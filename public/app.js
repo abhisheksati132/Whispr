@@ -400,13 +400,17 @@
       let previewHtml = '';
       if (msg.linkPreview) {
         const { title, description, image, url } = msg.linkPreview;
+        let hostname = '';
+        try {
+          if (url) hostname = new URL(url).hostname;
+        } catch (_) {}
         previewHtml = `
-          <a class="link-preview-card" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">
+          <a class="link-preview-card" href="${escapeHtml(url || '')}" target="_blank" rel="noopener noreferrer">
             ${image ? `<img class="link-preview-image" src="${escapeHtml(image)}" alt="preview image" loading="lazy" />` : ''}
             <div class="link-preview-info">
-              <div class="link-preview-title">${escapeHtml(title)}</div>
+              <div class="link-preview-title">${escapeHtml(title || '')}</div>
               ${description ? `<div class="link-preview-desc">${escapeHtml(description)}</div>` : ''}
-              <div class="link-preview-site">${escapeHtml(new URL(url).hostname)}</div>
+              <div class="link-preview-site">${escapeHtml(hostname)}</div>
             </div>
           </a>
         `;
@@ -1227,7 +1231,7 @@
   // ═══════════════════ SECRET MODE ═══════════════════
   function toggleSecretMode() {
     secretMode = !secretMode;
-    els.secretToggle.classList.toggle('active', secretMode);
+    if (els.secretToggle) els.secretToggle.classList.toggle('active', secretMode);
     els.secretIndicator.style.display = secretMode ? 'block' : 'none';
   }
 
@@ -2797,7 +2801,7 @@
     els.msgInput.addEventListener('input', () => {
       if (joined && socket) socket.emit('typing');
       const len = els.msgInput.value.length;
-      els.charCount.textContent = len > 1800 ? `${len}/2000` : '';
+      if (els.charCount) els.charCount.textContent = len > 1800 ? `${len}/2000` : '';
       toggleSendMicIcons();
     });
 
