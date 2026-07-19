@@ -622,10 +622,11 @@
 
   // ═══════════════════ CONNECTION STATUS ═══════════════════
   function setConnected(online) {
-    els.statusDot.classList.toggle('online', online);
-    els.statusText.textContent = online ? 'Connected' : 'Reconnecting…';
-    els.msgInput.disabled = !online;
-    els.sendBtn.disabled  = !online;
+    if (els.bestieStatus) {
+      els.bestieStatus.textContent = online ? 'Connected' : 'Reconnecting…';
+    }
+    if (els.msgInput) els.msgInput.disabled = !online;
+    if (els.sendBtn) els.sendBtn.disabled  = !online;
     document.body.classList.toggle('reconnecting', !online);
   }
 
