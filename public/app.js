@@ -110,6 +110,23 @@
     lightboxImg:      document.getElementById('lightboxImg'),
     contextMenu:      document.getElementById('contextMenu'),
     charCount:        document.getElementById('charCount'),
+    wallpaperSelect:  document.getElementById('wallpaperSelect'),
+    wallpaperUrlInput:document.getElementById('wallpaperUrlInput'),
+  };
+
+  // WebRTC State variables
+  let webrtcConn = null;
+  let localStreamStream = null;
+  let webrtcCallOffer = null;
+  let audioMuted = false;
+  let cameraOff = false;
+  let callType = null;
+
+  const rtcConfig = {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' }
+    ]
   };
 
   // ═══════════════════ SOUND ═══════════════════
@@ -775,15 +792,57 @@
 
   async function sendPhoto(file) {
     if (!file || !joined) return;
+    if (!file.type.startsWith('image/')) return;
+
+    const img = new Image();
     const reader = new FileReader();
-    reader.onload = async () => {
-      try {
-        const { url } = await uploadFile(reader.result, file.type, 'image');
-        socket.emit('message', { type: 'image', url, replyTo: replyingTo });
-        cancelReply();
-        playSound('send');
-      } catch { renderSystem('Could not upload photo — try a smaller image'); }
+    
+    reader.onload = (e) => {
+      img.src = e.target.result;
     };
+    
+    img.onload = () => {
+      const maxW = 1200;
+      let w = img.width;
+      let h = img.height;
+      
+      if (w > maxW) {
+        h = Math.round((h * maxW) / w);
+        w = maxW;
+      }
+      
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      
+      canvas.toBlob(async (blob) => {
+        if (!blob) {
+          renderSystem('Could not process photo');
+          return;
+        }
+        
+        const blobReader = new FileReader();
+        blobReader.onload = async () => {
+          try {
+            const { url } = await uploadFile(blobReader.result, 'image/jpeg', 'image');
+            socket.emit('message', { type: 'image', url, replyTo: replyingTo });
+            cancelReply();
+            playSound('send');
+          } catch {
+            renderSystem('Could not upload photo');
+          }
+        };
+        blobReader.readAsDataURL(blob);
+      }, 'image/jpeg', 0.82);
+    };
+    
+    img.onerror = () => {
+      renderSystem('Could not load photo file');
+    };
+    
     reader.readAsDataURL(file);
   }
 
@@ -1398,6 +1457,266 @@
     });
 
     socket.on('receipt-update', (rb) => { applyReadReceipts(rb); });
+
+    // WebRTC calling signaling listeners
+    socket.on('call-invite', ({ from, offer, type }) => {
+      webrtcCallOffer = offer;
+      callType = type;
+      
+      const overlay = document.getElementById('callOverlay');
+      const acceptBtns = document.getElementById('incomingControls');
+      const statusText = document.getElementById('callStatusText');
+      const callAvatar = document.getElementById('callAvatar');
+      const callName = document.getElementById('callName');
+      const camBtn = document.getElementById('toggleCamBtn');
+      
+      if (overlay) overlay.style.display = 'flex';
+      if (acceptBtns) acceptBtns.style.display = 'flex';
+      if (statusText) statusText.textContent = `Incoming ${type} call…`;
+      
+      const p = getProfile(from);
+      if (callAvatar) callAvatar.textContent = p.avatar || '🐱';
+      if (callName) callName.textContent = p.nickname || from;
+      if (camBtn) camBtn.style.display = type === 'video' ? 'flex' : 'none';
+      
+      playSound('receive');
+    });
+
+    socket.on('call-accept', ({ answer }) => {
+      if (webrtcConn) {
+        webrtcConn.setRemoteDescription(new RTCSessionDescription(answer)).catch(console.error);
+        const statusText = document.getElementById('callStatusText');
+        if (statusText) statusText.textContent = 'Active Call';
+      }
+    });
+
+    socket.on('call-decline', () => {
+      renderSystem('Call declined by bestie');
+      endCall(true);
+    });
+
+    socket.on('call-candidate', ({ candidate }) => {
+      if (webrtcConn) {
+        webrtcConn.addIceCandidate(new RTCIceCandidate(candidate)).catch(console.error);
+      }
+    });
+
+    socket.on('call-hangup', () => {
+      renderSystem('Call ended');
+      endCall(true);
+    });
+  }
+
+  // ═══════════════════ WEBRTC CALLING ═══════════════════
+  async function startCall(type) {
+    if (!joined) return;
+    callType = type;
+    
+    const overlay = document.getElementById('callOverlay');
+    const acceptBtns = document.getElementById('incomingControls');
+    const statusText = document.getElementById('callStatusText');
+    const camBtn = document.getElementById('toggleCamBtn');
+    
+    if (overlay) overlay.style.display = 'flex';
+    if (acceptBtns) acceptBtns.style.display = 'none';
+    if (statusText) statusText.textContent = 'Calling…';
+    
+    const others = currentOnlineUsers.filter(u => u !== myName);
+    const bestie = others[0] || 'Bestie';
+    const p = getProfile(bestie);
+    
+    const callAvatar = document.getElementById('callAvatar');
+    const callName = document.getElementById('callName');
+    if (callAvatar) callAvatar.textContent = p.avatar || '🐱';
+    if (callName) callName.textContent = p.nickname || bestie;
+    
+    if (camBtn) camBtn.style.display = type === 'video' ? 'flex' : 'none';
+    
+    try {
+      const constraints = {
+        audio: true,
+        video: type === 'video' ? { width: 640, height: 480 } : false
+      };
+      
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      localStreamStream = stream;
+      
+      const localVideo = document.getElementById('localVideo');
+      if (localVideo) {
+        localVideo.srcObject = stream;
+        localVideo.style.display = type === 'video' ? 'block' : 'none';
+      }
+      
+      initPeerConnection(type);
+      
+      stream.getTracks().forEach((track) => {
+        webrtcConn.addTrack(track, stream);
+      });
+      
+      const offer = await webrtcConn.createOffer();
+      await webrtcConn.setLocalDescription(offer);
+      
+      socket.emit('call-invite', { offer, type });
+      
+    } catch (err) {
+      console.error('Call failed to start:', err);
+      renderSystem('Could not access camera/microphone');
+      endCall(true);
+    }
+  }
+
+  function initPeerConnection(type) {
+    webrtcConn = new RTCPeerConnection(rtcConfig);
+    
+    webrtcConn.onicecandidate = (e) => {
+      if (e.candidate && socket) {
+        socket.emit('call-candidate', { candidate: e.candidate });
+      }
+    };
+    
+    webrtcConn.ontrack = (e) => {
+      const remoteVideo = document.getElementById('remoteVideo');
+      if (remoteVideo && e.streams[0]) {
+        remoteVideo.srcObject = e.streams[0];
+        remoteVideo.style.display = type === 'video' ? 'block' : 'none';
+      }
+    };
+  }
+
+  async function acceptCall() {
+    if (!webrtcCallOffer) return;
+    
+    const statusText = document.getElementById('callStatusText');
+    if (statusText) statusText.textContent = 'Connecting…';
+    
+    const acceptBtns = document.getElementById('incomingControls');
+    if (acceptBtns) acceptBtns.style.display = 'none';
+    
+    try {
+      const constraints = {
+        audio: true,
+        video: callType === 'video' ? { width: 640, height: 480 } : false
+      };
+      
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      localStreamStream = stream;
+      
+      const localVideo = document.getElementById('localVideo');
+      if (localVideo) {
+        localVideo.srcObject = stream;
+        localVideo.style.display = callType === 'video' ? 'block' : 'none';
+      }
+      
+      initPeerConnection(callType);
+      
+      stream.getTracks().forEach((track) => {
+        webrtcConn.addTrack(track, stream);
+      });
+      
+      await webrtcConn.setRemoteDescription(new RTCSessionDescription(webrtcCallOffer));
+      const answer = await webrtcConn.createAnswer();
+      await webrtcConn.setLocalDescription(answer);
+      
+      socket.emit('call-accept', { answer });
+      if (statusText) statusText.textContent = 'Active Call';
+      
+    } catch (err) {
+      console.error('Failed to accept call:', err);
+      socket.emit('call-decline');
+      endCall(true);
+    }
+  }
+
+  function endCall(silent) {
+    if (!silent && socket) {
+      socket.emit('call-hangup');
+    }
+    
+    if (localStreamStream) {
+      localStreamStream.getTracks().forEach((t) => t.stop());
+      localStreamStream = null;
+    }
+    
+    if (webrtcConn) {
+      webrtcConn.close();
+      webrtcConn = null;
+    }
+    
+    webrtcCallOffer = null;
+    audioMuted = false;
+    cameraOff = false;
+    
+    const muteBtn = document.getElementById('muteAudioBtn');
+    const camBtn = document.getElementById('toggleCamBtn');
+    if (muteBtn) { muteBtn.textContent = '🎤'; muteBtn.classList.remove('active'); }
+    if (camBtn) { camBtn.textContent = '📹'; camBtn.classList.remove('active'); }
+    
+    const overlay = document.getElementById('callOverlay');
+    if (overlay) overlay.style.display = 'none';
+    
+    const localVideo = document.getElementById('localVideo');
+    const remoteVideo = document.getElementById('remoteVideo');
+    if (localVideo) localVideo.srcObject = null;
+    if (remoteVideo) remoteVideo.srcObject = null;
+  }
+
+  function toggleMuteAudio() {
+    if (!localStreamStream) return;
+    audioMuted = !audioMuted;
+    localStreamStream.getAudioTracks().forEach((t) => t.enabled = !audioMuted);
+    const muteBtn = document.getElementById('muteAudioBtn');
+    if (muteBtn) {
+      muteBtn.textContent = audioMuted ? '🔇' : '🎤';
+      muteBtn.classList.toggle('active', audioMuted);
+    }
+  }
+
+  function toggleCamera() {
+    if (!localStreamStream || callType !== 'video') return;
+    cameraOff = !cameraOff;
+    localStreamStream.getVideoTracks().forEach((t) => t.enabled = !cameraOff);
+    const camBtn = document.getElementById('toggleCamBtn');
+    if (camBtn) {
+      camBtn.textContent = cameraOff ? '❌' : '📹';
+      camBtn.classList.toggle('active', cameraOff);
+    }
+  }
+
+  // ═══════════════════ CHAT WALLPAPER ═══════════════════
+  function changeWallpaper(type, customUrl) {
+    const messagesEl = els.messages;
+    if (!messagesEl) return;
+    
+    const selectEl = els.wallpaperSelect;
+    const customInputEl = els.wallpaperUrlInput;
+    if (selectEl) {
+      if (selectEl.value === 'custom') {
+        if (customInputEl) customInputEl.style.display = 'block';
+      } else {
+        if (customInputEl) customInputEl.style.display = 'none';
+      }
+    }
+    
+    if (type === 'custom') {
+      const url = customUrl || (customInputEl ? customInputEl.value : '') || '';
+      if (url) {
+        messagesEl.style.backgroundImage = `url('${url}')`;
+        messagesEl.style.backgroundSize = 'cover';
+        messagesEl.style.backgroundPosition = 'center';
+        localStorage.setItem('bestieChatWallpaper', 'custom');
+        localStorage.setItem('bestieChatWallpaperUrl', url);
+      }
+    } else if (type) {
+      messagesEl.style.backgroundImage = 'none';
+      messagesEl.style.backgroundColor = type;
+      localStorage.setItem('bestieChatWallpaper', type);
+      localStorage.removeItem('bestieChatWallpaperUrl');
+    } else {
+      messagesEl.style.backgroundImage = '';
+      messagesEl.style.backgroundColor = '';
+      localStorage.removeItem('bestieChatWallpaper');
+      localStorage.removeItem('bestieChatWallpaperUrl');
+    }
   }
 
   // ═══════════════════ INIT ═══════════════════
@@ -1421,6 +1740,25 @@
         giphyApiKey = cfg.giphyKey || '';
       })
       .catch(() => {});
+
+    // Restore wallpaper setting
+    const savedWallpaper = localStorage.getItem('bestieChatWallpaper');
+    const savedWallpaperUrl = localStorage.getItem('bestieChatWallpaperUrl');
+    const selectEl = els.wallpaperSelect;
+    const customInputEl = els.wallpaperUrlInput;
+    
+    if (savedWallpaper) {
+      if (selectEl) selectEl.value = savedWallpaper;
+      if (savedWallpaper === 'custom') {
+        if (customInputEl) {
+          customInputEl.value = savedWallpaperUrl || '';
+          customInputEl.style.display = 'block';
+        }
+        changeWallpaper('custom', savedWallpaperUrl);
+      } else {
+        changeWallpaper(savedWallpaper);
+      }
+    }
 
     // Input events
     els.nameInput.addEventListener('keydown',     (e) => { if (e.key === 'Enter') joinChat(); });
@@ -1524,6 +1862,8 @@
     startEditMessage, deleteMessage,
     pinMessageById, unpinMessage, scrollToPinned,
     copyText,
+    startCall, acceptCall, endCall, toggleMuteAudio, toggleCamera,
+    changeWallpaper,
   };
 
   if (document.readyState === 'loading') {

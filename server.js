@@ -344,6 +344,27 @@ io.on('connection', (socket) => {
     io.to(currentRoom).emit('poll-update', { messageId, votes: msg.votes });
   });
 
+  // ── WebRTC Calling Relays ──────────────────────────────────────────
+  socket.on('call-invite', (payload) => {
+    if (currentRoom) socket.to(currentRoom).emit('call-invite', { from: username, offer: payload.offer, type: payload.type });
+  });
+
+  socket.on('call-accept', (payload) => {
+    if (currentRoom) socket.to(currentRoom).emit('call-accept', { answer: payload.answer });
+  });
+
+  socket.on('call-decline', () => {
+    if (currentRoom) socket.to(currentRoom).emit('call-decline');
+  });
+
+  socket.on('call-candidate', (payload) => {
+    if (currentRoom) socket.to(currentRoom).emit('call-candidate', { candidate: payload.candidate });
+  });
+
+  socket.on('call-hangup', () => {
+    if (currentRoom) socket.to(currentRoom).emit('call-hangup');
+  });
+
   // ── Disconnect ──────────────────────────────────────────────────────
   socket.on('disconnect', () => {
     if (username && currentRoom) {

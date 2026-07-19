@@ -70,6 +70,8 @@
         <span id="theirFeeling"></span>
       </div>
       <div class="header-btns">
+        <button class="icon-btn call-audio-btn" title="Voice Call" onclick="BestieChat.startCall('audio')">📞</button>
+        <button class="icon-btn call-video-btn" title="Video Call" onclick="BestieChat.startCall('video')">📹</button>
         <button id="searchToggleBtn" class="icon-btn" title="Search" onclick="BestieChat.toggleSearch()">🔍</button>
         <button id="galleryBtn" class="icon-btn" title="Photo Gallery" onclick="BestieChat.openGallery()">🖼️</button>
         <button id="soundBtn" class="icon-btn active" title="Sound" onclick="BestieChat.toggleSound()">🔊</button>
@@ -109,7 +111,18 @@
     </div>
     <div class="extra-block">
       <label>Nickname 🏷️</label>
-      <input id="nicknameInputChat" type="text" placeholder="Change your nickname" maxlength="24" />
+      <input id="nicknameInputChat" type="text" placeholder="Change nickname" maxlength="24" />
+    </div>
+    <div class="extra-block">
+      <label>Chat Wallpaper 🎨</label>
+      <select id="wallpaperSelect" onchange="BestieChat.changeWallpaper(this.value)">
+        <option value="">Default Ambient Glow</option>
+        <option value="#0d0d1a">Solid Dark Navy</option>
+        <option value="#1c1124">Solid Deep Orchid</option>
+        <option value="#0c1d1a">Solid Teal Forest</option>
+        <option value="custom">Custom Image URL</option>
+      </select>
+      <input id="wallpaperUrlInput" type="text" placeholder="Paste image link..." style="display:none; margin-top: 6px;" onchange="BestieChat.changeWallpaper('custom', this.value)" />
     </div>
   </div>
 
@@ -242,7 +255,32 @@
     <button class="doodle-send-btn" onclick="BestieChat.sendDoodle()">📤 Send Doodle</button>
   </div>
 </div>
-
+<!-- ═══════════════════ WEBRTC CALL OVERLAY ═══════════════════ -->
+<div id="callOverlay" style="display:none">
+  <div class="call-card">
+    <div class="call-user-info">
+      <div id="callAvatar" class="call-avatar">✨</div>
+      <h3 id="callName">Bestie</h3>
+      <div id="callStatusText">Calling…</div>
+    </div>
+    
+    <div class="video-grid" id="videoGrid">
+      <video id="remoteVideo" autoplay playsinline></video>
+      <video id="localVideo" autoplay playsinline muted></video>
+    </div>
+    
+    <div class="call-controls">
+      <button id="muteAudioBtn" class="call-btn" onclick="BestieChat.toggleMuteAudio()" title="Mute Mic">🎤</button>
+      <button id="toggleCamBtn" class="call-btn" onclick="BestieChat.toggleCamera()" title="Toggle Camera">📹</button>
+      <button id="endCallBtn" class="call-btn end-call" onclick="BestieChat.endCall()" title="End Call">📞</button>
+    </div>
+    
+    <div class="incoming-controls" id="incomingControls" style="display:none">
+      <button class="call-btn accept-call" onclick="BestieChat.acceptCall()" title="Accept Call">📞 Accept</button>
+      <button class="call-btn decline-call" onclick="BestieChat.endCall()" title="Decline Call">✕ Decline</button>
+    </div>
+  </div>
+</div>
 <script src="/socket.io/socket.io.js"></script>
 <script src="/app.js"></script>
 <script>
