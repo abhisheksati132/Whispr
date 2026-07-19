@@ -467,6 +467,30 @@
       showContextMenu(e, msg);
     });
 
+    // Swipe right to reply
+    let _swipeStartX = 0;
+    let _swipeStartY = 0;
+    let _swiping = false;
+    wrap.addEventListener('touchstart', (e) => {
+      _swipeStartX = e.touches[0].clientX;
+      _swipeStartY = e.touches[0].clientY;
+      _swiping = false;
+    }, { passive: true });
+    wrap.addEventListener('touchmove', (e) => {
+      const dx = e.touches[0].clientX - _swipeStartX;
+      const dy = Math.abs(e.touches[0].clientY - _swipeStartY);
+      if (dx > 20 && dy < 40) {
+        _swiping = true;
+        wrap.classList.add('swiping');
+        wrap.style.transform = `translateX(${Math.min(dx, 70)}px)`;
+      }
+    }, { passive: true });
+    wrap.addEventListener('touchend', () => {
+      wrap.classList.remove('swiping');
+      wrap.style.transform = '';
+      if (_swiping) { replyToMessage(msg.id); _swiping = false; }
+    });
+
     // Tap to show react bar on touch
     if ('ontouchstart' in window) {
       wrap.addEventListener('click', (e) => {
@@ -479,6 +503,11 @@
     }
 
     els.messages.appendChild(wrap);
+    // Slide-up animation for new (not history) messages
+    if (!skipSound) {
+      wrap.classList.add('msg-new');
+      wrap.addEventListener('animationend', () => wrap.classList.remove('msg-new'), { once: true });
+    }
     scrollBottom();
 
     if (!skipSound && !mine && !['poll'].includes(msg.type)) playSound('receive');
@@ -561,20 +590,45 @@
     if (lastOtherMsgId) emitReadReceipt(lastOtherMsgId);
   }
 
+  function getMessageIndex(msgId) {
+    return allMessagesCached.findIndex((m) => m.id === msgId);
+  }
+
   function updateReadTickForMessage(msgId) {
     const tick = document.getElementById(`tick-${msgId}`);
     if (!tick) return;
-    // Check if any other user has read this or beyond
     const others = Object.entries(readBy).filter(([name]) => name !== myName);
-    if (others.length) {
-      tick.textContent = '✓✓';
-      tick.className   = 'read-tick';
+    if (!others.length) return;
+    
+    const targetIdx = getMessageIndex(msgId);
+    if (targetIdx === -1) return;
+    
+    let hasBeenRead = false;
+    let readReceiptTime = null;
+    
+    for (const [name, readMsgId] of others) {
+      const readIdx = getMessageIndex(readMsgId);
+      if (readIdx >= targetIdx) {
+        hasBeenRead = true;
+        if (readMsgId === msgId) {
+          const msgObj = allMessagesCached[readIdx];
+          if (msgObj) readReceiptTime = msgObj.time;
+        }
+      }
+    }
+    
+    if (hasBeenRead) {
+      tick.className = 'read-tick';
+      if (readReceiptTime) {
+        tick.innerHTML = `✓✓ <span class="receipt-time">Seen</span>`;
+      } else {
+        tick.textContent = '✓✓';
+      }
     }
   }
 
   function applyReadReceipts(rb) {
     readBy = rb || {};
-    // Update ticks for all sent messages
     els.messages.querySelectorAll('.msg-wrap.me').forEach((wrap) => {
       updateReadTickForMessage(wrap.dataset.id);
     });
@@ -582,6 +636,7 @@
 
   // ═══════════════════ CONTEXT MENU ═══════════════════
   function showContextMenu(e, msg) {
+    contextTarget = msg.id;
     const mine = msg.user === myName;
     const isPinned = pinnedMsg && pinnedMsg.id === msg.id;
 
@@ -614,11 +669,28 @@
 
     const menuW = 175;
     const menuH = els.contextMenu.scrollHeight || 200;
-    els.contextMenu.style.left = `${Math.min(x, window.innerWidth  - menuW - 10)}px`;
-    els.contextMenu.style.top  = `${Math.min(y, window.innerHeight - menuH - 10)}px`;
+    const menuLeft = Math.min(x, window.innerWidth  - menuW - 10);
+    const menuTop = Math.min(y, window.innerHeight - menuH - 10);
+    els.contextMenu.style.left = `${menuLeft}px`;
+    els.contextMenu.style.top  = `${menuTop}px`;
+
+    // Position & show Quick Reaction Picker
+    const picker = document.getElementById('reactionPicker');
+    if (picker && !msg.deleted) {
+      picker.classList.add('open');
+      const pickerW = 320;
+      const pickerLeft = Math.max(10, Math.min(x - pickerW / 2, window.innerWidth - pickerW - 10));
+      const pickerTop = Math.max(10, menuTop - 55);
+      picker.style.left = `${pickerLeft}px`;
+      picker.style.top = `${pickerTop}px`;
+    }
   }
 
-  function hideContextMenu() { els.contextMenu.classList.remove('open'); }
+  function hideContextMenu() {
+    els.contextMenu.classList.remove('open');
+    const picker = document.getElementById('reactionPicker');
+    if (picker) picker.classList.remove('open');
+  }
 
   // ═══════════════════ CONNECTION STATUS ═══════════════════
   function setConnected(online) {
@@ -1184,16 +1256,30 @@
   }
 
   function performSearch() {
-    const q = (els.searchInput.value || '').toLowerCase().trim();
+    const q = (els.searchInput ? els.searchInput.value : '').toLowerCase().trim();
     els.messages.querySelectorAll('.msg-wrap').forEach((wrap) => {
       const msgEl = wrap.querySelector('.msg');
       if (!msgEl) return;
       if (!q) {
         wrap.style.display = '';
+        // Remove any existing highlights
+        msgEl.querySelectorAll('mark.search-highlight').forEach((m) => {
+          m.outerHTML = m.textContent;
+        });
         return;
       }
-      const text = (msgEl.textContent || '').toLowerCase();
-      wrap.style.display = text.includes(q) ? '' : 'none';
+      const textDivs = msgEl.querySelectorAll('div');
+      let found = false;
+      textDivs.forEach((div) => {
+        if (div.querySelector('img,audio,video,canvas')) return;
+        const raw = div.textContent || '';
+        if (raw.toLowerCase().includes(q)) {
+          found = true;
+          const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+          div.innerHTML = div.innerHTML.replace(re, (m) => `<mark class="search-highlight">${m}</mark>`);
+        }
+      });
+      wrap.style.display = (found || (msgEl.textContent || '').toLowerCase().includes(q)) ? '' : 'none';
     });
   }
 
@@ -1364,6 +1450,12 @@
       return;
     }
     socket = io({ reconnection: true, reconnectionAttempts: Infinity });
+    let _reconnectDelay = 1000;
+    socket.io.on('reconnect_attempt', () => {
+      _reconnectDelay = Math.min(_reconnectDelay * 2, 16000);
+      socket.io.opts.reconnectionDelay = _reconnectDelay;
+    });
+    socket.io.on('reconnect', () => { _reconnectDelay = 1000; });
 
     socket.on('connect', () => {
       setConnected(true);
@@ -1440,6 +1532,11 @@
       sharedBonsai = payload.bonsai || { growth: 0, lastWatered: null };
       renderBonsai(sharedBonsai);
       renderHeatmap();
+
+      // Premium dashboard features
+      fetchDailyQuestion();
+      updateScoreboardDisplay(payload.gameScores || { wins: {}, losses: {} });
+      updateE2EEFingerprint();
     });
 
     socket.on('message', (msg) => {
@@ -1517,17 +1614,22 @@
 
     socket.on('typing', (name) => {
       if (name === getDisplayName(myName) || name === myName) return;
-      
-      const statusEl = els.bestieStatus;
-      if (statusEl) {
-        statusEl.textContent = 'typing…';
-        statusEl.className = 'bestie-status typing';
+      // Show animated typing bubble
+      let bubble = document.getElementById('typingBubble');
+      if (!bubble) {
+        bubble = document.createElement('div');
+        bubble.id = 'typingBubble';
+        bubble.className = 'typing-bubble';
+        bubble.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+        els.messages.appendChild(bubble);
       }
-      
+      bubble.style.display = 'flex';
+      scrollBottom();
       clearTimeout(typingTimeout);
       typingTimeout = setTimeout(() => {
+        if (bubble) bubble.style.display = 'none';
         updateBestieHeaderState();
-      }, 2000);
+      }, 2500);
     });
 
     socket.on('feelings-update', (updated) => {
@@ -1665,6 +1767,14 @@
       }
       const el = document.getElementById(`reactions-${messageId}`);
       if (el) el.innerHTML = renderReactions({ id: messageId, reactions });
+    });
+
+    socket.on('rate-limited', (data) => {
+      showToast(data.message || 'Slow down! 🌿');
+    });
+
+    socket.on('score-update', (scores) => {
+      updateScoreboardDisplay(scores);
     });
   }
 
@@ -1953,6 +2063,7 @@
       e2eKey = input.value;
       localStorage.setItem('bestieChatE2EEKey', e2eKey);
       refreshMessagesLayout();
+      updateE2EEFingerprint();
     }
   }
 
@@ -2295,6 +2406,7 @@
     socket.emit('update-bonsai', sharedBonsai);
   }
 
+  let lastBonsaiLvl = -1;
   function renderBonsai(state) {
     const lvlText = document.getElementById('bonsaiLevel');
     const trunk = document.getElementById('bonsaiTrunk');
@@ -2315,6 +2427,18 @@
     if (leaf1) leaf1.setAttribute('r', String(Math.min(22, 11 + lvl)));
     if (leaf2) leaf2.setAttribute('r', String(Math.min(18, 8 + lvl)));
     if (leaf3) leaf3.setAttribute('r', String(Math.min(15, 7 + lvl)));
+
+    if (lastBonsaiLvl !== -1 && lvl > lastBonsaiLvl) {
+      confetti();
+      showToast(`🌳 Your Bonsai Tree leveled up to Level ${lvl}!`);
+      playSound('milestone');
+      const container = document.querySelector('.bonsai-container');
+      if (container) {
+        container.classList.add('bonsai-levelup');
+        container.addEventListener('animationend', () => container.classList.remove('bonsai-levelup'), { once: true });
+      }
+    }
+    lastBonsaiLvl = lvl;
   }
 
   // ── Co-Draw live shared canvas ──
@@ -2571,8 +2695,12 @@
       const [a,b,c] = w;
       if (tttBoard[a] && tttBoard[a] === tttBoard[b] && tttBoard[a] === tttBoard[c]) {
         document.querySelectorAll('.ttt-cell').forEach(cell => cell.disabled = true);
+        const won = tttBoard[a] === tttMySymbol;
         if (turnEl) {
-          turnEl.textContent = tttBoard[a] === tttMySymbol ? '🏆 You Win!' : '💀 Bestie Wins!';
+          turnEl.textContent = won ? '🏆 You Win!' : '💀 Bestie Wins!';
+        }
+        if (won) {
+          socket.emit('game-result', { winner: myName });
         }
         confetti();
         return true;
@@ -2581,6 +2709,8 @@
     
     if (!tttBoard.includes(null)) {
       if (turnEl) turnEl.textContent = '🤝 It\'s a Draw!';
+      // Emit draw so score is calculated or broadcast if needed
+      socket.emit('game-result', { winner: null });
       return true;
     }
     return false;
@@ -2721,168 +2851,282 @@
     }
   }
   function init() {
-    initAmbience();
-    applyNightGlow();
-    buildEmojiPicker();
+    try {
+      initAmbience();
+      applyNightGlow();
+      buildEmojiPicker();
 
-    const savedName = localStorage.getItem('bestieChatName') || '';
-    const savedNick = localStorage.getItem('bestieChatNickname') || '';
-    if (savedName) els.nameInput.value = savedName;
-    if (savedNick) els.nicknameInput.value = savedNick;
+      const savedName = localStorage.getItem('bestieChatName') || '';
+      const savedNick = localStorage.getItem('bestieChatNickname') || '';
+      if (savedName) els.nameInput.value = savedName;
+      if (savedNick) els.nicknameInput.value = savedNick;
 
-    els.soundBtn.classList.toggle('active', soundEnabled());
+      els.soundBtn.classList.toggle('active', soundEnabled());
 
-    fetch('/api/config')
-      .then((r) => r.json())
-      .then((cfg) => {
-        if (cfg.passwordRequired) els.passwordField.style.display = 'block';
-        giphyApiKey = cfg.giphyKey || '';
+      fetch('/api/config')
+        .then((r) => r.json())
+        .then((cfg) => {
+          if (cfg.passwordRequired) els.passwordField.style.display = 'block';
+          giphyApiKey = cfg.giphyKey || '';
+        })
+        .catch(() => {});
+
+      // Restore Accent Theme
+      const savedAccent = localStorage.getItem('bestieChatAccent') || 'cyberpunk';
+      const accentEl = document.getElementById('accentSelect');
+      if (accentEl) accentEl.value = savedAccent;
+      changeAccent(savedAccent);
+
+      // Restore Sound Pack
+      const savedPack = localStorage.getItem('bestieChatSoundPack') || 'cozy';
+      const packEl = document.getElementById('soundPackSelect');
+      if (packEl) packEl.value = savedPack;
+      changeSoundPack(savedPack);
+
+      // Restore E2EE Key
+      const savedE2EE = localStorage.getItem('bestieChatE2EEKey') || '';
+      const e2eInput = document.getElementById('e2eKeyInput');
+      if (e2eInput) e2eInput.value = savedE2EE;
+      e2eKey = savedE2EE;
+      updateE2EEFingerprint();
+      
+      const e2eActive = localStorage.getItem('bestieChatE2EEActive') === 'true';
+      e2eEnabled = e2eActive;
+      const e2eBtn = document.getElementById('e2eToggleBtn');
+      if (e2eBtn) {
+        e2eBtn.textContent = e2eEnabled ? 'Disable' : 'Enable';
+        e2eBtn.classList.toggle('active', e2eEnabled);
+      }
+
+      // Restore Weather City
+      const savedCity = localStorage.getItem('bestieWeatherCity') || '';
+      const cityInput = document.getElementById('weatherCityInput');
+      if (cityInput) cityInput.value = savedCity;
+      if (savedCity) fetchWeatherForCity(savedCity);
+
+      // Restore wallpaper setting
+      const savedWallpaper = localStorage.getItem('bestieChatWallpaper');
+      const savedWallpaperUrl = localStorage.getItem('bestieChatWallpaperUrl');
+      const selectEl = els.wallpaperSelect;
+      const customInputEl = els.wallpaperUrlInput;
+      
+      if (savedWallpaper) {
+        if (selectEl) selectEl.value = savedWallpaper;
+        if (savedWallpaper === 'custom') {
+          if (customInputEl) {
+            customInputEl.value = savedWallpaperUrl || '';
+            customInputEl.style.display = 'block';
+          }
+          changeWallpaper('custom', savedWallpaperUrl);
+        } else {
+          changeWallpaper(savedWallpaper);
+        }
+      }
+
+      // Input events
+      if (els.nameInput)     els.nameInput.addEventListener('keydown',     (e) => { if (e.key === 'Enter') joinChat(); });
+      if (els.passwordInput) els.passwordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') joinChat(); });
+      if (els.msgInput) {
+        els.msgInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) sendMessage(); });
+        els.msgInput.addEventListener('input', () => {
+          if (joined && socket) socket.emit('typing');
+          const len = els.msgInput.value.length;
+          if (els.charCount) els.charCount.textContent = len > 1800 ? `${len}/2000` : '';
+          toggleSendMicIcons();
+        });
+      }
+
+      // Search
+      if (els.searchInput) {
+        els.searchInput.addEventListener('input', performSearch);
+        els.searchInput.addEventListener('keydown', (e) => { if (e.key === 'Escape') clearSearch(); });
+      }
+
+      // Room meta
+      if (els.moodInput) {
+        els.moodInput.addEventListener('change', saveMood);
+        els.moodInput.addEventListener('focus',  () => {
+          if (!els.moodInput.value) {
+            els.moodInput.placeholder = `Try: ${VIBE_SUGGESTIONS[Math.floor(Math.random() * VIBE_SUGGESTIONS.length)]}`;
+          }
+        });
+      }
+      if (els.jokesInput)       els.jokesInput.addEventListener('blur',   saveJokes);
+      if (els.countdownLabel)   els.countdownLabel.addEventListener('change', saveCountdown);
+      if (els.countdownDate)    els.countdownDate.addEventListener('change',  saveCountdown);
+      if (els.nicknameInputChat) els.nicknameInputChat.addEventListener('input', saveNickname);
+
+      // Photo input
+      if (els.photoInput) els.photoInput.addEventListener('change', (e) => {
+        if (e.target.files[0]) sendPhoto(e.target.files[0]);
+        e.target.value = '';
+      });
+
+      // Tab visibility
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+          clearUnread();
+          emitReadReceiptForLastVisible();
+        }
+      });
+
+      // Scroll to bottom → read receipt
+      els.messages.addEventListener('scroll', () => {
+        const { scrollTop, scrollHeight, clientHeight } = els.messages;
+        if (scrollHeight - scrollTop - clientHeight < 80) {
+          emitReadReceiptForLastVisible();
+        }
+      });
+
+      // Global click → close menus / context menu
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('#emojiPicker')  && !e.target.closest('[data-emoji-toggle]')) els.emojiPicker.classList.remove('open');
+        if (!e.target.closest('#gameMenu')     && !e.target.closest('[data-game-toggle]'))  els.gameMenu.classList.remove('open');
+        if (!e.target.closest('#gifPanel')     && !e.target.closest('.attach-item') && !e.target.closest('#gifPanel')) els.gifPanel.classList.remove('open');
+        if (!e.target.closest('#feelingsPanel')&& !e.target.closest('[title="Feelings"]'))  els.feelingsPanel.classList.remove('open');
+        if (!e.target.closest('#contextMenu')  && !e.target.closest('.msg-wrap'))           hideContextMenu();
+        if (!e.target.closest('#attachMenu')   && !e.target.closest('#attachBtn'))          { if (els.attachMenu) els.attachMenu.style.display = 'none'; }
+        if (!e.target.closest('.msg-wrap'))    document.querySelectorAll('.msg-wrap.touched').forEach((el) => el.classList.remove('touched'));
+      });
+
+      // Keyboard shortcuts
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          hideContextMenu();
+          if (searchActive) clearSearch();
+          if (editingMessageId) {
+            editingMessageId = null;
+            els.msgInput.value = '';
+            toggleSendMicIcons();
+          }
+          cancelReply();
+        }
+        if ((e.ctrlKey || e.metaKey) && e.key === 'f' && joined) {
+          e.preventDefault();
+          toggleSearch();
+        }
+      });
+
+      // Notifications
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+
+      initSocket();
+      toggleSendMicIcons();
+      if (savedName) joinChat();
+
+      // Load saved theme theme-light
+      const savedTheme = localStorage.getItem('bestieChatTheme') || 'dark';
+      if (savedTheme === 'light') {
+        document.body.classList.add('theme-light');
+        const toggleBtn = document.getElementById('themeToggle');
+        if (toggleBtn) toggleBtn.textContent = '☀️';
+      }
+    } catch (err) {
+      console.error('Init crash:', err);
+      const boundary = document.getElementById('errorBoundary');
+      if (boundary) boundary.classList.add('visible');
+    }
+  }
+
+  // ── Premium Additional Functions ──
+  function showToast(msg) {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = msg;
+    container.appendChild(toast);
+    setTimeout(() => {
+      toast.classList.add('hiding');
+      toast.addEventListener('animationend', () => toast.remove());
+    }, 3000);
+  }
+
+  function toggleTheme() {
+    const isLight = document.body.classList.toggle('theme-light');
+    localStorage.setItem('bestieChatTheme', isLight ? 'light' : 'dark');
+    const toggleBtn = document.getElementById('themeToggle');
+    if (toggleBtn) toggleBtn.textContent = isLight ? '☀️' : '🌙';
+  }
+
+  function dismissDailyQuestion() {
+    const banner = document.getElementById('dailyQuestion');
+    if (banner) banner.style.display = 'none';
+    const today = new Date().toISOString().slice(0, 10);
+    localStorage.setItem('dismissedDailyQuestionDate', today);
+  }
+
+  function fetchDailyQuestion() {
+    fetch('/api/daily-question')
+      .then(res => res.json())
+      .then(data => {
+        const textEl = document.getElementById('dailyQuestionText');
+        const banner = document.getElementById('dailyQuestion');
+        if (textEl && banner && data.question) {
+          const dismissedDate = localStorage.getItem('dismissedDailyQuestionDate');
+          const today = new Date().toISOString().slice(0, 10);
+          if (dismissedDate !== today) {
+            textEl.textContent = data.question;
+            banner.style.display = 'block';
+          }
+        }
       })
       .catch(() => {});
+  }
 
-    // Restore Accent Theme
-    const savedAccent = localStorage.getItem('bestieChatAccent') || 'cyberpunk';
-    const accentEl = document.getElementById('accentSelect');
-    if (accentEl) accentEl.value = savedAccent;
-    changeAccent(savedAccent);
-
-    // Restore Sound Pack
-    const savedPack = localStorage.getItem('bestieChatSoundPack') || 'cozy';
-    const packEl = document.getElementById('soundPackSelect');
-    if (packEl) packEl.value = savedPack;
-    changeSoundPack(savedPack);
-
-    // Restore E2EE Key
-    const savedE2EE = localStorage.getItem('bestieChatE2EEKey') || '';
-    const e2eInput = document.getElementById('e2eKeyInput');
-    if (e2eInput) e2eInput.value = savedE2EE;
-    e2eKey = savedE2EE;
-    
-    const e2eActive = localStorage.getItem('bestieChatE2EEActive') === 'true';
-    e2eEnabled = e2eActive;
-    const e2eBtn = document.getElementById('e2eToggleBtn');
-    if (e2eBtn) {
-      e2eBtn.textContent = e2eEnabled ? 'Disable' : 'Enable';
-      e2eBtn.classList.toggle('active', e2eEnabled);
+  function updateScoreboardDisplay(scores) {
+    const container = document.getElementById('scoreboardRows');
+    if (!container) return;
+    if (!scores || (!scores.wins && !scores.losses)) {
+      container.innerHTML = '<p style="opacity:0.5;font-size:0.82rem">No games played yet!</p>';
+      return;
     }
-
-    // Restore Weather City
-    const savedCity = localStorage.getItem('bestieWeatherCity') || '';
-    const cityInput = document.getElementById('weatherCityInput');
-    if (cityInput) cityInput.value = savedCity;
-    if (savedCity) fetchWeatherForCity(savedCity);
-
-    // Restore wallpaper setting
-    const savedWallpaper = localStorage.getItem('bestieChatWallpaper');
-    const savedWallpaperUrl = localStorage.getItem('bestieChatWallpaperUrl');
-    const selectEl = els.wallpaperSelect;
-    const customInputEl = els.wallpaperUrlInput;
-    
-    if (savedWallpaper) {
-      if (selectEl) selectEl.value = savedWallpaper;
-      if (savedWallpaper === 'custom') {
-        if (customInputEl) {
-          customInputEl.value = savedWallpaperUrl || '';
-          customInputEl.style.display = 'block';
-        }
-        changeWallpaper('custom', savedWallpaperUrl);
-      } else {
-        changeWallpaper(savedWallpaper);
-      }
+    const wins = scores.wins || {};
+    const players = Array.from(new Set([...Object.keys(wins)]));
+    if (players.length === 0) {
+      container.innerHTML = '<p style="opacity:0.5;font-size:0.82rem">No games won yet!</p>';
+      return;
     }
-
-    // Input events
-    if (els.nameInput)     els.nameInput.addEventListener('keydown',     (e) => { if (e.key === 'Enter') joinChat(); });
-    if (els.passwordInput) els.passwordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') joinChat(); });
-    if (els.msgInput) {
-      els.msgInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) sendMessage(); });
-      els.msgInput.addEventListener('input', () => {
-        if (joined && socket) socket.emit('typing');
-        const len = els.msgInput.value.length;
-        if (els.charCount) els.charCount.textContent = len > 1800 ? `${len}/2000` : '';
-        toggleSendMicIcons();
-      });
-    }
-
-    // Search
-    if (els.searchInput) {
-      els.searchInput.addEventListener('input', performSearch);
-      els.searchInput.addEventListener('keydown', (e) => { if (e.key === 'Escape') clearSearch(); });
-    }
-
-    // Room meta
-    if (els.moodInput) {
-      els.moodInput.addEventListener('change', saveMood);
-      els.moodInput.addEventListener('focus',  () => {
-        if (!els.moodInput.value) {
-          els.moodInput.placeholder = `Try: ${VIBE_SUGGESTIONS[Math.floor(Math.random() * VIBE_SUGGESTIONS.length)]}`;
-        }
-      });
-    }
-    if (els.jokesInput)       els.jokesInput.addEventListener('blur',   saveJokes);
-    if (els.countdownLabel)   els.countdownLabel.addEventListener('change', saveCountdown);
-    if (els.countdownDate)    els.countdownDate.addEventListener('change',  saveCountdown);
-    if (els.nicknameInputChat) els.nicknameInputChat.addEventListener('input', saveNickname);
-
-    // Photo input
-    if (els.photoInput) els.photoInput.addEventListener('change', (e) => {
-      if (e.target.files[0]) sendPhoto(e.target.files[0]);
-      e.target.value = '';
+    let html = '';
+    players.forEach((player) => {
+      const wCount = wins[player] || 0;
+      html += `
+        <div class="score-row">
+          <span>${escapeHtml(getDisplayName(player))}</span>
+          <span class="score-wins">${wCount} Win${wCount !== 1 ? 's' : ''} 🏆</span>
+        </div>
+      `;
     });
+    container.innerHTML = html;
+  }
 
-    // Tab visibility
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) {
-        clearUnread();
-        emitReadReceiptForLastVisible();
-      }
-    });
-
-    // Scroll to bottom → read receipt
-    els.messages.addEventListener('scroll', () => {
-      const { scrollTop, scrollHeight, clientHeight } = els.messages;
-      if (scrollHeight - scrollTop - clientHeight < 80) {
-        emitReadReceiptForLastVisible();
-      }
-    });
-
-    // Global click → close menus / context menu
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('#emojiPicker')  && !e.target.closest('[data-emoji-toggle]')) els.emojiPicker.classList.remove('open');
-      if (!e.target.closest('#gameMenu')     && !e.target.closest('[data-game-toggle]'))  els.gameMenu.classList.remove('open');
-      if (!e.target.closest('#gifPanel')     && !e.target.closest('.attach-item') && !e.target.closest('#gifPanel')) els.gifPanel.classList.remove('open');
-      if (!e.target.closest('#feelingsPanel')&& !e.target.closest('[title="Feelings"]'))  els.feelingsPanel.classList.remove('open');
-      if (!e.target.closest('#contextMenu')  && !e.target.closest('.msg-wrap'))           hideContextMenu();
-      if (!e.target.closest('#attachMenu')   && !e.target.closest('#attachBtn'))          { if (els.attachMenu) els.attachMenu.style.display = 'none'; }
-      if (!e.target.closest('.msg-wrap'))    document.querySelectorAll('.msg-wrap.touched').forEach((el) => el.classList.remove('touched'));
-    });
-
-    // Keyboard shortcuts
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        hideContextMenu();
-        if (searchActive) clearSearch();
-        if (editingMessageId) {
-          editingMessageId = null;
-          els.msgInput.value = '';
-          toggleSendMicIcons();
-        }
-        cancelReply();
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'f' && joined) {
-        e.preventDefault();
-        toggleSearch();
-      }
-    });
-
-    // Notifications
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
+  function updateE2EEFingerprint() {
+    const el = document.getElementById('e2eeFingerprint');
+    if (!el) return;
+    if (!e2eKey) {
+      el.classList.remove('visible');
+      return;
     }
+    let h1 = 5381, h2 = 52711;
+    for (let i = 0; i < e2eKey.length; i++) {
+      const char = e2eKey.charCodeAt(i);
+      h1 = ((h1 << 5) + h1) ^ char;
+      h2 = ((h2 << 5) + h2) ^ char;
+    }
+    const fp = `${(h1 >>> 0).toString(16).toUpperCase()}-${(h2 >>> 0).toString(16).toUpperCase()}`;
+    el.textContent = `🔒 Fingerprint: ${fp}`;
+    el.classList.add('visible');
+  }
 
-    initSocket();
-    toggleSendMicIcons();
-    if (savedName) joinChat();
+  function quickReact(emoji) {
+    if (contextTarget) {
+      react(contextTarget, emoji);
+      const picker = document.getElementById('reactionPicker');
+      if (picker) picker.classList.remove('open');
+      hideContextMenu();
+    }
   }
 
   // ═══════════════════ PUBLIC API ═══════════════════
@@ -2917,6 +3161,7 @@
     openTTT, closeTTT, makeTTTMove, resetTTT,
     openHapticSync, closeHapticSync, startHapticPulse, stopHapticPulse,
     sendNudge, toggleLofi, setLofiVolume,
+    toggleTheme, dismissDailyQuestion, quickReact,
   };
 
   if (document.readyState === 'loading') {

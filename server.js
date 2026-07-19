@@ -36,6 +36,10 @@ app.get('/api/config', (_req, res) => {
   });
 });
 
+app.get('/api/daily-question', (_req, res) => {
+  res.json({ question: store.getDailyQuestion() });
+});
+
 // ── OpenGraph Link Scraper ──────────────────────────────────────────────────
 app.get('/api/link-preview', async (req, res) => {
   const targetUrl = req.query.url;
@@ -141,6 +145,8 @@ io.on('connection', (socket) => {
   let username = null;
   let currentRoom = null;
   let longPressTimer = null;
+  let msgCount = 0;
+  let msgResetAt = Date.now() + 5000;
 
   // ── Join ──────────────────────────────────────────────────────────────
   socket.on('join', ({ name, room, nickname, password } = {}) => {
@@ -185,7 +191,8 @@ io.on('connection', (socket) => {
       bucketList: roomState.bucketList || [],
       calendar: roomState.calendar || [],
       glossary: roomState.glossary || [],
-      bonsai: roomState.bonsai || { growth: 0, lastWatered: null }
+      bonsai: roomState.bonsai || { growth: 0, lastWatered: null },
+      gameScores: roomState.gameScores || { wins: {}, losses: {} }
     });
 
     io.to(currentRoom).emit('system', randomJoinMessage(profile.nickname || username));
@@ -195,6 +202,11 @@ io.on('connection', (socket) => {
   // ── Message ─────────────────────────────────────────────────────────
   socket.on('message', (payload) => {
     if (!username || !currentRoom) return;
+
+    const _now = Date.now();
+    if (_now > msgResetAt) { msgCount = 0; msgResetAt = _now + 5000; }
+    msgCount++;
+    if (msgCount > 10) { socket.emit('rate-limited', { message: 'Slow down! Take a breath.' }); return; }
 
     let msgData;
     if (typeof payload === 'string') {
@@ -440,6 +452,12 @@ io.on('connection', (socket) => {
     if (currentRoom) socket.to(currentRoom).emit('game-move', data);
   });
 
+  socket.on('game-result', ({ winner } = {}) => {
+    if (!currentRoom) return;
+    const scores = store.updateGameScore(currentRoom, winner || null);
+    io.to(currentRoom).emit('score-update', scores);
+  });
+
   // ── Screen Nudge / Buzz ──
   socket.on('nudge', () => {
     if (currentRoom) socket.to(currentRoom).emit('nudge', { from: username });
@@ -516,6 +534,8 @@ io.on('connection', (socket) => {
 
 // ── Start server ───────────────────────────────────────────────────────────
 if (require.main === module) {
+  store.cleanExpiredRooms();
+  setInterval(store.cleanExpiredRooms, 24 * 60 * 60 * 1000);
   const PORT = process.env.PORT || 3000;
   server.listen(PORT, () => console.log(`Bestie Chat running on port ${PORT}`));
 }

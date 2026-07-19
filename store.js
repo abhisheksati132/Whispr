@@ -57,7 +57,8 @@ function defaultRoom() {
     bucketList: [],
     calendar: [],
     glossary: [],
-    bonsai: { growth: 0, lastWatered: null }
+    bonsai: { growth: 0, lastWatered: null },
+    gameScores: { wins: {}, losses: {} }
   };
 }
 
@@ -85,6 +86,7 @@ function loadData() {
         if (!room.calendar) room.calendar = [];
         if (!room.glossary) room.glossary = [];
         if (!room.bonsai) room.bonsai = { growth: 0, lastWatered: null };
+        if (!room.gameScores) room.gameScores = { wins: {}, losses: {} };
       }
     }
     return { ...defaultData(), ...parsed };
@@ -97,7 +99,9 @@ function loadData() {
 
 function saveData(data) {
   ensureDirs();
-  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+  const tmp = DATA_FILE + '.tmp';
+  fs.writeFileSync(tmp, JSON.stringify(data, null, 2));
+  fs.renameSync(tmp, DATA_FILE);
 }
 
 let data = loadData();
@@ -320,6 +324,73 @@ function resetForTests() {
   persist();
 }
 
+const DAILY_QUESTIONS = [
+  'What made you smile today? smile',
+  'If you could teleport anywhere right now, where would you go?',
+  'What song has been stuck in your head?',
+  "What's something you're looking forward to this week?",
+  'Share a random fun fact you learned recently',
+  "What's your comfort food right now?",
+  "What's the last thing that made you laugh out loud?",
+  'If today were a movie, what genre would it be?',
+  "What's one small thing that made today better?",
+  'What are you grateful for right now?',
+  "What's your dream weekend look like?",
+  "What habit are you trying to build?",
+  "What's a skill you wish you had?",
+  "What's the best thing you ate this week?",
+  'What is your current vibe in one emoji?',
+  'What movie or show should we watch together?',
+  "What's something you've been overthinking?",
+  "What's a place that feels like home to you?",
+  "Tell me something you've never told anyone",
+  "What's the nicest thing someone did for you recently?",
+  'What are you procrastinating on right now?',
+  "What's your go-to way to cheer yourself up?",
+  "What's one thing you want to accomplish this month?",
+  "What's a memory that always makes you happy?",
+  'If you could have any superpower today, what would you pick?',
+  "What's your current obsession?",
+  "What's something beautiful you noticed today?",
+  "What's a compliment you'll never forget?",
+  'What would your perfect morning look like?',
+  "What's something you want to learn this year?"
+];
+
+function getDailyQuestion() {
+  const day = new Date().toISOString().slice(0, 10);
+  const idx = hashName(day) % DAILY_QUESTIONS.length;
+  return DAILY_QUESTIONS[idx];
+}
+
+function cleanExpiredRooms() {
+  const EXPIRY_DAYS = parseInt(process.env.ROOM_EXPIRY_DAYS || '7', 10);
+  const cutoff = Date.now() - EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+  let cleaned = 0;
+  for (const [roomName, room] of Object.entries(data.rooms)) {
+    const lastMsgTime = room.messages.length > 0
+      ? room.messages[room.messages.length - 1].time
+      : 0;
+    if (lastMsgTime > 0 && lastMsgTime < cutoff) {
+      delete data.rooms[roomName];
+      cleaned++;
+    }
+  }
+  if (cleaned > 0) {
+    persist();
+    console.log('Cleaned ' + cleaned + ' expired room(s)');
+  }
+}
+
+function updateGameScore(room, winner) {
+  const state = getRoom(room);
+  if (!state.gameScores) state.gameScores = { wins: {}, losses: {} };
+  if (!winner) return state.gameScores;
+  state.gameScores.wins[winner] = (state.gameScores.wins[winner] || 0) + 1;
+  persist();
+  return state.gameScores;
+}
+
 module.exports = {
   getProfile,
   updateProfile,
@@ -342,6 +413,9 @@ module.exports = {
   setFeeling,
   clearFeeling,
   getFeelings,
+  getDailyQuestion,
+  cleanExpiredRooms,
+  updateGameScore,
   MOTD_PROMPTS,
   MILESTONES,
   FEELINGS

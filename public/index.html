@@ -8,13 +8,13 @@
 <link rel="manifest" href="/manifest.json" />
 <meta name="theme-color" content="#0d0d1a" />
 <link rel="apple-touch-icon" href="/icon-192.png" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Bestie Chat" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="/styles.css?v=2" />
+<link rel="stylesheet" href="/styles.css?v=4" />
 </head>
 <body>
 
@@ -31,6 +31,19 @@
 <div id="pulseOverlay"></div>
 <!-- Floating context menu -->
 <div id="contextMenu"></div>
+
+<!-- Toast notifications -->
+<div id="toastContainer"></div>
+
+<!-- Emoji reaction picker -->
+<div id="reactionPicker"></div>
+
+<!-- Error boundary overlay -->
+<div id="errorBoundary">
+  <h2>💔 Oops!</h2>
+  <p>Something went wrong. Try refreshing the page.</p>
+  <button onclick="location.reload()">Refresh</button>
+</div>
 
 <!-- ═══════════════════ LOGIN ═══════════════════ -->
 <div id="login">
@@ -90,6 +103,7 @@
         <button id="soundBtn" class="icon-btn active" title="Sound" onclick="BestieChat.toggleSound()">
           <svg id="soundOnIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
         </button>
+        <button id="themeToggle" title="Toggle Light/Dark" onclick="BestieChat.toggleTheme()">🌙</button>
         <button class="icon-btn" title="Feelings" onclick="BestieChat.toggleFeelings()">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
         </button>
@@ -105,6 +119,13 @@
 
   <!-- MOTD Banner -->
   <div id="motdBanner"></div>
+
+  <!-- Daily Question Card -->
+  <div id="dailyQuestion">
+    <div class="dq-label">✨ Daily Question</div>
+    <div id="dailyQuestionText"></div>
+    <button class="dq-dismiss" onclick="document.getElementById('dailyQuestion').style.display='none'" title="Dismiss">✕</button>
+  </div>
 
   <!-- Feelings Panel -->
   <div id="feelingsPanel">
@@ -201,6 +222,10 @@
         <div id="heatmapContainer"></div>
         <div class="stats-counter" id="statsTotalMsgs">Total messages sent: 0</div>
       </div>
+      <div id="gameScoreboard">
+        <h4>🎮 Game Scores</h4>
+        <div id="scoreboardRows"></div>
+      </div>
     </div>
 
     <!-- Tab 4: Preferences, Accents, Sound Packs, E2EE -->
@@ -242,6 +267,7 @@
           <button id="e2eToggleBtn" onclick="BestieChat.toggleE2EE()">Enable</button>
         </div>
         <div class="e2e-hint">Enter the same secret key on both devices to lock your chats securely.</div>
+        <div id="e2eeFingerprint"></div>
       </div>
       <div class="extra-block">
         <label>Nickname 🏷️</label>
@@ -549,7 +575,7 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="/app.js?v=3"></script>
+<script src="/app.js?v=4"></script>
 <script>
   // PWA install prompt
   if ('serviceWorker' in navigator) {

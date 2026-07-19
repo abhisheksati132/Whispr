@@ -1677,3 +1677,94 @@ body.theme-light #extrasPanel {
   #sendBtn span { display: none; }
   .extras-tabs { flex-wrap: wrap; }
 }
+
+/* ==============================================
+   PHASE 2 - ANIMATIONS, THEME, MOBILE POLISH
+   ============================================== */
+
+@keyframes msgSlideUp {
+  from { opacity: 0; transform: translateY(18px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)     scale(1); }
+}
+.msg-new { animation: msgSlideUp 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+.typing-bubble {
+  display: flex; align-items: center; gap: 4px;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 18px 18px 18px 4px;
+  width: fit-content; max-width: 80px;
+  margin: 4px 0 4px 48px;
+}
+.typing-bubble .dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #c084fc;
+  animation: typingBounce 1.2s infinite ease-in-out;
+}
+.typing-bubble .dot:nth-child(1) { animation-delay: 0s; }
+.typing-bubble .dot:nth-child(2) { animation-delay: 0.18s; }
+.typing-bubble .dot:nth-child(3) { animation-delay: 0.36s; }
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+  30%            { transform: translateY(-6px); opacity: 1; }
+}
+
+.theme-light {
+  --bg-primary: #f0f4ff;
+  --text-primary: #1a1a2e;
+}
+.theme-light #chat, .theme-light #login, .theme-light .input-bar { background: #f0f4ff; color: #1a1a2e; }
+.theme-light .msg-in .bubble { color: #1a1a2e; background: rgba(255,255,255,0.88); border: 1px solid rgba(180,180,220,0.35); }
+.theme-light header { background: rgba(255,255,255,0.82); border-bottom: 1px solid rgba(180,180,220,0.3); backdrop-filter: blur(20px); }
+.theme-light .backdrop-blob { opacity: 0.2; }
+
+#themeToggle { background: none; border: none; cursor: pointer; font-size: 1.2rem; padding: 6px; border-radius: 50%; transition: background 0.2s, transform 0.2s; line-height: 1; color: inherit; }
+#themeToggle:hover { background: rgba(255,255,255,0.12); transform: rotate(20deg) scale(1.15); }
+
+#dailyQuestion {
+  display: none; margin: 0 12px 8px; padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(192,132,252,0.15), rgba(129,140,248,0.15));
+  border: 1px solid rgba(192,132,252,0.3); border-radius: 14px; font-size: 0.82rem; position: relative;
+  animation: msgSlideUp 0.4s ease both;
+}
+.dq-label { font-weight: 700; font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.6; margin-bottom: 3px; }
+.dq-dismiss { position: absolute; top: 6px; right: 10px; background: none; border: none; cursor: pointer; opacity: 0.5; font-size: 1rem; color: inherit; line-height: 1; padding: 0; }
+.dq-dismiss:hover { opacity: 1; }
+
+mark.search-highlight { background: #fde68a; color: #1a1a2e; border-radius: 3px; padding: 0 2px; }
+
+#gameScoreboard { background: rgba(255,255,255,0.06); border-radius: 14px; padding: 12px; margin-top: 12px; border: 1px solid rgba(255,255,255,0.1); }
+#gameScoreboard h4 { margin: 0 0 10px; font-size: 0.85rem; opacity: 0.7; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+.score-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 0.88rem; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.score-row:last-child { border-bottom: none; }
+.score-wins { color: #4ade80; font-weight: 700; }
+
+#e2eeFingerprint { font-family: monospace; font-size: 0.78rem; letter-spacing: 0.08em; padding: 6px 10px; background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.25); border-radius: 8px; color: #4ade80; margin-top: 8px; display: none; }
+#e2eeFingerprint.visible { display: block; }
+
+#reactionPicker { display: none; position: fixed; z-index: 2000; background: rgba(20,10,50,0.92); border: 1px solid rgba(255,255,255,0.15); border-radius: 40px; padding: 8px 12px; gap: 6px; flex-wrap: wrap; box-shadow: 0 8px 32px rgba(0,0,0,0.4); backdrop-filter: blur(20px); }
+#reactionPicker.open { display: flex; }
+.react-btn { background: none; border: none; cursor: pointer; font-size: 1.4rem; padding: 4px 5px; border-radius: 50%; transition: transform 0.15s, background 0.15s; line-height: 1; }
+.react-btn:hover { transform: scale(1.3); background: rgba(255,255,255,0.1); }
+
+#toastContainer { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); z-index: 3000; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.toast { background: rgba(30,20,60,0.9); border: 1px solid rgba(255,255,255,0.15); border-radius: 24px; padding: 9px 20px; font-size: 0.85rem; color: #f0e6ff; backdrop-filter: blur(12px); animation: toastIn 0.3s ease both; white-space: nowrap; }
+@keyframes toastIn { from { opacity: 0; transform: translateY(12px) scale(0.93); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateY(-8px) scale(0.93); } }
+.toast.hiding { animation: toastOut 0.25s ease forwards; }
+
+.msg-wrap { touch-action: pan-y; }
+.msg-wrap.swiping { transition: none; }
+
+@keyframes bonsaiPop { 0% { transform: scale(1); } 30% { transform: scale(1.35) rotate(-3deg); } 60% { transform: scale(1.15) rotate(3deg); } 100% { transform: scale(1); } }
+.bonsai-levelup { animation: bonsaiPop 0.6s cubic-bezier(0.34,1.56,0.64,1) both; }
+
+.input-bar { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+#messages { scroll-behavior: smooth; }
+.receipt-time { font-size: 0.68rem; opacity: 0.55; margin-left: 4px; }
+
+#errorBoundary { display: none; position: fixed; inset: 0; background: rgba(10,5,30,0.95); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; gap: 16px; color: #f0e6ff; text-align: center; padding: 32px; }
+#errorBoundary.visible { display: flex; }
+#errorBoundary h2 { font-size: 2rem; margin: 0; }
+#errorBoundary p { opacity: 0.7; max-width: 320px; line-height: 1.5; }
+#errorBoundary button { padding: 12px 28px; background: linear-gradient(135deg, #c084fc, #818cf8); border: none; border-radius: 24px; color: #fff; font-weight: 700; font-size: 1rem; cursor: pointer; }
