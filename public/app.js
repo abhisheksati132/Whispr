@@ -67,14 +67,11 @@
     loginError:       document.getElementById('loginError'),
     msgInput:         document.getElementById('msgInput'),
     sendBtn:          document.getElementById('sendBtn'),
-    presence:         document.getElementById('presence'),
-    statusDot:        document.getElementById('statusDot'),
-    statusText:       document.getElementById('statusText'),
-    roomLabel:        document.getElementById('roomLabel'),
-    typing:           document.getElementById('typing'),
+    bestieAvatar:     document.getElementById('bestieAvatar'),
+    bestieName:       document.getElementById('bestieName'),
+    bestieStatus:     document.getElementById('bestieStatus'),
     motdBanner:       document.getElementById('motdBanner'),
     streakBadge:      document.getElementById('streakBadge'),
-    lastSeenEl:       document.getElementById('lastSeenEl'),
     unreadBadge:      document.getElementById('unreadBadge'),
     extrasPanel:      document.getElementById('extrasPanel'),
     moodInput:        document.getElementById('moodInput'),
@@ -346,7 +343,6 @@
     const tickHtml = mine ? `<div class="read-tick delivered" id="tick-${msg.id}">✓</div>` : '';
 
     wrap.innerHTML = `
-      ${!mine ? `<div class="msg-avatar">${profile.avatar || '✨'}</div>` : ''}
       ${body}
       <div class="react-bar">${renderReactionBar(msg.id)}</div>
       <div class="reactions" id="reactions-${msg.id}">${renderReactions(msg)}</div>
@@ -549,6 +545,52 @@
   }
 
   // ═══════════════════ UI UPDATES ═══════════════════
+  let lastSeenData = {};
+  let currentOnlineUsers = [];
+
+  function updateBestieHeaderState(users, lastSeen) {
+    if (users) currentOnlineUsers = users;
+    if (lastSeen) lastSeenData = lastSeen;
+
+    const others = currentOnlineUsers.filter((u) => u !== myName);
+    const avatarEl = els.bestieAvatar;
+    const nameEl   = els.bestieName;
+    const statusEl = els.bestieStatus;
+
+    if (!avatarEl || !nameEl || !statusEl) return;
+
+    if (others.length) {
+      // Bestie is online!
+      const bestie = others[0];
+      const p = getProfile(bestie);
+      avatarEl.textContent = p.avatar || '🐱';
+      avatarEl.classList.add('online');
+      nameEl.textContent = p.nickname || bestie;
+      statusEl.textContent = 'Online';
+      statusEl.className = 'bestie-status online';
+    } else {
+      // Bestie is offline
+      avatarEl.classList.remove('online');
+      const allOthers = Object.keys(lastSeenData || {}).filter((u) => u !== myName);
+      if (allOthers.length) {
+        const sorted = allOthers.sort((a, b) => (lastSeenData[b] || 0) - (lastSeenData[a] || 0));
+        const lastBestie = sorted[0];
+        const p = getProfile(lastBestie);
+        avatarEl.textContent = p.avatar || '🐱';
+        nameEl.textContent = p.nickname || lastBestie;
+        const ts = lastSeenData[lastBestie];
+        statusEl.textContent = ts ? formatLastSeen(ts) : 'Offline';
+        statusEl.className = 'bestie-status';
+      } else {
+        // No one else has joined yet
+        avatarEl.textContent = '✨';
+        nameEl.textContent = 'Bestie';
+        statusEl.textContent = 'Offline';
+        statusEl.className = 'bestie-status';
+      }
+    }
+  }
+
   function updateStreak(streak) {
     if (!streak) return;
     const days = streak.days || 0;
@@ -556,10 +598,8 @@
   }
 
   function updateLastSeen(lastSeen) {
-    const others = Object.entries(lastSeen || {}).filter(([name]) => name !== myName);
-    if (!others.length) { els.lastSeenEl.textContent = ''; return; }
-    const [name, ts] = others.sort((a, b) => b[1] - a[1])[0];
-    els.lastSeenEl.textContent = `${getDisplayName(name)}: ${formatLastSeen(ts)}`;
+    if (lastSeen) lastSeenData = lastSeen;
+    updateBestieHeaderState();
   }
 
   function updateUnreadBadge() {
@@ -646,7 +686,7 @@
   // ═══════════════════ JOIN / LEAVE ═══════════════════
   function joinChat() {
     const name = els.nameInput.value.trim();
-    const room = els.roomSelect.value.trim();
+    const room = 'our-private-space';
     const nickname = els.nicknameInput.value.trim();
     if (!name) { els.loginError.textContent = 'Enter your name first 🥺'; return; }
     els.loginError.textContent = '';
@@ -666,7 +706,6 @@
     clearInterval(countdownInterval);
     if (socket) { socket.disconnect(); socket.connect(); }
     els.messages.innerHTML       = '';
-    els.typing.innerHTML         = '';
     els.chat.style.display       = 'none';
     els.login.style.display      = 'block';
     els.loginError.textContent   = '';
@@ -1206,7 +1245,6 @@
       allImageMessages = [];
       els.login.style.display = 'none';
       els.chat.style.display  = 'flex';
-      els.roomLabel.textContent = ROOM_LABELS[myRoom] || myRoom;
       els.motdBanner.textContent = `✨ ${payload.motd}`;
       els.moodInput.value  = payload.mood  || '';
       els.jokesInput.value = (payload.jokes || []).join('\n');
@@ -1216,7 +1254,7 @@
         updateCountdown(payload.countdown);
       }
       updateStreak(payload.streak);
-      updateLastSeen(payload.lastSeen);
+      updateBestieHeaderState(null, payload.lastSeen);
 
       feelingsPalette = payload.feelingsPalette || {};
       feelings        = payload.feelings        || {};
@@ -1314,23 +1352,22 @@
 
     socket.on('presence', ({ users, profiles: profs, lastSeen }) => {
       (profs || []).forEach((p) => { profiles[p.name] = p; });
-      const others = users.filter((u) => u !== myName);
-      if (others.length) {
-        els.presence.innerHTML = others.map((u) => {
-          const p = profiles[u] || {};
-          return `<span class="presence-user"><span class="presence-avatar">${p.avatar || '✨'}</span>${escapeHtml(getDisplayName(u))}</span>`;
-        }).join('<span style="margin:0 4px;opacity:0.4">·</span>');
-      } else {
-        els.presence.textContent = 'Waiting for your bestie…';
-      }
-      updateLastSeen(lastSeen);
+      updateBestieHeaderState(users, lastSeen);
     });
 
     socket.on('typing', (name) => {
       if (name === getDisplayName(myName) || name === myName) return;
-      els.typing.innerHTML = `<span class="typing-dots"><span></span><span></span><span></span></span> ${escapeHtml(name)} is typing…`;
+      
+      const statusEl = els.bestieStatus;
+      if (statusEl) {
+        statusEl.textContent = 'typing…';
+        statusEl.className = 'bestie-status typing';
+      }
+      
       clearTimeout(typingTimeout);
-      typingTimeout = setTimeout(() => { els.typing.innerHTML = ''; }, 2000);
+      typingTimeout = setTimeout(() => {
+        updateBestieHeaderState();
+      }, 2000);
     });
 
     socket.on('feelings-update', (updated) => {
@@ -1370,10 +1407,8 @@
     buildEmojiPicker();
 
     const savedName = localStorage.getItem('bestieChatName') || '';
-    const savedRoom = localStorage.getItem('bestieChatRoom') || 'just-us';
     const savedNick = localStorage.getItem('bestieChatNickname') || '';
     if (savedName) els.nameInput.value = savedName;
-    if (savedRoom) els.roomSelect.value = savedRoom;
     if (savedNick) els.nicknameInput.value = savedNick;
 
     els.soundBtn.classList.toggle('active', soundEnabled());

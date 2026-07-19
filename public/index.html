@@ -39,13 +39,7 @@
   <div class="input-group">
     <input id="nicknameInput" type="text" placeholder="Nickname (optional)" maxlength="24" autocomplete="off" />
   </div>
-  <div class="input-group">
-    <select id="roomSelect">
-      <option value="just-us">💜 Just Us</option>
-      <option value="daily">☀️ Daily Check-In</option>
-      <option value="cute">💕 Sweet Notes</option>
-    </select>
-  </div>
+  <!-- Room Select Removed for direct WhatsApp-style 1-on-1 chat -->
   <div id="passwordField" class="input-group" style="display:none">
     <input id="passwordInput" type="password" placeholder="🔒 Room password" autocomplete="off" />
   </div>
@@ -57,25 +51,24 @@
 <!-- ═══════════════════ CHAT ═══════════════════ -->
 <div id="chat">
 
-  <!-- Header -->
   <header>
     <div class="header-left">
-      <div class="header-title-row">
-        <h2>Bestie Chat</h2>
-        <span id="unreadBadge" style="display:none">0</span>
+      <div class="header-profile">
+        <div id="bestieAvatar" class="bestie-avatar">✨</div>
+        <div class="header-user-info">
+          <div class="header-title-row">
+            <h2 id="bestieName">Bestie</h2>
+            <span id="unreadBadge" style="display:none">0</span>
+          </div>
+          <div id="bestieStatus" class="bestie-status">Connecting…</div>
+        </div>
       </div>
-      <div id="roomLabel"></div>
+    </div>
+    <div class="header-right">
       <div class="header-meta">
         <span id="streakBadge">🔥 Start a streak!</span>
         <span id="theirFeeling"></span>
       </div>
-      <div id="lastSeenEl"></div>
-    </div>
-    <div class="header-right">
-      <div id="connectionStatus">
-        <span id="statusDot"></span><span id="statusText">Connecting…</span>
-      </div>
-      <div id="presence"></div>
       <div class="header-btns">
         <button id="searchToggleBtn" class="icon-btn" title="Search" onclick="BestieChat.toggleSearch()">🔍</button>
         <button id="galleryBtn" class="icon-btn" title="Photo Gallery" onclick="BestieChat.openGallery()">🖼️</button>
@@ -101,8 +94,8 @@
   <!-- Extras Panel -->
   <div id="extrasPanel">
     <div class="extra-block">
-      <label>Room Vibe ✨</label>
-      <input id="moodInput" type="text" placeholder="Set the mood…" maxlength="100" />
+      <label>Our Vibe ✨</label>
+      <input id="moodInput" type="text" placeholder="Set our vibe…" maxlength="100" />
     </div>
     <div class="extra-block">
       <label>Our Notes 📝</label>
@@ -137,8 +130,7 @@
   <!-- Messages -->
   <div id="messages"></div>
 
-  <!-- Typing indicator -->
-  <div id="typing"></div>
+  <!-- Typing state relocated to header status -->
 
   <!-- Reply bar -->
   <div id="replyBar" style="display:none">
