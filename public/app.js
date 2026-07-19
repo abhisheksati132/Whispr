@@ -1601,8 +1601,6 @@
       }
     });
 
-    });
-
     socket.on('call-hangup', () => {
       renderSystem('Call ended');
       endCall(true);
@@ -1913,8 +1911,6 @@
     const input = document.getElementById('photoInput');
     if (input) input.click();
     if (els.attachMenu) els.attachMenu.style.display = 'none';
-  }
-
   }
 
   // ═══════════════════ ULTIMATE FEATURES SET ═══════════════════
