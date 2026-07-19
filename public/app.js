@@ -1166,7 +1166,7 @@
 
   // ═══════════════════ ROOM META ═══════════════════
   function saveMood()     { socket.emit('update-mood', els.moodInput.value); }
-  function saveJokes()    { socket.emit('update-jokes', els.jokesInput.value.split('\n').filter(Boolean)); }
+  function saveJokes()    { if (els.jokesInput) socket.emit('update-jokes', els.jokesInput.value.split('\n').filter(Boolean)); }
   function saveCountdown(){ socket.emit('update-countdown', { label: els.countdownLabel.value, date: els.countdownDate.value || null }); updateCountdown({ label: els.countdownLabel.value, date: els.countdownDate.value }); }
   function saveNickname() {
     const nick = (els.nicknameInputChat ? els.nicknameInputChat.value : '').trim();
@@ -1393,7 +1393,7 @@
       els.chat.style.display  = 'flex';
       els.motdBanner.textContent = `✨ ${payload.motd}`;
       els.moodInput.value  = payload.mood  || '';
-      els.jokesInput.value = (payload.jokes || []).join('\n');
+      if (els.jokesInput) els.jokesInput.value = (payload.jokes || []).join('\n');
       if (payload.countdown) {
         els.countdownLabel.value = payload.countdown.label || '';
         els.countdownDate.value  = payload.countdown.date ? payload.countdown.date.slice(0, 16) : '';
@@ -1546,7 +1546,7 @@
     });
 
     socket.on('mood-update',      (mood)  => { els.moodInput.value = mood; });
-    socket.on('jokes-update',     (jokes) => { els.jokesInput.value = (jokes || []).join('\n'); });
+    socket.on('jokes-update',     (jokes) => { if (els.jokesInput) els.jokesInput.value = (jokes || []).join('\n'); });
     socket.on('countdown-update', (cd)    => {
       els.countdownLabel.value = cd.label || '';
       els.countdownDate.value  = cd.date ? cd.date.slice(0, 16) : '';
@@ -2792,34 +2792,40 @@
     }
 
     // Input events
-    els.nameInput.addEventListener('keydown',     (e) => { if (e.key === 'Enter') joinChat(); });
-    els.passwordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') joinChat(); });
-    els.msgInput.addEventListener('keydown',      (e) => { if (e.key === 'Enter' && !e.shiftKey) sendMessage(); });
-    els.msgInput.addEventListener('input', () => {
-      if (joined && socket) socket.emit('typing');
-      const len = els.msgInput.value.length;
-      if (els.charCount) els.charCount.textContent = len > 1800 ? `${len}/2000` : '';
-      toggleSendMicIcons();
-    });
+    if (els.nameInput)     els.nameInput.addEventListener('keydown',     (e) => { if (e.key === 'Enter') joinChat(); });
+    if (els.passwordInput) els.passwordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') joinChat(); });
+    if (els.msgInput) {
+      els.msgInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) sendMessage(); });
+      els.msgInput.addEventListener('input', () => {
+        if (joined && socket) socket.emit('typing');
+        const len = els.msgInput.value.length;
+        if (els.charCount) els.charCount.textContent = len > 1800 ? `${len}/2000` : '';
+        toggleSendMicIcons();
+      });
+    }
 
     // Search
-    els.searchInput.addEventListener('input', performSearch);
-    els.searchInput.addEventListener('keydown', (e) => { if (e.key === 'Escape') clearSearch(); });
+    if (els.searchInput) {
+      els.searchInput.addEventListener('input', performSearch);
+      els.searchInput.addEventListener('keydown', (e) => { if (e.key === 'Escape') clearSearch(); });
+    }
 
     // Room meta
-    els.moodInput.addEventListener('change', saveMood);
-    els.moodInput.addEventListener('focus',  () => {
-      if (!els.moodInput.value) {
-        els.moodInput.placeholder = `Try: ${VIBE_SUGGESTIONS[Math.floor(Math.random() * VIBE_SUGGESTIONS.length)]}`;
-      }
-    });
-    els.jokesInput.addEventListener('blur',  saveJokes);
-    els.countdownLabel.addEventListener('change', saveCountdown);
-    els.countdownDate.addEventListener('change',  saveCountdown);
+    if (els.moodInput) {
+      els.moodInput.addEventListener('change', saveMood);
+      els.moodInput.addEventListener('focus',  () => {
+        if (!els.moodInput.value) {
+          els.moodInput.placeholder = `Try: ${VIBE_SUGGESTIONS[Math.floor(Math.random() * VIBE_SUGGESTIONS.length)]}`;
+        }
+      });
+    }
+    if (els.jokesInput)       els.jokesInput.addEventListener('blur',   saveJokes);
+    if (els.countdownLabel)   els.countdownLabel.addEventListener('change', saveCountdown);
+    if (els.countdownDate)    els.countdownDate.addEventListener('change',  saveCountdown);
     if (els.nicknameInputChat) els.nicknameInputChat.addEventListener('input', saveNickname);
 
     // Photo input
-    els.photoInput.addEventListener('change', (e) => {
+    if (els.photoInput) els.photoInput.addEventListener('change', (e) => {
       if (e.target.files[0]) sendPhoto(e.target.files[0]);
       e.target.value = '';
     });
