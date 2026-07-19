@@ -36,6 +36,58 @@ app.get('/api/config', (_req, res) => {
   });
 });
 
+// ── OpenGraph Link Scraper ──────────────────────────────────────────────────
+app.get('/api/link-preview', async (req, res) => {
+  const targetUrl = req.query.url;
+  if (!targetUrl) return res.status(400).json({ error: 'Missing url' });
+  try {
+    const parsedUrl = new URL(targetUrl);
+    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+      return res.status(400).json({ error: 'Invalid protocol' });
+    }
+    
+    // Fetch page text with a 3-second abort signal
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3000);
+    const response = await fetch(targetUrl, {
+      signal: controller.signal,
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; BestieChatLinkPreview/1.0)' }
+    });
+    clearTimeout(timer);
+    
+    if (!response.ok) return res.status(response.status).json({ error: 'Failed to fetch link' });
+    const html = await response.text();
+    
+    // Simple regex matching
+    const getMeta = (propName) => {
+      const regex = new RegExp(`<meta[^>]+(?:property|name)=["']${propName}["'][^>]+content=["']([^"']+)["']`, 'i');
+      const match = html.match(regex);
+      if (match) return match[1];
+      const altRegex = new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']${propName}["']`, 'i');
+      const altMatch = html.match(altRegex);
+      return altMatch ? altMatch[1] : '';
+    };
+    
+    let title = getMeta('og:title') || getMeta('twitter:title');
+    if (!title) {
+      const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+      title = titleMatch ? titleMatch[1].trim() : '';
+    }
+    
+    const description = getMeta('og:description') || getMeta('twitter:description') || getMeta('description');
+    const image = getMeta('og:image') || getMeta('twitter:image');
+    
+    res.json({
+      title: title || parsedUrl.hostname,
+      description: description || '',
+      image: image || '',
+      url: targetUrl
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── File Upload ────────────────────────────────────────────────────────────
 app.post('/api/upload', (req, res) => {
   try {
@@ -128,7 +180,12 @@ io.on('connection', (socket) => {
       feelingsPalette: store.FEELINGS,
       feelings: store.getFeelings(),
       pinnedMsg,
-      readBy: roomState.readBy || {}
+      readBy: roomState.readBy || {},
+      diary: roomState.diary || [],
+      bucketList: roomState.bucketList || [],
+      calendar: roomState.calendar || [],
+      glossary: roomState.glossary || [],
+      bonsai: roomState.bonsai || { growth: 0, lastWatered: null }
     });
 
     io.to(currentRoom).emit('system', randomJoinMessage(profile.nickname || username));
@@ -363,6 +420,87 @@ io.on('connection', (socket) => {
 
   socket.on('call-hangup', () => {
     if (currentRoom) socket.to(currentRoom).emit('call-hangup');
+  });
+
+  // ── Co-Draw Shared Whiteboard ──
+  socket.on('draw-stroke', (data) => {
+    if (currentRoom) socket.to(currentRoom).emit('draw-stroke', data);
+  });
+  socket.on('draw-clear', () => {
+    if (currentRoom) socket.to(currentRoom).emit('draw-clear');
+  });
+
+  // ── Watch Together synced player ──
+  socket.on('watch-sync', (data) => {
+    if (currentRoom) socket.to(currentRoom).emit('watch-sync', data);
+  });
+
+  // ── Tic-Tac-Toe multiplayer game ──
+  socket.on('game-move', (data) => {
+    if (currentRoom) socket.to(currentRoom).emit('game-move', data);
+  });
+
+  // ── Screen Nudge / Buzz ──
+  socket.on('nudge', () => {
+    if (currentRoom) socket.to(currentRoom).emit('nudge', { from: username });
+  });
+
+  // ── Haptic Touch sync ──
+  socket.on('haptic-touch', (data) => {
+    if (currentRoom) socket.to(currentRoom).emit('haptic-touch', data);
+  });
+
+  // ── Shared Notebook State Syncs ──
+  socket.on('update-diary', (diary) => {
+    if (!currentRoom) return;
+    const safe = (Array.isArray(diary) ? diary : []).map(d => ({
+      date: String(d.date || ''),
+      text: String(d.text || '').slice(0, 500),
+      image: String(d.image || '')
+    })).slice(0, 100);
+    store.updateRoomMeta(currentRoom, { diary: safe });
+    io.to(currentRoom).emit('diary-update', safe);
+  });
+
+  socket.on('update-bucketlist', (list) => {
+    if (!currentRoom) return;
+    const safe = (Array.isArray(list) ? list : []).map(b => ({
+      text: String(b.text || '').slice(0, 100),
+      done: Boolean(b.done),
+      dateCompleted: b.dateCompleted || null
+    })).slice(0, 100);
+    store.updateRoomMeta(currentRoom, { bucketList: safe });
+    io.to(currentRoom).emit('bucketlist-update', safe);
+  });
+
+  socket.on('update-calendar', (cal) => {
+    if (!currentRoom) return;
+    const safe = (Array.isArray(cal) ? cal : []).map(c => ({
+      label: String(c.label || '').slice(0, 100),
+      date: String(c.date || '')
+    })).slice(0, 50);
+    store.updateRoomMeta(currentRoom, { calendar: safe });
+    io.to(currentRoom).emit('calendar-update', safe);
+  });
+
+  socket.on('update-glossary', (words) => {
+    if (!currentRoom) return;
+    const safe = (Array.isArray(words) ? words : []).map(w => ({
+      word: String(w.word || '').toLowerCase().trim().slice(0, 30),
+      meaning: String(w.meaning || '').slice(0, 200)
+    })).slice(0, 50);
+    store.updateRoomMeta(currentRoom, { glossary: safe });
+    io.to(currentRoom).emit('glossary-update', safe);
+  });
+
+  socket.on('update-bonsai', (bonsaiState) => {
+    if (!currentRoom) return;
+    const current = store.getRoom(currentRoom).bonsai || { growth: 0, lastWatered: null };
+    const growth = typeof bonsaiState.growth === 'number' ? bonsaiState.growth : current.growth;
+    const lastWatered = bonsaiState.lastWatered || current.lastWatered;
+    const updated = { growth, lastWatered };
+    store.updateRoomMeta(currentRoom, { bonsai: updated });
+    io.to(currentRoom).emit('bonsai-update', updated);
   });
 
   // ── Disconnect ──────────────────────────────────────────────────────

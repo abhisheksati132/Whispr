@@ -52,7 +52,12 @@ function defaultRoom() {
     messageCount: 0,
     milestonesHit: [],
     pinnedMessageId: null,
-    readBy: {}
+    readBy: {},
+    diary: [],
+    bucketList: [],
+    calendar: [],
+    glossary: [],
+    bonsai: { growth: 0, lastWatered: null }
   };
 }
 
@@ -75,6 +80,11 @@ function loadData() {
       for (const room of Object.values(parsed.rooms)) {
         if (room.pinnedMessageId === undefined) room.pinnedMessageId = null;
         if (!room.readBy) room.readBy = {};
+        if (!room.diary) room.diary = [];
+        if (!room.bucketList) room.bucketList = [];
+        if (!room.calendar) room.calendar = [];
+        if (!room.glossary) room.glossary = [];
+        if (!room.bonsai) room.bonsai = { growth: 0, lastWatered: null };
       }
     }
     return { ...defaultData(), ...parsed };

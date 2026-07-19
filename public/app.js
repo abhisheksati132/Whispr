@@ -118,6 +118,13 @@
     micIcon:          document.getElementById('micIcon'),
   };
 
+  // State caches
+  let allMessagesCached = [];
+  let sharedDiary = [];
+  let sharedBucketList = [];
+  let sharedGlossary = [];
+  let sharedBonsai = { growth: 0, lastWatered: null };
+
   // WebRTC State variables
   let webrtcConn = null;
   let localStreamStream = null;
@@ -134,13 +141,28 @@
   };
 
   // ═══════════════════ SOUND ═══════════════════
-  const sounds = {
-    send:      () => playTone(520, 0.08, 0.05),
-    receive:   () => playTone(660, 0.10, 0.07),
-    hug:       () => { playTone(440, 0.06, 0.04); setTimeout(() => playTone(554, 0.08, 0.05), 80); },
-    milestone: () => { playTone(523, 0.10, 0.06); setTimeout(() => playTone(659, 0.12, 0.07), 100); }
+  let currentSoundPack = localStorage.getItem('bestieChatSoundPack') || 'cozy';
+  const soundPacks = {
+    cozy: {
+      send:      () => playTone(520, 0.08, 0.05),
+      receive:   () => playTone(660, 0.10, 0.07),
+      hug:       () => { playTone(440, 0.06, 0.04); setTimeout(() => playTone(554, 0.08, 0.05), 80); },
+      milestone: () => { playTone(523, 0.10, 0.06); setTimeout(() => playTone(659, 0.12, 0.07), 100); }
+    },
+    arcade: {
+      send:      () => { playTone(200, 0.05, 0.04); setTimeout(() => playTone(400, 0.05, 0.04), 50); setTimeout(() => playTone(600, 0.05, 0.04), 100); },
+      receive:   () => { playTone(600, 0.05, 0.04); setTimeout(() => playTone(400, 0.05, 0.04), 50); setTimeout(() => playTone(200, 0.05, 0.04), 100); },
+      hug:       () => { playTone(300, 0.04, 0.03); setTimeout(() => playTone(500, 0.04, 0.03), 40); },
+      milestone: () => { playTone(150, 0.05, 0.04); setTimeout(() => playTone(300, 0.05, 0.04), 50); setTimeout(() => playTone(600, 0.15, 0.06), 100); }
+    },
+    minimal: {
+      send:      () => playTone(900, 0.02, 0.03),
+      receive:   () => playTone(750, 0.02, 0.03),
+      hug:       () => playTone(800, 0.02, 0.03),
+      milestone: () => { playTone(800, 0.02, 0.03); setTimeout(() => playTone(1000, 0.03, 0.03), 30); }
+    }
   };
-  function soundEnabled() { return localStorage.getItem('bestieSound') !== 'off'; }
+  function soundEnabled() { return localStorage.getItem('bestieSound') !== 'off' && currentSoundPack !== 'off'; }
   function playTone(freq, dur, vol) {
     if (!soundEnabled()) return;
     try {
@@ -154,7 +176,11 @@
       osc.stop(ctx.currentTime + dur);
     } catch (_) { /* ignore */ }
   }
-  function playSound(name) { if (sounds[name]) sounds[name](); }
+  function playSound(name) {
+    if (!soundEnabled()) return;
+    const pack = soundPacks[currentSoundPack] || soundPacks.cozy;
+    if (pack[name]) pack[name]();
+  }
 
   // ═══════════════════ AMBIENT ═══════════════════
   function initAmbience() {
@@ -313,29 +339,44 @@
       body = `<div class="msg ${mine ? 'me' : 'them'}">
         ${metaLine}${replyQuote}
         🎤 Voice note
-        <audio controls src="${escapeHtml(msg.url)}"></audio>
-        ${dur ? `<div class="voice-duration">${dur}</div>` : ''}
+        <div class="custom-audio-player" data-url="${escapeHtml(msg.url)}" data-id="${msg.id}">
+          <button class="wave-play-btn" onclick="BestieChat.playWaveform('${msg.id}', this)">
+            <svg class="play-svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <svg class="pause-svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24" style="display:none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+          </button>
+          <div class="audio-waveform" onclick="BestieChat.seekWaveform(event, '${msg.id}')">
+            ${Array.from({length: 25}).map(() => {
+              const h = Math.floor(Math.random() * 60) + 30;
+              return `<div class="waveform-bar" style="height:${h}%"></div>`;
+            }).join('')}
+          </div>
+          <div class="audio-duration" id="wave-dur-${msg.id}">${dur}</div>
+          <button class="transcribe-btn" onclick="BestieChat.transcribeAudio('${msg.id}', '${escapeHtml(msg.url)}')" title="Transcribe to Text" style="background:none; border:none; color:var(--muted); cursor:pointer; padding:4px;">🗣️</button>
+        </div>
+        <div class="transcription-box" id="transcription-${msg.id}" style="display:none; font-size:0.82rem; color:var(--muted); margin-top:6px; font-style:italic;"></div>
         ${editedTag}
       </div>`;
 
     } else if (msg.type === 'music') {
       const platform = getMusicPlatform(msg.url || '');
+      const decMusicText = decryptE2EE(msg.text || msg.url);
       body = `<div class="msg ${mine ? 'me' : 'them'}">
         ${metaLine}${replyQuote}
         <a class="music-card" href="${escapeHtml(msg.url)}" target="_blank" rel="noopener noreferrer">
           <div class="music-icon" style="background:${platform.color}">${platform.icon}</div>
           <div class="music-info">
             <div class="music-platform">${escapeHtml(platform.name)}</div>
-            <span class="music-link">${escapeHtml(msg.text || msg.url)}</span>
+            <span class="music-link">${escapeHtml(decMusicText)}</span>
           </div>
         </a>
         ${editedTag}
       </div>`;
 
     } else if (msg.type === 'secret') {
+      const decSecret = decryptE2EE(msg.text);
       body = `<div class="msg secret ${mine ? 'me' : 'them'}">
         ${metaLine}
-        <div class="secret-content" onclick="this.classList.toggle('revealed')">🤫 ${escapeHtml(msg.text)}</div>
+        <div class="secret-content" onclick="this.classList.toggle('revealed')">🤫 ${escapeHtml(decSecret)}</div>
         <div class="secret-timer" id="stimer-${msg.id}">Vanishes in 30s</div>
       </div>`;
       setTimeout(() => startSecretCountdown(msg.id, msg.time), 0);
@@ -353,9 +394,28 @@
       </div>`;
 
     } else {
+      const decText = decryptE2EE(msg.text);
+      const highlightedText = highlightInsideJokes(decText);
+      
+      let previewHtml = '';
+      if (msg.linkPreview) {
+        const { title, description, image, url } = msg.linkPreview;
+        previewHtml = `
+          <a class="link-preview-card" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">
+            ${image ? `<img class="link-preview-image" src="${escapeHtml(image)}" alt="preview image" loading="lazy" />` : ''}
+            <div class="link-preview-info">
+              <div class="link-preview-title">${escapeHtml(title)}</div>
+              ${description ? `<div class="link-preview-desc">${escapeHtml(description)}</div>` : ''}
+              <div class="link-preview-site">${escapeHtml(new URL(url).hostname)}</div>
+            </div>
+          </a>
+        `;
+      }
+
       body = `<div class="msg ${mine ? 'me' : 'them'}">
         ${metaLine}${replyQuote}
-        ${escapeHtml(msg.text)}
+        <div>${highlightedText}</div>
+        ${previewHtml}
         ${editedTag}
       </div>`;
     }
@@ -747,17 +807,26 @@
   }
 
   // ═══════════════════ SEND MESSAGE ═══════════════════
+  function findUrl(text) {
+    const match = text.match(/https?:\/\/[^\s]+/i);
+    return match ? match[0] : null;
+  }
+
   function sendMessage() {
-    const text = els.msgInput.value.trim();
-    if (!text) {
+    const rawText = els.msgInput.value.trim();
+    if (!rawText) {
       toggleRecord();
       return;
     }
     if (!joined) return;
 
+    const url = findUrl(rawText);
+    const text = encryptE2EE(rawText);
+
     // Editing mode
     if (editingMessageId) {
-      socket.emit('edit-message', { messageId: editingMessageId, text });
+      const encEdit = encryptE2EE(rawText);
+      socket.emit('edit-message', { messageId: editingMessageId, text: encEdit });
       els.msgInput.value     = '';
       editingMessageId       = null;
       cancelReply();
@@ -765,33 +834,32 @@
       return;
     }
 
-    // Check for music URL
-    if (isMusicUrl(text)) {
-      socket.emit('message', { type: 'music', url: text, text, replyTo: replyingTo });
+    const sendPayload = (preview) => {
+      const payload = { text, replyTo: replyingTo };
+      if (preview) payload.linkPreview = preview;
+      
+      // Check for music URL
+      if (isMusicUrl(rawText)) {
+        payload.type = 'music';
+        payload.url = rawText;
+      }
+      
+      socket.emit('message', payload);
       els.msgInput.value = '';
       cancelReply();
       toggleSendMicIcons();
       playSound('send');
       localStorage.setItem('bestieLastMsgDate', new Date().toISOString().slice(0, 10));
-      return;
-    }
+    };
 
-    // Secret mode
-    if (secretMode) {
-      socket.emit('secret-message', { text });
-      els.msgInput.value = '';
-      cancelReply();
-      toggleSendMicIcons();
-      playSound('send');
-      return;
+    if (url && !e2eEnabled) {
+      fetch(`/api/link-preview?url=${encodeURIComponent(url)}`)
+        .then(r => r.json())
+        .then(preview => sendPayload(preview))
+        .catch(() => sendPayload(null));
+    } else {
+      sendPayload(null);
     }
-
-    socket.emit('message', { text, replyTo: replyingTo });
-    els.msgInput.value = '';
-    cancelReply();
-    toggleSendMicIcons();
-    playSound('send');
-    localStorage.setItem('bestieLastMsgDate', new Date().toISOString().slice(0, 10));
   }
 
   function sendHug() {
@@ -886,9 +954,9 @@
   // ═══════════════════ EDIT / DELETE ═══════════════════
   function startEditMessage(msgId, text) {
     editingMessageId = msgId;
-    els.msgInput.value = text;
+    els.msgInput.value = decryptE2EE(text);
     els.msgInput.focus();
-    els.sendBtn.innerHTML = '<span>Save</span> ✓';
+    toggleSendMicIcons();
     hideContextMenu();
   }
 
@@ -1338,9 +1406,10 @@
       // Pre-populate profiles
       (payload.history || []).forEach((m) => { if (m.user) profiles[m.user] = profiles[m.user] || {}; });
 
+      allMessagesCached = payload.history || [];
       els.messages.innerHTML = '';
       lastDateLabel = '';
-      (payload.history || []).forEach((m) => renderMessage(m, true));
+      allMessagesCached.forEach((m) => renderMessage(m, true));
       els.msgInput.focus();
       startIntervals();
       clearUnread();
@@ -1355,10 +1424,23 @@
       // Restore nickname in chat extras panel
       const savedNick = localStorage.getItem('bestieChatNickname') || '';
       if (els.nicknameInputChat) els.nicknameInputChat.value = savedNick;
+
+      // Restore notebook states
+      sharedDiary = payload.diary || [];
+      renderDiaryList(sharedDiary);
+      sharedBucketList = payload.bucketList || [];
+      renderBucketList(sharedBucketList);
+      sharedGlossary = payload.glossary || [];
+      renderGlossaryList(sharedGlossary);
+      sharedBonsai = payload.bonsai || { growth: 0, lastWatered: null };
+      renderBonsai(sharedBonsai);
+      renderHeatmap();
     });
 
     socket.on('message', (msg) => {
+      allMessagesCached.push(msg);
       renderMessage(msg);
+      renderHeatmap();
       if (msg.user !== myName) {
         if (document.hidden) {
           unreadCount++;
@@ -1515,9 +1597,71 @@
       }
     });
 
+    });
+
     socket.on('call-hangup', () => {
       renderSystem('Call ended');
       endCall(true);
+    });
+
+    socket.on('diary-update', (diary) => {
+      sharedDiary = diary;
+      renderDiaryList(diary);
+    });
+
+    socket.on('bucketlist-update', (list) => {
+      sharedBucketList = list;
+      renderBucketList(list);
+    });
+
+    socket.on('glossary-update', (words) => {
+      sharedGlossary = words;
+      renderGlossaryList(words);
+      refreshMessagesLayout();
+    });
+
+    socket.on('bonsai-update', (state) => {
+      sharedBonsai = state;
+      renderBonsai(state);
+    });
+
+    socket.on('draw-stroke', (data) => {
+      drawCoDrawStrokeLocal(data);
+    });
+
+    socket.on('draw-clear', () => {
+      clearCoDraw(false);
+    });
+
+    socket.on('watch-sync', (data) => {
+      syncWatchTogetherPlayer(data);
+    });
+
+    socket.on('game-move', (data) => {
+      handleTTTMoveLocal(data);
+    });
+
+    socket.on('nudge', (data) => {
+      triggerScreenNudge(data.from);
+    });
+
+    socket.on('haptic-touch', (data) => {
+      if (data.from !== myName) {
+        triggerHapticPulseLocal();
+      }
+    });
+
+    socket.on('reaction-update', ({ messageId, reactions }) => {
+      const msg = allMessagesCached.find(m => m.id === messageId);
+      if (msg) {
+        msg.reactions = reactions;
+        const lastReact = Object.keys(reactions).pop();
+        if (lastReact) {
+          triggerEmojiReactionBurst(messageId, lastReact);
+        }
+      }
+      const el = document.getElementById(`reactions-${messageId}`);
+      if (el) el.innerHTML = renderReactions({ id: messageId, reactions });
     });
   }
 
@@ -1767,7 +1911,814 @@
     if (els.attachMenu) els.attachMenu.style.display = 'none';
   }
 
-  // ═══════════════════ INIT ═══════════════════
+  }
+
+  // ═══════════════════ ULTIMATE FEATURES SET ═══════════════════
+
+  // ── Tab Navigation ──
+  let activeExtrasTab = 'vibe';
+  function switchExtrasTab(tabId) {
+    activeExtrasTab = tabId;
+    document.querySelectorAll('#extrasPanel .tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('#extrasPanel .tab-content').forEach(content => content.classList.remove('active'));
+    const btn = [...document.querySelectorAll('#extrasPanel .tab-btn')].find(b => b.getAttribute('onclick').includes(tabId));
+    if (btn) btn.classList.add('active');
+    const content = document.getElementById(`tab${tabId.charAt(0).toUpperCase() + tabId.slice(1)}`);
+    if (content) content.classList.add('active');
+  }
+
+  // ── Accent Theme Switcher ──
+  function changeAccent(accent) {
+    document.body.className = document.body.className.replace(/\baccent-\S+/g, '');
+    document.body.className = document.body.className.replace(/\btheme-\S+/g, '');
+    if (accent === 'light') {
+      document.body.classList.add('theme-light');
+    } else if (accent !== 'cyberpunk') {
+      document.body.classList.add(`accent-${accent}`);
+    }
+    localStorage.setItem('bestieChatAccent', accent);
+  }
+
+  // ── Sound Packs ──
+  function changeSoundPack(pack) {
+    currentSoundPack = pack;
+    localStorage.setItem('bestieChatSoundPack', pack);
+  }
+
+  // ── End-to-End Encryption (E2EE) XOR ──
+  function updateE2EEKey() {
+    const input = document.getElementById('e2eKeyInput');
+    if (input) {
+      e2eKey = input.value;
+      localStorage.setItem('bestieChatE2EEKey', e2eKey);
+      refreshMessagesLayout();
+    }
+  }
+
+  function toggleE2EE() {
+    const btn = document.getElementById('e2eToggleBtn');
+    if (!btn) return;
+    e2eEnabled = !e2eEnabled;
+    btn.textContent = e2eEnabled ? 'Disable' : 'Enable';
+    btn.classList.toggle('active', e2eEnabled);
+    localStorage.setItem('bestieChatE2EEActive', e2eEnabled ? 'true' : 'false');
+    refreshMessagesLayout();
+  }
+
+  function encryptE2EE(text) {
+    if (!e2eEnabled || !e2eKey) return text;
+    let res = '';
+    for (let i = 0; i < text.length; i++) {
+      res += String.fromCharCode(text.charCodeAt(i) ^ e2eKey.charCodeAt(i % e2eKey.length));
+    }
+    return '🔒:' + btoa(unescape(encodeURIComponent(res)));
+  }
+
+  function decryptE2EE(text) {
+    if (!text || !text.startsWith('🔒:')) return text;
+    if (!e2eKey) return '🔒 [Encrypted — Enter Secret Key to View]';
+    try {
+      const base64 = text.substring(2);
+      const raw = decodeURIComponent(escape(atob(base64)));
+      let res = '';
+      for (let i = 0; i < raw.length; i++) {
+        res += String.fromCharCode(raw.charCodeAt(i) ^ e2eKey.charCodeAt(i % e2eKey.length));
+      }
+      return res;
+    } catch {
+      return '🔒 [Decryption Failed]';
+    }
+  }
+
+  // ── Audio Waveform Controller ──
+  let activeAudio = null;
+  let activeAudioBtn = null;
+
+  function playWaveform(msgId, btn) {
+    const player = btn.closest('.custom-audio-player');
+    if (!player) return;
+    const url = player.dataset.url;
+    
+    if (activeAudio && activeAudio.src === url) {
+      if (activeAudio.paused) {
+        activeAudio.play();
+        btn.querySelector('.play-svg').style.display = 'none';
+        btn.querySelector('.pause-svg').style.display = 'block';
+      } else {
+        activeAudio.pause();
+        btn.querySelector('.play-svg').style.display = 'block';
+        btn.querySelector('.pause-svg').style.display = 'none';
+      }
+      return;
+    }
+    
+    // Stop old
+    if (activeAudio) {
+      activeAudio.pause();
+      if (activeAudioBtn) {
+        activeAudioBtn.querySelector('.play-svg').style.display = 'block';
+        activeAudioBtn.querySelector('.pause-svg').style.display = 'none';
+      }
+    }
+    
+    activeAudio = new Audio(url);
+    activeAudioBtn = btn;
+    activeAudio.play();
+    btn.querySelector('.play-svg').style.display = 'none';
+    btn.querySelector('.pause-svg').style.display = 'block';
+    
+    activeAudio.addEventListener('timeupdate', () => {
+      const pct = (activeAudio.currentTime / activeAudio.duration) * 100;
+      const bars = player.querySelectorAll('.waveform-bar');
+      const activeCount = Math.floor((pct / 100) * bars.length);
+      bars.forEach((bar, idx) => {
+        bar.classList.toggle('played', idx < activeCount);
+      });
+      // Update duration text with current position
+      const curSec = Math.floor(activeAudio.currentTime);
+      const totalSec = Math.floor(activeAudio.duration) || 0;
+      const durText = document.getElementById(`wave-dur-${msgId}`);
+      if (durText) {
+        durText.textContent = `${Math.floor(curSec / 60)}:${String(curSec % 60).padStart(2, '0')} / ${Math.floor(totalSec / 60)}:${String(totalSec % 60).padStart(2, '0')}`;
+      }
+    });
+    
+    activeAudio.addEventListener('ended', () => {
+      btn.querySelector('.play-svg').style.display = 'block';
+      btn.querySelector('.pause-svg').style.display = 'none';
+      player.querySelectorAll('.waveform-bar').forEach(bar => bar.classList.remove('played'));
+      activeAudio = null;
+      activeAudioBtn = null;
+    });
+  }
+
+  function seekWaveform(event, msgId) {
+    if (!activeAudio || !activeAudioBtn) return;
+    const wave = event.currentTarget;
+    const rect = wave.getBoundingClientRect();
+    const clickX = event.clientX - rect.left;
+    const pct = clickX / rect.width;
+    activeAudio.currentTime = activeAudio.duration * pct;
+  }
+
+  function transcribeAudio(msgId, url) {
+    const box = document.getElementById(`transcription-${msgId}`);
+    if (!box) return;
+    box.style.display = 'block';
+    box.textContent = 'Transcribing voice note... 🎙️';
+    
+    const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Speech) {
+      box.textContent = 'Speech transcription not supported in this browser (Chrome recommended).';
+      return;
+    }
+    box.textContent = 'Speech transcribing is only available for live microphone input on web platforms.';
+  }
+
+  // ── Scrapbook Diary List ──
+  function addDiaryEntry() {
+    const input = document.getElementById('diaryTextInput');
+    if (!input || !input.value.trim()) return;
+    const entry = {
+      date: new Date().toLocaleDateString(),
+      text: input.value.trim(),
+      image: ''
+    };
+    sharedDiary.unshift(entry);
+    socket.emit('update-diary', sharedDiary);
+    input.value = '';
+  }
+
+  function deleteDiaryEntry(index) {
+    sharedDiary.splice(index, 1);
+    socket.emit('update-diary', sharedDiary);
+  }
+
+  function renderDiaryList(diary) {
+    const list = document.getElementById('diaryList');
+    if (!list) return;
+    list.innerHTML = (diary || []).map((d, idx) => `
+      <div class="diary-item">
+        <div class="diary-item-text">
+          <span class="diary-date">${escapeHtml(d.date)}</span>
+          <span>${escapeHtml(d.text)}</span>
+        </div>
+        <button class="delete-item-btn" onclick="BestieChat.deleteDiaryEntry(${idx})">✕</button>
+      </div>
+    `).join('');
+  }
+
+  // ── Bucket List ──
+  function addBucketItem() {
+    const input = document.getElementById('bucketTextInput');
+    if (!input || !input.value.trim()) return;
+    const item = {
+      text: input.value.trim(),
+      done: false,
+      dateCompleted: null
+    };
+    sharedBucketList.unshift(item);
+    socket.emit('update-bucketlist', sharedBucketList);
+    input.value = '';
+  }
+
+  function toggleBucketItem(index) {
+    const item = sharedBucketList[index];
+    if (!item) return;
+    item.done = !item.done;
+    item.dateCompleted = item.done ? new Date().toLocaleDateString() : null;
+    socket.emit('update-bucketlist', sharedBucketList);
+  }
+
+  function deleteBucketItem(index) {
+    sharedBucketList.splice(index, 1);
+    socket.emit('update-bucketlist', sharedBucketList);
+  }
+
+  function renderBucketList(list) {
+    const container = document.getElementById('bucketList');
+    if (!container) return;
+    container.innerHTML = (list || []).map((b, idx) => `
+      <div class="bucket-item ${b.done ? 'done' : ''}">
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+          <input type="checkbox" ${b.done ? 'checked' : ''} onchange="BestieChat.toggleBucketItem(${idx})" />
+          <span>${escapeHtml(b.text)} ${b.dateCompleted ? `(Completed ${b.dateCompleted})` : ''}</span>
+        </label>
+        <button class="delete-item-btn" onclick="BestieChat.deleteBucketItem(${idx})">✕</button>
+      </div>
+    `).join('');
+  }
+
+  // ── Inside Joke Glossary Wiki ──
+  function addGlossaryWord() {
+    const wordEl = document.getElementById('glossaryWord');
+    const meaningEl = document.getElementById('glossaryMeaning');
+    if (!wordEl || !meaningEl || !wordEl.value.trim() || !meaningEl.value.trim()) return;
+    
+    const word = wordEl.value.trim().toLowerCase();
+    const meaning = meaningEl.value.trim();
+    
+    // Check if word exists, if so update it
+    const existingIdx = sharedGlossary.findIndex(g => g.word === word);
+    if (existingIdx !== -1) {
+      sharedGlossary[existingIdx].meaning = meaning;
+    } else {
+      sharedGlossary.unshift({ word, meaning });
+    }
+    
+    socket.emit('update-glossary', sharedGlossary);
+    wordEl.value = '';
+    meaningEl.value = '';
+  }
+
+  function deleteGlossaryWord(index) {
+    sharedGlossary.splice(index, 1);
+    socket.emit('update-glossary', sharedGlossary);
+  }
+
+  function renderGlossaryList(glossary) {
+    const list = document.getElementById('glossaryList');
+    if (!list) return;
+    list.innerHTML = (glossary || []).map((g, idx) => `
+      <div class="glossary-item">
+        <div class="glossary-item-text">
+          <b>${escapeHtml(g.word)}</b>: ${escapeHtml(g.meaning)}
+        </div>
+        <button class="delete-item-btn" onclick="BestieChat.deleteGlossaryWord(${idx})">✕</button>
+      </div>
+    `).join('');
+  }
+
+  function highlightInsideJokes(text) {
+    if (!sharedGlossary || !sharedGlossary.length || !text) return escapeHtml(text);
+    let escaped = escapeHtml(text);
+    // Sort glossary words by length descending so longer matching phrases take priority
+    const sorted = [...sharedGlossary].sort((a,b) => b.word.length - a.word.length);
+    sorted.forEach(g => {
+      const word = escapeHtml(g.word);
+      const rx = new RegExp(`\\b(${word})\\b`, 'gi');
+      escaped = escaped.replace(rx, `<span class="glossary-word-highlight" title="${escapeHtml(g.meaning)}" onclick="alert('${escapeHtml(g.word)}: ${escapeHtml(g.meaning)}')">$1</span>`);
+    });
+    return escaped;
+  }
+
+  function refreshMessagesLayout() {
+    const container = els.messages;
+    if (!container) return;
+    container.innerHTML = '';
+    lastDateLabel = '';
+    allMessagesCached.forEach(m => renderMessage(m, true));
+    scrollToBottom();
+  }
+
+  // ── Conversation Heatmap ──
+  function renderHeatmap() {
+    const container = document.getElementById('heatmapContainer');
+    const totalEl = document.getElementById('statsTotalMsgs');
+    if (totalEl) totalEl.textContent = `Total messages sent: ${allMessagesCached.length}`;
+    if (!container) return;
+    container.innerHTML = '';
+    
+    const counts = {};
+    const now = new Date();
+    allMessagesCached.forEach(m => {
+      const dStr = new Date(m.time).toISOString().slice(0, 10);
+      counts[dStr] = (counts[dStr] || 0) + 1;
+    });
+    
+    // Draw past 105 days (15 columns x 7 rows)
+    for (let i = 104; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(now.getDate() - i);
+      const dStr = date.toISOString().slice(0, 10);
+      const count = counts[dStr] || 0;
+      
+      let lvl = 0;
+      if (count > 0 && count <= 2) lvl = 1;
+      else if (count <= 6) lvl = 2;
+      else if (count <= 15) lvl = 3;
+      else if (count > 15) lvl = 4;
+      
+      const block = document.createElement('div');
+      block.className = `heatmap-cell level-${lvl}`;
+      block.title = `${date.toLocaleDateString()}: ${count} messages`;
+      container.appendChild(block);
+    }
+  }
+
+  // ── Weather Geolocation Sync ──
+  function saveWeatherCity(city) {
+    localStorage.setItem('bestieWeatherCity', city);
+    fetchWeatherForCity(city);
+  }
+
+  function fetchWeatherForCity(city) {
+    const display = document.getElementById('weatherDisplay');
+    if (!display || !city) return;
+    display.textContent = 'Loading weather... 🌦️';
+    
+    fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1`)
+      .then(r => r.json())
+      .then(data => {
+        const result = data.results && data.results[0];
+        if (!result) { display.textContent = 'City not found'; return; }
+        const { latitude, longitude, name } = result;
+        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`)
+          .then(r => r.json())
+          .then(weather => {
+            const curr = weather.current_weather;
+            if (!curr) { display.textContent = 'Weather unavailable'; return; }
+            const emoji = weatherCodeToEmoji(curr.weathercode);
+            display.textContent = `${name}: ${emoji} ${curr.temperature}°C`;
+          })
+          .catch(() => display.textContent = 'Weather check failed');
+      })
+      .catch(() => display.textContent = 'Weather lookup failed');
+  }
+
+  function weatherCodeToEmoji(code) {
+    if (code === 0) return '☀️';
+    if (code <= 3) return '🌤️';
+    if (code <= 48) return '🌫️';
+    if (code <= 67) return '🌧️';
+    if (code <= 77) return '❄️';
+    if (code <= 82) return '🌦️';
+    return '⛈️';
+  }
+
+  // ── Shared Bonsai Garden state ──
+  function waterBonsai() {
+    if (!sharedBonsai) sharedBonsai = { growth: 0, lastWatered: null };
+    sharedBonsai.growth += 1;
+    sharedBonsai.lastWatered = Date.now();
+    socket.emit('update-bonsai', sharedBonsai);
+  }
+
+  function renderBonsai(state) {
+    const lvlText = document.getElementById('bonsaiLevel');
+    const trunk = document.getElementById('bonsaiTrunk');
+    const leaf1 = document.getElementById('leaf1');
+    const leaf2 = document.getElementById('leaf2');
+    const leaf3 = document.getElementById('leaf3');
+    if (!lvlText) return;
+    
+    const growth = state.growth || 0;
+    const lvl = Math.floor(growth / 5);
+    
+    lvlText.textContent = `Bonsai Tree (Lvl ${lvl})`;
+    
+    if (trunk) {
+      trunk.setAttribute('stroke-width', String(Math.min(12, 6 + lvl)));
+    }
+    
+    if (leaf1) leaf1.setAttribute('r', String(Math.min(22, 11 + lvl)));
+    if (leaf2) leaf2.setAttribute('r', String(Math.min(18, 8 + lvl)));
+    if (leaf3) leaf3.setAttribute('r', String(Math.min(15, 7 + lvl)));
+  }
+
+  // ── Co-Draw live shared canvas ──
+  let coDrawingActive = false;
+  let coDrawCtx = null;
+  let coDrawColor = '#ff6fae';
+  let coDrawTool = 'brush';
+  let coDrawSize = 6;
+  let coDrawLastX = 0;
+  let coDrawLastY = 0;
+
+  function openCoDraw() {
+    const modal = document.getElementById('coDrawModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    if (els.attachMenu) els.attachMenu.style.display = 'none';
+    
+    const canvas = document.getElementById('coDrawCanvas');
+    if (!canvas) return;
+    
+    // Set internal size
+    canvas.width = canvas.parentElement.clientWidth || 500;
+    canvas.height = 400;
+    coDrawCtx = canvas.getContext('2d');
+    coDrawCtx.lineCap = 'round';
+    coDrawCtx.lineJoin = 'round';
+    
+    // Canvas events
+    canvas.addEventListener('mousedown', startCoDrawStroke);
+    canvas.addEventListener('mousemove', drawCoDrawStroke);
+    canvas.addEventListener('mouseup', stopCoDrawStroke);
+    canvas.addEventListener('mouseleave', stopCoDrawStroke);
+    
+    canvas.addEventListener('touchstart', startCoDrawStroke, { passive: true });
+    canvas.addEventListener('touchmove', drawCoDrawStroke, { passive: true });
+    canvas.addEventListener('touchend', stopCoDrawStroke);
+  }
+
+  function closeCoDraw() {
+    const modal = document.getElementById('coDrawModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function startCoDrawStroke(e) {
+    coDrawingActive = true;
+    const coords = getCoDrawCoords(e);
+    coDrawLastX = coords.x;
+    coDrawLastY = coords.y;
+  }
+
+  function drawCoDrawStroke(e) {
+    if (!coDrawingActive || !coDrawCtx) return;
+    const coords = getCoDrawCoords(e);
+    
+    const strokeData = {
+      lastX: coDrawLastX,
+      lastY: coDrawLastY,
+      x: coords.x,
+      y: coords.y,
+      color: coDrawTool === 'eraser' ? '#111124' : coDrawColor,
+      size: coDrawSize
+    };
+    
+    drawCoDrawStrokeLocal(strokeData);
+    socket.emit('draw-stroke', strokeData);
+    
+    coDrawLastX = coords.x;
+    coDrawLastY = coords.y;
+  }
+
+  function stopCoDrawStroke() { coDrawingActive = false; }
+
+  function getCoDrawCoords(e) {
+    const canvas = document.getElementById('coDrawCanvas');
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return {
+      x: clientX - rect.left,
+      y: clientY - rect.top
+    };
+  }
+
+  function drawCoDrawStrokeLocal(stroke) {
+    if (!coDrawCtx) return;
+    coDrawCtx.beginPath();
+    coDrawCtx.moveTo(stroke.lastX, stroke.lastY);
+    coDrawCtx.lineTo(stroke.x, stroke.y);
+    coDrawCtx.strokeStyle = stroke.color;
+    coDrawCtx.lineWidth = stroke.size;
+    coDrawCtx.stroke();
+  }
+
+  function clearCoDraw(isLocal) {
+    const canvas = document.getElementById('coDrawCanvas');
+    if (!canvas || !coDrawCtx) return;
+    coDrawCtx.clearRect(0, 0, canvas.width, canvas.height);
+    if (isLocal) socket.emit('draw-clear');
+  }
+
+  function setCoDrawColor(color, btn) {
+    coDrawColor = color;
+    coDrawTool = 'brush';
+    document.querySelectorAll('#coDrawModal .doodle-color').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  function setCoDrawTool(tool, btn) {
+    coDrawTool = tool;
+    document.querySelectorAll('#coDrawModal .doodle-tool').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  function setCoDrawSize(size) {
+    coDrawSize = size;
+  }
+
+  // ── YouTube Watch Together syncer ──
+  let watchPlayerFrame = null;
+
+  function openWatchTogether() {
+    const modal = document.getElementById('watchModal');
+    if (modal) modal.style.display = 'flex';
+    if (els.attachMenu) els.attachMenu.style.display = 'none';
+  }
+
+  function closeWatchTogether() {
+    const modal = document.getElementById('watchModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function loadWatchVideo(url) {
+    const input = document.getElementById('watchUrlInput');
+    const val = url || (input ? input.value : '');
+    if (!val) return;
+    
+    // Parse Video ID from YouTube link
+    let vidId = '';
+    const reg = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = val.match(reg);
+    if (match && match[2].length === 11) vidId = match[2];
+    else vidId = val;
+    
+    const container = document.getElementById('watchPlayerContainer');
+    if (container) {
+      container.innerHTML = `<iframe id="watchIframe" width="100%" height="100%" src="https://www.youtube.com/embed/${vidId}?enablejsapi=1&autoplay=1" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+    }
+    
+    if (!url) {
+      socket.emit('watch-sync', { action: 'load', url: vidId });
+    }
+  }
+
+  function syncWatchTogetherPlayer(data) {
+    if (data.action === 'load') {
+      loadWatchVideo(data.url);
+    }
+  }
+
+  // ── Multiplayer Tic-Tac-Toe synced game ──
+  let tttBoard = Array(9).fill(null);
+  let tttMySymbol = 'X';
+  let tttTurnSymbol = 'X';
+
+  function openTTT() {
+    const modal = document.getElementById('tttModal');
+    if (modal) modal.style.display = 'flex';
+    if (els.attachMenu) els.attachMenu.style.display = 'none';
+    
+    // Determine Symbol: Name hash comparison resolves A as X, B as O
+    const otherUser = [...document.querySelectorAll('.presence-user')].map(u => u.textContent).find(n => n !== myName) || '';
+    if (myName.localeCompare(otherUser) > 0) {
+      tttMySymbol = 'O';
+    } else {
+      tttMySymbol = 'X';
+    }
+    resetTTT(false);
+  }
+
+  function closeTTT() {
+    const modal = document.getElementById('tttModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function resetTTT(isLocal) {
+    tttBoard = Array(9).fill(null);
+    tttTurnSymbol = 'X';
+    
+    const cells = document.querySelectorAll('.ttt-cell');
+    cells.forEach(c => {
+      c.textContent = '';
+      c.disabled = false;
+    });
+    
+    updateTTTStatus();
+    if (isLocal) socket.emit('game-move', { reset: true });
+  }
+
+  function updateTTTStatus() {
+    const turnEl = document.getElementById('tttTurn');
+    if (!turnEl) return;
+    if (tttTurnSymbol === tttMySymbol) {
+      turnEl.textContent = `Your Turn (${tttMySymbol})`;
+    } else {
+      turnEl.textContent = `Bestie's Turn (${tttTurnSymbol})`;
+    }
+  }
+
+  function makeTTTMove(cellIndex) {
+    if (tttTurnSymbol !== tttMySymbol) return;
+    if (tttBoard[cellIndex]) return;
+    
+    tttBoard[cellIndex] = tttMySymbol;
+    const cells = document.querySelectorAll('.ttt-cell');
+    if (cells[cellIndex]) cells[cellIndex].textContent = tttMySymbol;
+    
+    socket.emit('game-move', { cellIndex, symbol: tttMySymbol });
+    
+    if (checkTTTWinner()) return;
+    
+    tttTurnSymbol = tttMySymbol === 'X' ? 'O' : 'X';
+    updateTTTStatus();
+  }
+
+  function handleTTTMoveLocal(data) {
+    if (data.reset) {
+      resetTTT(false);
+      return;
+    }
+    
+    const idx = data.cellIndex;
+    const sym = data.symbol;
+    
+    tttBoard[idx] = sym;
+    const cells = document.querySelectorAll('.ttt-cell');
+    if (cells[idx]) cells[idx].textContent = sym;
+    
+    if (checkTTTWinner()) return;
+    
+    tttTurnSymbol = sym === 'X' ? 'O' : 'X';
+    updateTTTStatus();
+  }
+
+  function checkTTTWinner() {
+    const wins = [
+      [0,1,2], [3,4,5], [6,7,8], // rows
+      [0,3,6], [1,4,7], [2,5,8], // cols
+      [0,4,8], [2,4,6]           // diagonals
+    ];
+    
+    const turnEl = document.getElementById('tttTurn');
+    
+    for (const w of wins) {
+      const [a,b,c] = w;
+      if (tttBoard[a] && tttBoard[a] === tttBoard[b] && tttBoard[a] === tttBoard[c]) {
+        document.querySelectorAll('.ttt-cell').forEach(cell => cell.disabled = true);
+        if (turnEl) {
+          turnEl.textContent = tttBoard[a] === tttMySymbol ? '🏆 You Win!' : '💀 Bestie Wins!';
+        }
+        confetti();
+        return true;
+      }
+    }
+    
+    if (!tttBoard.includes(null)) {
+      if (turnEl) turnEl.textContent = '🤝 It\'s a Draw!';
+      return true;
+    }
+    return false;
+  }
+
+  // ── Touch Sync Pulse Haptics ──
+  let hapticPulseInterval = null;
+
+  function openHapticSync() {
+    const modal = document.getElementById('hapticModal');
+    if (modal) modal.style.display = 'flex';
+    if (els.attachMenu) els.attachMenu.style.display = 'none';
+  }
+
+  function closeHapticSync() {
+    const modal = document.getElementById('hapticModal');
+    if (modal) modal.style.display = 'none';
+    stopHapticPulse();
+  }
+
+  function startHapticPulse(e) {
+    if (e) e.preventDefault();
+    if (hapticPulseInterval) clearInterval(hapticPulseInterval);
+    
+    hapticPulseInterval = setInterval(() => {
+      socket.emit('haptic-touch', { from: myName });
+    }, 250);
+    
+    const heart = document.getElementById('hapticHeart');
+    if (heart) heart.style.animationDuration = '0.5s';
+    
+    const status = document.getElementById('hapticStatus');
+    if (status) status.textContent = 'Holding Pulse... 💓';
+  }
+
+  function stopHapticPulse() {
+    if (hapticPulseInterval) {
+      clearInterval(hapticPulseInterval);
+      hapticPulseInterval = null;
+    }
+    const heart = document.getElementById('hapticHeart');
+    if (heart) heart.style.animationDuration = '1.6s';
+    
+    const status = document.getElementById('hapticStatus');
+    if (status) status.textContent = 'Hold down heart to sync';
+  }
+
+  function triggerHapticPulseLocal() {
+    const heart = document.getElementById('hapticHeart');
+    if (heart) {
+      heart.style.transform = 'scale(1.3)';
+      setTimeout(() => heart.style.transform = 'scale(1)', 150);
+    }
+    
+    if ('vibrate' in navigator) {
+      navigator.vibrate(100);
+    }
+    
+    const status = document.getElementById('hapticStatus');
+    if (status) status.textContent = '💓 Feel their touch!';
+  }
+
+  // ── Screen Nudges ──
+  function sendNudge() {
+    if (!joined) return;
+    socket.emit('nudge');
+    triggerScreenNudge('You');
+    if (els.attachMenu) els.attachMenu.style.display = 'none';
+  }
+
+  function triggerScreenNudge(from) {
+    const chatEl = els.chat;
+    if (!chatEl) return;
+    
+    chatEl.classList.remove('nudge-shake');
+    void chatEl.offsetWidth; // Trigger reflow to restart animation
+    chatEl.classList.add('nudge-shake');
+    
+    playTone(280, 0.35, 0.08);
+    
+    setTimeout(() => {
+      chatEl.classList.remove('nudge-shake');
+    }, 450);
+  }
+
+  // ── Background Lo-Fi Player ──
+  let lofiPlaying = false;
+
+  function toggleLofi() {
+    const audio = document.getElementById('lofiAudio');
+    const btn = document.getElementById('lofiPlayBtn');
+    if (!audio || !btn) return;
+    
+    if (lofiPlaying) {
+      audio.pause();
+      btn.querySelector('span').textContent = 'Play Lo-Fi';
+      btn.querySelector('svg').innerHTML = '<polygon points="5 3 19 12 5 21 5 3"/>';
+    } else {
+      audio.play().catch(console.error);
+      btn.querySelector('span').textContent = 'Pause Lo-Fi';
+      btn.querySelector('svg').innerHTML = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+    }
+    lofiPlaying = !lofiPlaying;
+  }
+
+  function setLofiVolume(vol) {
+    const audio = document.getElementById('lofiAudio');
+    if (audio) audio.volume = vol;
+  }
+
+  // ── Message Reactions bursts ──
+  function triggerEmojiReactionBurst(messageId, emoji) {
+    const wrap = document.querySelector(`.msg-wrap[data-id="${messageId}"]`);
+    if (!wrap) return;
+    
+    const rect = wrap.getBoundingClientRect();
+    const colors = ['#ff6fae', '#8b5cf6', '#f59e0b', '#06b6d4'];
+    
+    for (let i = 0; i < 7; i++) {
+      const p = document.createElement('div');
+      p.className = 'reaction-particle';
+      p.textContent = emoji;
+      
+      // Random directions
+      const dx = (Math.random() - 0.5) * 120;
+      const dy = -40 - Math.random() * 80;
+      const rot = (Math.random() - 0.5) * 360;
+      
+      p.style.setProperty('--dx', `${dx}px`);
+      p.style.setProperty('--dy', `${dy}px`);
+      p.style.setProperty('--rot', `${rot}deg`);
+      
+      p.style.left = `${rect.left + rect.width / 2}px`;
+      p.style.top = `${rect.top}px`;
+      
+      document.body.appendChild(p);
+      setTimeout(() => p.remove(), 850);
+    }
+  }
   function init() {
     initAmbience();
     applyNightGlow();
@@ -1779,7 +2730,6 @@
     if (savedNick) els.nicknameInput.value = savedNick;
 
     els.soundBtn.classList.toggle('active', soundEnabled());
-    els.soundBtn.textContent = soundEnabled() ? '🔊' : '🔇';
 
     fetch('/api/config')
       .then((r) => r.json())
@@ -1788,6 +2738,38 @@
         giphyApiKey = cfg.giphyKey || '';
       })
       .catch(() => {});
+
+    // Restore Accent Theme
+    const savedAccent = localStorage.getItem('bestieChatAccent') || 'cyberpunk';
+    const accentEl = document.getElementById('accentSelect');
+    if (accentEl) accentEl.value = savedAccent;
+    changeAccent(savedAccent);
+
+    // Restore Sound Pack
+    const savedPack = localStorage.getItem('bestieChatSoundPack') || 'cozy';
+    const packEl = document.getElementById('soundPackSelect');
+    if (packEl) packEl.value = savedPack;
+    changeSoundPack(savedPack);
+
+    // Restore E2EE Key
+    const savedE2EE = localStorage.getItem('bestieChatE2EEKey') || '';
+    const e2eInput = document.getElementById('e2eKeyInput');
+    if (e2eInput) e2eInput.value = savedE2EE;
+    e2eKey = savedE2EE;
+    
+    const e2eActive = localStorage.getItem('bestieChatE2EEActive') === 'true';
+    e2eEnabled = e2eActive;
+    const e2eBtn = document.getElementById('e2eToggleBtn');
+    if (e2eBtn) {
+      e2eBtn.textContent = e2eEnabled ? 'Disable' : 'Enable';
+      e2eBtn.classList.toggle('active', e2eEnabled);
+    }
+
+    // Restore Weather City
+    const savedCity = localStorage.getItem('bestieWeatherCity') || '';
+    const cityInput = document.getElementById('weatherCityInput');
+    if (cityInput) cityInput.value = savedCity;
+    if (savedCity) fetchWeatherForCity(savedCity);
 
     // Restore wallpaper setting
     const savedWallpaper = localStorage.getItem('bestieChatWallpaper');
@@ -1916,6 +2898,18 @@
     startCall, acceptCall, endCall, toggleMuteAudio, toggleCamera,
     changeWallpaper,
     toggleAttachMenu, triggerPhotoUpload,
+    
+    // Ultimate Premium functions
+    switchExtrasTab, changeAccent, changeSoundPack, updateE2EEKey, toggleE2EE,
+    playWaveform, seekWaveform, transcribeAudio,
+    addDiaryEntry, deleteDiaryEntry, addBucketItem, toggleBucketItem, deleteBucketItem,
+    addGlossaryWord, deleteGlossaryWord,
+    saveWeatherCity, waterBonsai,
+    openCoDraw, closeCoDraw, clearCoDraw, setCoDrawColor, setCoDrawTool, setCoDrawSize,
+    openWatchTogether, closeWatchTogether, loadWatchVideo,
+    openTTT, closeTTT, makeTTTMove, resetTTT,
+    openHapticSync, closeHapticSync, startHapticPulse, stopHapticPulse,
+    sendNudge, toggleLofi, setLofiVolume,
   };
 
   if (document.readyState === 'loading') {
