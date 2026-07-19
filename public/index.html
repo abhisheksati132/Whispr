@@ -18,6 +18,11 @@
 </head>
 <body>
 
+<!-- Ambient Backdrop Blobs for million-dollar glassmorphism depth -->
+<div id="blob1" class="backdrop-blob"></div>
+<div id="blob2" class="backdrop-blob"></div>
+<div id="blob3" class="backdrop-blob"></div>
+
 <!-- Ambient background particles -->
 <div id="ambience"></div>
 <!-- Mood glow overlay (feel what they feel) -->
@@ -70,14 +75,30 @@
         <span id="theirFeeling"></span>
       </div>
       <div class="header-btns">
-        <button class="icon-btn call-audio-btn" title="Voice Call" onclick="BestieChat.startCall('audio')">📞</button>
-        <button class="icon-btn call-video-btn" title="Video Call" onclick="BestieChat.startCall('video')">📹</button>
-        <button id="searchToggleBtn" class="icon-btn" title="Search" onclick="BestieChat.toggleSearch()">🔍</button>
-        <button id="galleryBtn" class="icon-btn" title="Photo Gallery" onclick="BestieChat.openGallery()">🖼️</button>
-        <button id="soundBtn" class="icon-btn active" title="Sound" onclick="BestieChat.toggleSound()">🔊</button>
-        <button class="icon-btn" title="Feelings" onclick="BestieChat.toggleFeelings()">💭</button>
-        <button class="icon-btn" title="Extras" onclick="BestieChat.toggleExtras()">✨</button>
-        <button class="icon-btn leave-btn" title="Leave" onclick="BestieChat.leaveChat()">↩</button>
+        <button class="icon-btn call-audio-btn" title="Voice Call" onclick="BestieChat.startCall('audio')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        </button>
+        <button class="icon-btn call-video-btn" title="Video Call" onclick="BestieChat.startCall('video')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7a2 2 0 0 0-2-2H3a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V7Z"/><path d="m16 21 6-6-6-6"/></svg>
+        </button>
+        <button id="searchToggleBtn" class="icon-btn" title="Search" onclick="BestieChat.toggleSearch()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        </button>
+        <button id="galleryBtn" class="icon-btn" title="Photo Gallery" onclick="BestieChat.openGallery()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+        </button>
+        <button id="soundBtn" class="icon-btn active" title="Sound" onclick="BestieChat.toggleSound()">
+          <svg id="soundOnIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+        </button>
+        <button class="icon-btn" title="Feelings" onclick="BestieChat.toggleFeelings()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        </button>
+        <button class="icon-btn" title="Extras" onclick="BestieChat.toggleExtras()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        </button>
+        <button class="icon-btn leave-btn" title="Leave" onclick="BestieChat.leaveChat()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+        </button>
       </div>
     </div>
   </header>
@@ -157,20 +178,45 @@
   <!-- Secret mode indicator -->
   <div id="secretIndicator" style="display:none">🤫 Secret mode — messages vanish in 30s</div>
 
-  <!-- Toolbar -->
-  <div id="toolbar">
-    <button onclick="BestieChat.toggleEmojiPicker()" title="Emoji" data-emoji-toggle>😊</button>
-    <button onclick="BestieChat.toggleGameMenu()" title="Games" data-game-toggle>🎮</button>
-    <button onclick="BestieChat.toggleGifPanel()" title="GIFs & Stickers">🎁</button>
-    <button onclick="BestieChat.sendHug()" title="Send a hug">🫂</button>
-    <label title="Share photo" class="toolbar-file-label">
-      📷
-      <input type="file" id="photoInput" accept="image/*" />
+  <!-- WhatsApp/Telegram style Attachment Pop-out menu -->
+  <div id="attachMenu" class="attach-menu" style="display:none">
+    <label class="attach-item" title="Send Photo">
+      <span class="attach-icon" style="background:#22c55e">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      </span>
+      <span class="attach-label">Photo</span>
+      <input type="file" id="photoInput" accept="image/*" style="display:none" />
     </label>
-    <button id="recordBtn" onclick="BestieChat.toggleRecord()" title="Voice note">🎤</button>
-    <button id="doodleBtn" onclick="BestieChat.openDoodle()" title="Draw a doodle">✏️</button>
-    <button id="secretToggle" onclick="BestieChat.toggleSecretMode()" title="Secret message">🤫</button>
-    <span class="toolbar-label" id="charCount"></span>
+    <button class="attach-item" onclick="BestieChat.openDoodle()" title="Draw Doodle">
+      <span class="attach-icon" style="background:#3b82f6">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      </span>
+      <span class="attach-label">Doodle</span>
+    </button>
+    <button class="attach-item" onclick="BestieChat.toggleGameMenu()" title="Play Mini Games" data-game-toggle>
+      <span class="attach-icon" style="background:#f59e0b">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h4M8 10v4M15 11h.01M18 13h.01"/></svg>
+      </span>
+      <span class="attach-label">Games</span>
+    </button>
+    <button class="attach-item" onclick="BestieChat.toggleGifPanel()" title="Search GIFs">
+      <span class="attach-icon" style="background:#ec4899">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg>
+      </span>
+      <span class="attach-label">Stickers</span>
+    </button>
+    <button class="attach-item" onclick="BestieChat.sendHug()" title="Send Hug">
+      <span class="attach-icon" style="background:#ef4444">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      </span>
+      <span class="attach-label">Hug</span>
+    </button>
+    <button class="attach-item" onclick="BestieChat.toggleSecretMode()" title="Secret Mode">
+      <span class="attach-icon" style="background:#a855f7">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </span>
+      <span class="attach-label">Secret</span>
+    </button>
   </div>
 
   <!-- Emoji Picker -->
@@ -197,12 +243,21 @@
     <div id="gifGrid"></div>
   </div>
 
-  <!-- Input Bar -->
-  <div id="inputBar">
-    <input id="msgInput" type="text" placeholder="Type a message…" autocomplete="off" maxlength="2000" />
-    <button id="sendBtn" onclick="BestieChat.sendMessage()">
-      <span>Send</span>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21L23 12 2 3v7l15 2-15 2z"/></svg>
+  <!-- Input Bar (WhatsApp/Telegram structure) -->
+  <div id="inputBarContainer">
+    <div class="input-pill">
+      <button class="pill-btn" onclick="BestieChat.toggleEmojiPicker()" title="Emojis" data-emoji-toggle>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg>
+      </button>
+      <input id="msgInput" type="text" placeholder="Type a message…" autocomplete="off" maxlength="2000" />
+      <button class="pill-btn" onclick="BestieChat.toggleAttachMenu()" title="Attach files" id="attachBtn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+    </div>
+    
+    <button id="sendBtn" onclick="BestieChat.sendMessage()" title="Send">
+      <svg id="sendIcon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      <svg id="micIcon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
     </button>
   </div>
 </div><!-- end #chat -->

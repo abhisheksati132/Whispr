@@ -112,6 +112,10 @@
     charCount:        document.getElementById('charCount'),
     wallpaperSelect:  document.getElementById('wallpaperSelect'),
     wallpaperUrlInput:document.getElementById('wallpaperUrlInput'),
+    attachMenu:       document.getElementById('attachMenu'),
+    attachBtn:        document.getElementById('attachBtn'),
+    sendIcon:         document.getElementById('sendIcon'),
+    micIcon:          document.getElementById('micIcon'),
   };
 
   // WebRTC State variables
@@ -745,15 +749,19 @@
   // ═══════════════════ SEND MESSAGE ═══════════════════
   function sendMessage() {
     const text = els.msgInput.value.trim();
-    if (!text || !joined) return;
+    if (!text) {
+      toggleRecord();
+      return;
+    }
+    if (!joined) return;
 
     // Editing mode
     if (editingMessageId) {
       socket.emit('edit-message', { messageId: editingMessageId, text });
       els.msgInput.value     = '';
       editingMessageId       = null;
-      els.sendBtn.innerHTML  = '<span>Send</span><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21L23 12 2 3v7l15 2-15 2z"/></svg>';
       cancelReply();
+      toggleSendMicIcons();
       return;
     }
 
@@ -762,6 +770,7 @@
       socket.emit('message', { type: 'music', url: text, text, replyTo: replyingTo });
       els.msgInput.value = '';
       cancelReply();
+      toggleSendMicIcons();
       playSound('send');
       localStorage.setItem('bestieLastMsgDate', new Date().toISOString().slice(0, 10));
       return;
@@ -772,6 +781,7 @@
       socket.emit('secret-message', { text });
       els.msgInput.value = '';
       cancelReply();
+      toggleSendMicIcons();
       playSound('send');
       return;
     }
@@ -779,6 +789,7 @@
     socket.emit('message', { text, replyTo: replyingTo });
     els.msgInput.value = '';
     cancelReply();
+    toggleSendMicIcons();
     playSound('send');
     localStorage.setItem('bestieLastMsgDate', new Date().toISOString().slice(0, 10));
   }
@@ -912,7 +923,7 @@
 
   // ═══════════════════ VOICE RECORDING ═══════════════════
   async function toggleRecord() {
-    const btn = document.getElementById('recordBtn');
+    const btn = els.sendBtn;
     if (mediaRecorder && mediaRecorder.state === 'recording') {
       mediaRecorder.stop();
       btn.classList.remove('recording');
@@ -965,13 +976,15 @@
     els.emojiPicker.classList.toggle('open');
     els.gameMenu.classList.remove('open');
     els.gifPanel.classList.remove('open');
+    if (els.attachMenu) els.attachMenu.style.display = 'none';
   }
   function toggleGameMenu() {
     els.gameMenu.classList.toggle('open');
     els.emojiPicker.classList.remove('open');
     els.gifPanel.classList.remove('open');
+    if (els.attachMenu) els.attachMenu.style.display = 'none';
   }
-  function insertEmoji(emoji) { els.msgInput.value += emoji; els.msgInput.focus(); }
+  function insertEmoji(emoji) { els.msgInput.value += emoji; els.msgInput.focus(); toggleSendMicIcons(); }
   function startGame(type) { socket.emit('start-game', type); els.gameMenu.classList.remove('open'); }
 
   function toggleGifPanel() {
@@ -979,6 +992,7 @@
     if (isOpen) {
       els.emojiPicker.classList.remove('open');
       els.gameMenu.classList.remove('open');
+      if (els.attachMenu) els.attachMenu.style.display = 'none';
       if (!els.gifGrid.children.length) renderGifGrid(STICKERS);
     }
   }
@@ -1719,6 +1733,40 @@
     }
   }
 
+  // ═══════════════════ UI HELPERS ═══════════════════
+  function toggleSendMicIcons() {
+    const hasText = els.msgInput.value.trim().length > 0;
+    const sendIcon = els.sendIcon;
+    const micIcon = els.micIcon;
+    if (sendIcon && micIcon) {
+      if (hasText || editingMessageId) {
+        sendIcon.style.display = 'block';
+        micIcon.style.display = 'none';
+      } else {
+        sendIcon.style.display = 'none';
+        micIcon.style.display = 'block';
+      }
+    }
+  }
+
+  function toggleAttachMenu() {
+    const menu = els.attachMenu;
+    if (!menu) return;
+    const isShowing = menu.style.display === 'grid';
+    menu.style.display = isShowing ? 'none' : 'grid';
+    
+    // Auto-close other panels
+    els.emojiPicker.classList.remove('open');
+    els.gameMenu.classList.remove('open');
+    els.gifPanel.classList.remove('open');
+  }
+
+  function triggerPhotoUpload() {
+    const input = document.getElementById('photoInput');
+    if (input) input.click();
+    if (els.attachMenu) els.attachMenu.style.display = 'none';
+  }
+
   // ═══════════════════ INIT ═══════════════════
   function init() {
     initAmbience();
@@ -1768,6 +1816,7 @@
       if (joined && socket) socket.emit('typing');
       const len = els.msgInput.value.length;
       els.charCount.textContent = len > 1800 ? `${len}/2000` : '';
+      toggleSendMicIcons();
     });
 
     // Search
@@ -1812,9 +1861,10 @@
     document.addEventListener('click', (e) => {
       if (!e.target.closest('#emojiPicker')  && !e.target.closest('[data-emoji-toggle]')) els.emojiPicker.classList.remove('open');
       if (!e.target.closest('#gameMenu')     && !e.target.closest('[data-game-toggle]'))  els.gameMenu.classList.remove('open');
-      if (!e.target.closest('#gifPanel')     && !e.target.closest('[title="GIFs & Stickers"]')) els.gifPanel.classList.remove('open');
+      if (!e.target.closest('#gifPanel')     && !e.target.closest('.attach-item') && !e.target.closest('#gifPanel')) els.gifPanel.classList.remove('open');
       if (!e.target.closest('#feelingsPanel')&& !e.target.closest('[title="Feelings"]'))  els.feelingsPanel.classList.remove('open');
       if (!e.target.closest('#contextMenu')  && !e.target.closest('.msg-wrap'))           hideContextMenu();
+      if (!e.target.closest('#attachMenu')   && !e.target.closest('#attachBtn'))          { if (els.attachMenu) els.attachMenu.style.display = 'none'; }
       if (!e.target.closest('.msg-wrap'))    document.querySelectorAll('.msg-wrap.touched').forEach((el) => el.classList.remove('touched'));
     });
 
@@ -1826,7 +1876,7 @@
         if (editingMessageId) {
           editingMessageId = null;
           els.msgInput.value = '';
-          els.sendBtn.innerHTML = '<span>Send</span><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21L23 12 2 3v7l15 2-15 2z"/></svg>';
+          toggleSendMicIcons();
         }
         cancelReply();
       }
@@ -1842,6 +1892,7 @@
     }
 
     initSocket();
+    toggleSendMicIcons();
     if (savedName) joinChat();
   }
 
@@ -1864,6 +1915,7 @@
     copyText,
     startCall, acceptCall, endCall, toggleMuteAudio, toggleCamera,
     changeWallpaper,
+    toggleAttachMenu, triggerPhotoUpload,
   };
 
   if (document.readyState === 'loading') {
