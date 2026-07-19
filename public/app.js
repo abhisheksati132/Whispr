@@ -36,7 +36,7 @@
   let replyingTo      = null;   // { id, user, text, type }
   let editingMessageId= null;
   let secretMode      = false;
-  let tenorApiKey     = '';
+  let giphyApiKey     = '';
   let pinnedMsg       = null;
   let readBy          = {};
   let allImageMessages= [];     // { id, url, user, time }
@@ -895,12 +895,12 @@
     const q = (els.gifSearch.value || '').trim().toLowerCase();
     if (!q) { renderGifGrid(STICKERS); return; }
 
-    // Try Tenor API first
-    if (tenorApiKey) {
+    // Try Giphy API first
+    if (giphyApiKey) {
       try {
-        const res  = await fetch(`https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(q)}&key=${tenorApiKey}&limit=12&media_filter=gif`);
+        const res  = await fetch(`https://api.giphy.com/v1/gifs/search?q=${encodeURIComponent(q)}&api_key=${giphyApiKey}&limit=12&rating=g`);
         const data = await res.json();
-        const results = (data.results || []).map((r) => ({ url: r.media_formats.gif.url, tags: [q] }));
+        const results = (data.data || []).map((r) => ({ url: r.images.fixed_height_small.url, tags: [q] }));
         if (results.length) { renderGifGrid(results); return; }
       } catch (_) { /* fall through */ }
     }
@@ -1383,7 +1383,7 @@
       .then((r) => r.json())
       .then((cfg) => {
         if (cfg.passwordRequired) els.passwordField.style.display = 'block';
-        tenorApiKey = cfg.tenorKey || '';
+        giphyApiKey = cfg.giphyKey || '';
       })
       .catch(() => {});
 

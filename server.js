@@ -16,7 +16,7 @@ const {
 } = require('./chat-utils');
 
 const CHAT_PASSWORD = process.env.CHAT_PASSWORD || '';
-const TENOR_API_KEY = process.env.TENOR_API_KEY || '';
+const GIPHY_API_KEY = process.env.GIPHY_API_KEY || '';
 
 const app = express();
 const server = http.createServer(app);
@@ -32,7 +32,7 @@ app.get('/health', (_req, res) => res.send('ok'));
 app.get('/api/config', (_req, res) => {
   res.json({
     passwordRequired: Boolean(CHAT_PASSWORD),
-    tenorKey: TENOR_API_KEY
+    giphyKey: GIPHY_API_KEY
   });
 });
 
