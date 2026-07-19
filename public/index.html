@@ -2,284 +2,277 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
 <title>Bestie Chat 💬</title>
+<meta name="description" content="A private, real-time chat just for you and your bestie. No accounts, no ads." />
 <link rel="manifest" href="/manifest.json" />
-<meta name="theme-color" content="#0f0f1a" />
+<meta name="theme-color" content="#0d0d1a" />
 <link rel="apple-touch-icon" href="/icon-192.png" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Bestie Chat" />
-<style>
-  :root {
-    --bg: #0f0f1a;
-    --panel: #17172a;
-    --bubble-me: #7c5cff;
-    --bubble-them: #24243c;
-    --text: #f0f0f5;
-    --muted: #8a8aa3;
-    --accent: #ff6fae;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: linear-gradient(180deg, #0f0f1a, #1a1a2e);
-    color: var(--text);
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-  }
-
-  #login {
-    margin: auto;
-    background: var(--panel);
-    padding: 32px;
-    border-radius: 16px;
-    text-align: center;
-    width: 90%;
-    max-width: 320px;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
-  }
-  #login h1 { margin-top: 0; font-size: 1.4em; }
-  #login input {
-    width: 100%;
-    padding: 12px;
-    border-radius: 10px;
-    border: 1px solid #333;
-    background: #0f0f1a;
-    color: var(--text);
-    margin: 12px 0;
-    font-size: 1em;
-  }
-  #login button {
-    width: 100%;
-    padding: 12px;
-    border-radius: 10px;
-    border: none;
-    background: var(--accent);
-    color: white;
-    font-weight: bold;
-    font-size: 1em;
-    cursor: pointer;
-  }
-
-  #chat { display: none; flex-direction: column; height: 100%; }
-
-  header {
-    background: var(--panel);
-    padding: 14px 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-    z-index: 2;
-  }
-  header h2 { margin: 0; font-size: 1.1em; }
-  #presence { font-size: 0.8em; color: var(--muted); }
-
-  #messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .msg {
-    max-width: 75%;
-    padding: 10px 14px;
-    border-radius: 16px;
-    line-height: 1.4;
-    font-size: 0.95em;
-    word-wrap: break-word;
-    animation: pop 0.15s ease-out;
-  }
-  @keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-
-  .msg.me {
-    align-self: flex-end;
-    background: var(--bubble-me);
-    border-bottom-right-radius: 4px;
-  }
-  .msg.them {
-    align-self: flex-start;
-    background: var(--bubble-them);
-    border-bottom-left-radius: 4px;
-  }
-  .msg .meta {
-    font-size: 0.7em;
-    color: rgba(255,255,255,0.6);
-    margin-bottom: 2px;
-  }
-  .system {
-    align-self: center;
-    font-size: 0.75em;
-    color: var(--muted);
-    margin: 4px 0;
-  }
-  #typing {
-    font-size: 0.75em;
-    color: var(--muted);
-    padding: 0 16px;
-    height: 18px;
-  }
-
-  #inputBar {
-    display: flex;
-    padding: 12px;
-    background: var(--panel);
-    gap: 8px;
-  }
-  #inputBar input {
-    flex: 1;
-    padding: 12px 14px;
-    border-radius: 20px;
-    border: none;
-    background: #0f0f1a;
-    color: var(--text);
-    font-size: 1em;
-  }
-  #inputBar button {
-    padding: 0 20px;
-    border-radius: 20px;
-    border: none;
-    background: var(--accent);
-    color: white;
-    font-weight: bold;
-    cursor: pointer;
-  }
-</style>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
 
+<!-- Ambient background particles -->
+<div id="ambience"></div>
+<!-- Mood glow overlay (feel what they feel) -->
+<div id="feelingGlow"></div>
+<!-- Empathy pulse overlay -->
+<div id="pulseOverlay"></div>
+<!-- Floating context menu -->
+<div id="contextMenu"></div>
+
+<!-- ═══════════════════ LOGIN ═══════════════════ -->
 <div id="login">
-  <h1>Bestie Chat 💬</h1>
-  <p style="color:var(--muted); font-size:0.9em;">Just you two. Pick a name to join.</p>
-  <input id="nameInput" placeholder="Your name" maxlength="20" />
-  <button onclick="joinChat()">Join Chat</button>
-  <button id="installBtn" style="display:none; margin-top:10px; background:transparent; border:1px solid var(--accent); color:var(--accent);">📲 Install App</button>
+  <div class="login-logo">💬</div>
+  <h1>Bestie Chat</h1>
+  <p class="login-hint">Just you two. Private, real-time, no accounts.</p>
+
+  <div class="input-group">
+    <input id="nameInput" type="text" placeholder="Your name" maxlength="20" autocomplete="off" autocapitalize="words" />
+  </div>
+  <div class="input-group">
+    <input id="nicknameInput" type="text" placeholder="Nickname (optional)" maxlength="24" autocomplete="off" />
+  </div>
+  <div class="input-group">
+    <select id="roomSelect">
+      <option value="just-us">💜 Just Us</option>
+      <option value="daily">☀️ Daily Check-In</option>
+      <option value="cute">💕 Sweet Notes</option>
+    </select>
+  </div>
+  <div id="passwordField" class="input-group" style="display:none">
+    <input id="passwordInput" type="password" placeholder="🔒 Room password" autocomplete="off" />
+  </div>
+  <div id="loginError"></div>
+  <button id="joinBtn" onclick="BestieChat.joinChat()">Start Chatting ✨</button>
+  <button id="installBtn" style="display:none">📲 Install App</button>
 </div>
 
+<!-- ═══════════════════ CHAT ═══════════════════ -->
 <div id="chat">
+
+  <!-- Header -->
   <header>
-    <h2>Bestie Chat 💬</h2>
-    <span id="presence"></span>
+    <div class="header-left">
+      <div class="header-title-row">
+        <h2>Bestie Chat</h2>
+        <span id="unreadBadge" style="display:none">0</span>
+      </div>
+      <div id="roomLabel"></div>
+      <div class="header-meta">
+        <span id="streakBadge">🔥 Start a streak!</span>
+        <span id="theirFeeling"></span>
+      </div>
+      <div id="lastSeenEl"></div>
+    </div>
+    <div class="header-right">
+      <div id="connectionStatus">
+        <span id="statusDot"></span><span id="statusText">Connecting…</span>
+      </div>
+      <div id="presence"></div>
+      <div class="header-btns">
+        <button id="searchToggleBtn" class="icon-btn" title="Search" onclick="BestieChat.toggleSearch()">🔍</button>
+        <button id="galleryBtn" class="icon-btn" title="Photo Gallery" onclick="BestieChat.openGallery()">🖼️</button>
+        <button id="soundBtn" class="icon-btn active" title="Sound" onclick="BestieChat.toggleSound()">🔊</button>
+        <button class="icon-btn" title="Feelings" onclick="BestieChat.toggleFeelings()">💭</button>
+        <button class="icon-btn" title="Extras" onclick="BestieChat.toggleExtras()">✨</button>
+        <button class="icon-btn leave-btn" title="Leave" onclick="BestieChat.leaveChat()">↩</button>
+      </div>
+    </div>
   </header>
+
+  <!-- MOTD Banner -->
+  <div id="motdBanner"></div>
+
+  <!-- Feelings Panel -->
+  <div id="feelingsPanel">
+    <div class="feelings-title">How are you feeling? 💭</div>
+    <div id="feelingsGrid"></div>
+    <button id="pulseBtn" onclick="BestieChat.sendPulse()">💓 Send Empathy Pulse</button>
+    <div class="feelings-hint">Your bestie will feel your vibe 🌈</div>
+  </div>
+
+  <!-- Extras Panel -->
+  <div id="extrasPanel">
+    <div class="extra-block">
+      <label>Room Vibe ✨</label>
+      <input id="moodInput" type="text" placeholder="Set the mood…" maxlength="100" />
+    </div>
+    <div class="extra-block">
+      <label>Our Notes 📝</label>
+      <textarea id="jokesInput" placeholder="Inside jokes, reminders…"></textarea>
+    </div>
+    <div class="extra-block">
+      <label>Countdown ⏳</label>
+      <input id="countdownLabel" type="text" placeholder="e.g. Summer trip" maxlength="50" />
+      <input id="countdownDate" type="datetime-local" />
+      <div id="countdownDisplay"></div>
+    </div>
+    <div class="extra-block">
+      <label>Nickname 🏷️</label>
+      <input id="nicknameInputChat" type="text" placeholder="Change your nickname" maxlength="24" />
+    </div>
+  </div>
+
+  <!-- Search Bar -->
+  <div id="searchBar">
+    <span class="search-icon">🔍</span>
+    <input id="searchInput" type="text" placeholder="Search messages…" autocomplete="off" />
+    <button class="search-clear" onclick="BestieChat.clearSearch()">✕</button>
+  </div>
+
+  <!-- Pinned Message Banner -->
+  <div id="pinnedBanner">
+    <span class="pin-icon">📌</span>
+    <span id="pinnedText" onclick="BestieChat.scrollToPinned()"></span>
+    <button class="pin-close" onclick="BestieChat.unpinMessage()" title="Unpin">✕</button>
+  </div>
+
+  <!-- Messages -->
   <div id="messages"></div>
+
+  <!-- Typing indicator -->
   <div id="typing"></div>
+
+  <!-- Reply bar -->
+  <div id="replyBar" style="display:none">
+    <div class="reply-bar-inner">
+      <span class="reply-bar-icon">↩</span>
+      <div id="replyPreview"></div>
+    </div>
+    <button class="reply-cancel" onclick="BestieChat.cancelReply()">✕</button>
+  </div>
+
+  <!-- Secret mode indicator -->
+  <div id="secretIndicator" style="display:none">🤫 Secret mode — messages vanish in 30s</div>
+
+  <!-- Toolbar -->
+  <div id="toolbar">
+    <button onclick="BestieChat.toggleEmojiPicker()" title="Emoji" data-emoji-toggle>😊</button>
+    <button onclick="BestieChat.toggleGameMenu()" title="Games" data-game-toggle>🎮</button>
+    <button onclick="BestieChat.toggleGifPanel()" title="GIFs & Stickers">🎁</button>
+    <button onclick="BestieChat.sendHug()" title="Send a hug">🫂</button>
+    <label title="Share photo" class="toolbar-file-label">
+      📷
+      <input type="file" id="photoInput" accept="image/*" />
+    </label>
+    <button id="recordBtn" onclick="BestieChat.toggleRecord()" title="Voice note">🎤</button>
+    <button id="doodleBtn" onclick="BestieChat.openDoodle()" title="Draw a doodle">✏️</button>
+    <button id="secretToggle" onclick="BestieChat.toggleSecretMode()" title="Secret message">🤫</button>
+    <span class="toolbar-label" id="charCount"></span>
+  </div>
+
+  <!-- Emoji Picker -->
+  <div id="emojiPicker"></div>
+
+  <!-- Game Menu -->
+  <div id="gameMenu">
+    <div class="game-menu-title">🎮 Mini Games</div>
+    <button onclick="BestieChat.startGame('would-you-rather')">🤔 Would You Rather</button>
+    <button onclick="BestieChat.startGame('this-or-that')">⚡ This or That</button>
+    <button onclick="BestieChat.startGame('truth')">💭 Truth</button>
+    <button onclick="BestieChat.startGame('dare')">🎯 Dare</button>
+    <button onclick="BestieChat.startGame('never-have-i-ever')">🙅 Never Have I Ever</button>
+    <button onclick="BestieChat.startGame('emoji-story')">🎭 Emoji Story</button>
+    <button onclick="BestieChat.startGame('finish-sentence')">✍️ Finish the Sentence</button>
+    <button onclick="BestieChat.startGame('rapid-fire')">⚡ Rapid Fire</button>
+  </div>
+
+  <!-- GIF / Sticker Panel -->
+  <div id="gifPanel">
+    <div class="gif-search-row">
+      <input id="gifSearch" type="text" placeholder="Search GIFs…" autocomplete="off" oninput="BestieChat.searchGifs()" />
+    </div>
+    <div id="gifGrid"></div>
+  </div>
+
+  <!-- Input Bar -->
   <div id="inputBar">
-    <input id="msgInput" placeholder="Type a message..." autocomplete="off" />
-    <button onclick="sendMessage()">Send</button>
+    <input id="msgInput" type="text" placeholder="Type a message…" autocomplete="off" maxlength="2000" />
+    <button id="sendBtn" onclick="BestieChat.sendMessage()">
+      <span>Send</span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21L23 12 2 3v7l15 2-15 2z"/></svg>
+    </button>
+  </div>
+</div><!-- end #chat -->
+
+<!-- ═══════════════════ GALLERY MODAL ═══════════════════ -->
+<div id="galleryModal" style="display:none">
+  <div class="modal-backdrop" onclick="BestieChat.closeGallery()"></div>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>📸 Shared Photos</h3>
+      <button class="modal-close" onclick="BestieChat.closeGallery()">✕</button>
+    </div>
+    <div id="galleryGrid"></div>
+    <div id="galleryEmpty" style="display:none">No photos shared yet 🥺</div>
+  </div>
+</div>
+
+<!-- ═══════════════════ LIGHTBOX ═══════════════════ -->
+<div id="lightbox" style="display:none">
+  <div class="lightbox-backdrop" onclick="BestieChat.closeLightbox()"></div>
+  <img id="lightboxImg" src="" alt="Full size photo" />
+  <button class="lightbox-close" onclick="BestieChat.closeLightbox()">✕</button>
+</div>
+
+<!-- ═══════════════════ DOODLE MODAL ═══════════════════ -->
+<div id="doodleModal" style="display:none">
+  <div class="modal-backdrop" onclick="BestieChat.closeDoodle()"></div>
+  <div class="modal-content doodle-modal-content">
+    <div class="modal-header">
+      <h3>✏️ Draw Something</h3>
+      <button class="modal-close" onclick="BestieChat.closeDoodle()">✕</button>
+    </div>
+    <canvas id="doodleCanvas"></canvas>
+    <div class="doodle-toolbar">
+      <div class="doodle-colors">
+        <button class="doodle-color active" data-color="#ff6fae" style="background:#ff6fae" onclick="BestieChat.setDoodleColor('#ff6fae',this)"></button>
+        <button class="doodle-color" data-color="#8b5cf6" style="background:#8b5cf6" onclick="BestieChat.setDoodleColor('#8b5cf6',this)"></button>
+        <button class="doodle-color" data-color="#06b6d4" style="background:#06b6d4" onclick="BestieChat.setDoodleColor('#06b6d4',this)"></button>
+        <button class="doodle-color" data-color="#4ade80" style="background:#4ade80" onclick="BestieChat.setDoodleColor('#4ade80',this)"></button>
+        <button class="doodle-color" data-color="#f59e0b" style="background:#f59e0b" onclick="BestieChat.setDoodleColor('#f59e0b',this)"></button>
+        <button class="doodle-color" data-color="#f0f0f5" style="background:#f0f0f5" onclick="BestieChat.setDoodleColor('#f0f0f5',this)"></button>
+      </div>
+      <div class="doodle-tools">
+        <button id="doodleBrushBtn" class="doodle-tool active" onclick="BestieChat.setDoodleTool('brush',this)" title="Brush">✏️</button>
+        <button id="doodleEraserBtn" class="doodle-tool" onclick="BestieChat.setDoodleTool('eraser',this)" title="Eraser">🧹</button>
+        <input type="range" id="doodleSize" min="2" max="32" value="6" title="Brush size" oninput="BestieChat.setDoodleSize(this.value)" />
+        <button onclick="BestieChat.clearDoodle()" title="Clear canvas">🗑️</button>
+      </div>
+    </div>
+    <button class="doodle-send-btn" onclick="BestieChat.sendDoodle()">📤 Send Doodle</button>
   </div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
+<script src="/app.js"></script>
 <script>
-  // Register service worker so the app is installable
+  // PWA install prompt
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js').catch(console.error);
-    });
+    window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(console.error));
   }
-
-  // Handle "Add to Home Screen" prompt (Android/desktop Chrome)
-  let deferredPrompt;
-  const installBtn = document.getElementById('installBtn');
+  let _deferredPrompt;
+  const _installBtn = document.getElementById('installBtn');
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
-    deferredPrompt = e;
-    installBtn.style.display = 'block';
+    _deferredPrompt = e;
+    _installBtn.style.display = 'block';
   });
-  installBtn.addEventListener('click', async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    await deferredPrompt.userChoice;
-    deferredPrompt = null;
-    installBtn.style.display = 'none';
+  _installBtn.addEventListener('click', async () => {
+    if (!_deferredPrompt) return;
+    _deferredPrompt.prompt();
+    await _deferredPrompt.userChoice;
+    _deferredPrompt = null;
+    _installBtn.style.display = 'none';
   });
-  window.addEventListener('appinstalled', () => {
-    installBtn.style.display = 'none';
-  });
-
-  const socket = io();
-  let myName = '';
-
-  const loginDiv = document.getElementById('login');
-  const chatDiv = document.getElementById('chat');
-  const messagesDiv = document.getElementById('messages');
-  const nameInput = document.getElementById('nameInput');
-  const msgInput = document.getElementById('msgInput');
-  const presenceEl = document.getElementById('presence');
-  const typingEl = document.getElementById('typing');
-
-  nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') joinChat(); });
-  msgInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
-  msgInput.addEventListener('input', () => socket.emit('typing'));
-
-  function joinChat() {
-    const name = nameInput.value.trim();
-    if (!name) return;
-    myName = name;
-    // remember name locally for convenience (in-memory only for this tab session)
-    socket.emit('join', name);
-    loginDiv.style.display = 'none';
-    chatDiv.style.display = 'flex';
-    msgInput.focus();
-  }
-
-  function sendMessage() {
-    const text = msgInput.value;
-    if (!text.trim()) return;
-    socket.emit('message', text);
-    msgInput.value = '';
-  }
-
-  function renderMessage(msg) {
-    const div = document.createElement('div');
-    const mine = msg.user === myName;
-    div.className = 'msg ' + (mine ? 'me' : 'them');
-    const time = new Date(msg.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    div.innerHTML = `<div class="meta">${mine ? 'You' : escapeHtml(msg.user)} · ${time}</div>${escapeHtml(msg.text)}`;
-    messagesDiv.appendChild(div);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-  }
-
-  function renderSystem(text) {
-    const div = document.createElement('div');
-    div.className = 'system';
-    div.textContent = text;
-    messagesDiv.appendChild(div);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-  }
-
-  function escapeHtml(str) {
-    const d = document.createElement('div');
-    d.textContent = str;
-    return d.innerHTML;
-  }
-
-  socket.on('history', (history) => {
-    messagesDiv.innerHTML = '';
-    history.forEach(renderMessage);
-  });
-
-  socket.on('message', renderMessage);
-  socket.on('system', renderSystem);
-
-  socket.on('presence', (users) => {
-    presenceEl.textContent = users.length ? `Online: ${users.join(', ')}` : '';
-  });
-
-  let typingTimeout;
-  socket.on('typing', (name) => {
-    if (name === myName) return;
-    typingEl.textContent = `${name} is typing...`;
-    clearTimeout(typingTimeout);
-    typingTimeout = setTimeout(() => { typingEl.textContent = ''; }, 1500);
-  });
+  window.addEventListener('appinstalled', () => { _installBtn.style.display = 'none'; });
 </script>
-
 </body>
 </html>

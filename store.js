@@ -9,21 +9,21 @@ const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
 const AVATARS = ['🐱', '🦋', '🌸', '🐻', '🌙', '✨', '🍓', '🐰', '💫', '🌈', '🦄', '🐼'];
 const COLORS = ['#8b5cf6', '#ff6fae', '#f59e0b', '#06b6d4', '#84cc16', '#ec4899', '#a78bfa', '#fb7185'];
 
-// Feelings palette: each feeling carries a glow color so the other person's
-// screen can visually shift to reflect it — the core of "feel what they feel".
 const FEELINGS = {
-  happy: { emoji: '😊', label: 'Happy', color: '#fbbf24' },
-  excited: { emoji: '🤩', label: 'Excited', color: '#fb923c' },
-  loved: { emoji: '🥰', label: 'Loved', color: '#ff6fae' },
-  calm: { emoji: '😌', label: 'Calm', color: '#60a5fa' },
-  tired: { emoji: '😴', label: 'Tired', color: '#818cf8' },
-  sad: { emoji: '😢', label: 'Sad', color: '#60a5fa' },
-  anxious: { emoji: '😟', label: 'Anxious', color: '#a78bfa' },
-  stressed: { emoji: '😩', label: 'Stressed', color: '#f87171' },
-  lonely: { emoji: '🥺', label: 'Missing you', color: '#c084fc' },
-  grateful: { emoji: '🙏', label: 'Grateful', color: '#34d399' }
+  happy:    { emoji: '😊', label: 'Happy',      color: '#fbbf24' },
+  excited:  { emoji: '🤩', label: 'Excited',    color: '#fb923c' },
+  loved:    { emoji: '🥰', label: 'Loved',      color: '#ff6fae' },
+  calm:     { emoji: '😌', label: 'Calm',       color: '#60a5fa' },
+  tired:    { emoji: '😴', label: 'Tired',      color: '#818cf8' },
+  sad:      { emoji: '😢', label: 'Sad',        color: '#60a5fa' },
+  anxious:  { emoji: '😟', label: 'Anxious',    color: '#a78bfa' },
+  stressed: { emoji: '😩', label: 'Stressed',   color: '#f87171' },
+  lonely:   { emoji: '🥺', label: 'Missing you',color: '#c084fc' },
+  grateful: { emoji: '🙏', label: 'Grateful',   color: '#34d399' }
 };
+
 const MILESTONES = [10, 25, 50, 100, 200, 500, 1000];
+
 const MOTD_PROMPTS = [
   'Tell them one thing you appreciated today 💛',
   'Send a random memory you love 🫶',
@@ -43,6 +43,19 @@ const defaultData = () => ({
   feelings: {}
 });
 
+function defaultRoom() {
+  return {
+    messages: [],
+    mood: '',
+    jokes: [],
+    countdown: { label: '', date: null },
+    messageCount: 0,
+    milestonesHit: [],
+    pinnedMessageId: null,
+    readBy: {}
+  };
+}
+
 function ensureDirs() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -56,7 +69,15 @@ function loadData() {
     return data;
   }
   try {
-    return { ...defaultData(), ...JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')) };
+    const parsed = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+    // Migrate rooms to have new fields
+    if (parsed.rooms) {
+      for (const room of Object.values(parsed.rooms)) {
+        if (room.pinnedMessageId === undefined) room.pinnedMessageId = null;
+        if (!room.readBy) room.readBy = {};
+      }
+    }
+    return { ...defaultData(), ...parsed };
   } catch {
     const data = defaultData();
     saveData(data);
@@ -101,17 +122,6 @@ function updateProfile(name, updates) {
   return profile;
 }
 
-function defaultRoom() {
-  return {
-    messages: [],
-    mood: '',
-    jokes: [],
-    countdown: { label: '', date: null },
-    messageCount: 0,
-    milestonesHit: []
-  };
-}
-
 function getRoom(room) {
   if (!data.rooms[room]) {
     data.rooms[room] = defaultRoom();
@@ -138,6 +148,27 @@ function addMessage(room, msg) {
   state.messageCount += 1;
   persist();
   return { message: full, milestone: checkMilestone(state) };
+}
+
+function editMessage(room, msgId, newText) {
+  const state = getRoom(room);
+  const msg = state.messages.find((m) => m.id === msgId);
+  if (!msg || msg.deleted) return null;
+  msg.text = newText;
+  msg.editedAt = Date.now();
+  persist();
+  return msg;
+}
+
+function deleteMessage(room, msgId) {
+  const state = getRoom(room);
+  const msg = state.messages.find((m) => m.id === msgId);
+  if (!msg) return null;
+  msg.deleted = true;
+  msg.text = '';
+  delete msg.url;
+  persist();
+  return msg;
 }
 
 function checkMilestone(state) {
@@ -172,6 +203,20 @@ function updateRoomMeta(room, updates) {
   Object.assign(state, updates);
   persist();
   return state;
+}
+
+function pinMessage(room, msgId) {
+  const state = getRoom(room);
+  state.pinnedMessageId = msgId || null;
+  persist();
+}
+
+function updateReadReceipt(room, username, messageId) {
+  const state = getRoom(room);
+  if (!state.readBy) state.readBy = {};
+  state.readBy[username] = messageId;
+  persist();
+  return state.readBy;
 }
 
 function recordActivity(username) {
@@ -234,7 +279,6 @@ function clearFeeling(username) {
 }
 
 function getFeelings() {
-  // Auto-expire feelings after 6 hours so an old mood doesn't linger forever
   const EXPIRY = 6 * 60 * 60 * 1000;
   const now = Date.now();
   let changed = false;
@@ -271,8 +315,12 @@ module.exports = {
   updateProfile,
   getRoom,
   addMessage,
+  editMessage,
+  deleteMessage,
   updateMessageReaction,
   updateRoomMeta,
+  pinMessage,
+  updateReadReceipt,
   recordActivity,
   getStreak,
   setLastSeen,

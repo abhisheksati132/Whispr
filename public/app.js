@@ -1,113 +1,144 @@
 /* global io */
 (() => {
-  const ROOM_LABELS = { 'just-us': 'Just Us 💜', daily: 'Daily Check-In ☀️', cute: 'Sweet Notes 💕' };
-  const ROOM_THEMES = { 'just-us': '', daily: 'theme-daily', cute: 'theme-cute' };
-  const REACTIONS = ['❤️', '😂', '🥺', '🔥', '👀', '✨'];
-  const EMOJIS = '😀😂🥰😭💀✨💖👀🫶😊🥺💕🔥👋🎉💬🌙☀️🍕🌮🎵📸💭🦋🐱🌸'.match(/./gu) || [];
-  const STICKERS = [
-    { tags: ['cute', 'love'], url: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjEx/MDJ9bX4Q5K3yA/giphy.gif' },
-    { tags: ['happy', 'love'], url: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjEx/26BRv0ThflsHCqDrG/giphy.gif' },
-    { tags: ['hug', 'love'], url: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjEx/lrr9rH7bbQusE/giphy.gif' },
-    { tags: ['cute', 'happy'], url: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjEx/3o7TKsQ8X3x8F2V2lC/giphy.gif' },
-    { tags: ['love', 'sparkle'], url: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjEx/26tn33aiTi1jkl6H6/giphy.gif' },
-    { tags: ['happy', 'dance'], url: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjEx/l0HlBO7eyXz4S3H4Y/giphy.gif' },
-    { tags: ['cat', 'cute'], url: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjEx/jd7vPTz4h9k4/giphy.gif' },
-    { tags: ['bunny', 'cute'], url: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjEx/26BRv0ThflsHCqDrG/giphy.gif' },
-    { tags: ['love', 'heart'], url: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjEx/26tn33aiTi1jkl6H6/giphy.gif' },
-    { tags: ['sparkle', 'magic'], url: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjEx/3o7TKsQ8X3x8F2V2lC/giphy.gif' }
+  // ═══════════════════ CONSTANTS ═══════════════════
+  const ROOM_LABELS  = { 'just-us': 'Just Us 💜', daily: 'Daily Check-In ☀️', cute: 'Sweet Notes 💕' };
+  const ROOM_THEMES  = { 'just-us': '', daily: 'theme-daily', cute: 'theme-cute' };
+  const REACTIONS    = ['❤️', '😂', '🥺', '🔥', '👀', '✨'];
+  const EMOJIS       = '😀😂🥰😭💀✨💖👀🫶😊🥺💕🔥👋🎉💬🌙☀️🍕🌮🎵📸💭🦋🐱🌸'.match(/./gu) || [];
+  const STICKERS     = [
+    { tags: ['cute','love'],    url: 'https://media.giphy.com/media/26BRv0ThflsHCqDrG/giphy.gif' },
+    { tags: ['happy','love'],   url: 'https://media.giphy.com/media/l0HlBO7eyXz4S3H4Y/giphy.gif' },
+    { tags: ['hug','love'],     url: 'https://media.giphy.com/media/lrr9rH7bbQusE/giphy.gif' },
+    { tags: ['cute','happy'],   url: 'https://media.giphy.com/media/3o7TKsQ8X3x8F2V2lC/giphy.gif' },
+    { tags: ['love','sparkle'], url: 'https://media.giphy.com/media/26tn33aiTi1jkl6H6/giphy.gif' },
+    { tags: ['cat','cute'],     url: 'https://media.giphy.com/media/jd7vPTz4h9k4/giphy.gif' },
+    { tags: ['happy','dance'],  url: 'https://media.giphy.com/media/3o85xnoIXebk3xYx4Q/giphy.gif' },
+    { tags: ['love','heart'],   url: 'https://media.giphy.com/media/l0NwHXQy3kUSfFF60/giphy.gif' },
+    { tags: ['sparkle','magic'],url: 'https://media.giphy.com/media/xT0xeJpnrWC4XWblEk/giphy.gif' }
   ];
   const VIBE_SUGGESTIONS = [
-    'tired but happy 😴✨',
-    'need coffee ☕️',
-    'missing you 💭',
-    'feeling grateful 🙏',
-    'daydreaming about us 🌈',
-    'current mood: chaotic 🎭',
-    'sending good vibes ✨',
-    'can’t stop smiling 😊'
+    'tired but happy 😴✨', 'need coffee ☕️', 'missing you 💭',
+    'feeling grateful 🙏', 'daydreaming about us 🌈',
+    'current mood: chaotic 🎭', 'sending good vibes ✨', "can't stop smiling 😊"
   ];
   const REMINDER_HOUR = 20;
+  const MUSIC_DOMAINS = /^https?:\/\/(open\.spotify\.com|music\.apple\.com|soundcloud\.com|www\.youtube\.com|youtu\.be|spotify\.link)/i;
 
+  // ═══════════════════ STATE ═══════════════════
   let socket, myName = '', myRoom = '', joined = false, lastDateLabel = '';
-  let myProfile = {}, profiles = {}, unreadCount = 0, mediaRecorder = null, recordChunks = [];
+  let myProfile = {}, profiles = {}, unreadCount = 0;
+  let mediaRecorder = null, recordChunks = [], recordStartTime = 0;
   let typingTimeout, heartbeatInterval, reminderInterval, countdownInterval;
-  let recordStartTime = 0;
   let lastTapTime = 0;
   let feelingsPalette = {}, feelings = {}, myFeelingKey = null;
 
+  // Feature state
+  let replyingTo      = null;   // { id, user, text, type }
+  let editingMessageId= null;
+  let secretMode      = false;
+  let tenorApiKey     = '';
+  let pinnedMsg       = null;
+  let readBy          = {};
+  let allImageMessages= [];     // { id, url, user, time }
+  let searchActive    = false;
+  let contextTarget   = null;
+  let longPressTimer  = null;
+
+  // Doodle state
+  let doodleCtx      = null;
+  let doodleDrawing  = false;
+  let doodleColor    = '#ff6fae';
+  let doodleTool     = 'brush';
+  let doodleSize     = 6;
+  let doodleLastX    = 0;
+  let doodleLastY    = 0;
+
+  // ═══════════════════ ELEMENT CACHE ═══════════════════
   const els = {
-    login: document.getElementById('login'),
-    chat: document.getElementById('chat'),
-    messages: document.getElementById('messages'),
-    nameInput: document.getElementById('nameInput'),
-    nicknameInput: document.getElementById('nicknameInput'),
-    roomSelect: document.getElementById('roomSelect'),
-    passwordField: document.getElementById('passwordField'),
-    passwordInput: document.getElementById('passwordInput'),
-    loginError: document.getElementById('loginError'),
-    msgInput: document.getElementById('msgInput'),
-    sendBtn: document.getElementById('sendBtn'),
-    presence: document.getElementById('presence'),
-    statusDot: document.getElementById('statusDot'),
-    statusText: document.getElementById('statusText'),
-    roomLabel: document.getElementById('roomLabel'),
-    typing: document.getElementById('typing'),
-    motdBanner: document.getElementById('motdBanner'),
-    streakBadge: document.getElementById('streakBadge'),
-    lastSeenEl: document.getElementById('lastSeenEl'),
-    unreadBadge: document.getElementById('unreadBadge'),
-    extrasPanel: document.getElementById('extrasPanel'),
-    moodInput: document.getElementById('moodInput'),
-    jokesInput: document.getElementById('jokesInput'),
-    countdownLabel: document.getElementById('countdownLabel'),
-    countdownDate: document.getElementById('countdownDate'),
+    login:            document.getElementById('login'),
+    chat:             document.getElementById('chat'),
+    messages:         document.getElementById('messages'),
+    nameInput:        document.getElementById('nameInput'),
+    nicknameInput:    document.getElementById('nicknameInput'),
+    nicknameInputChat:document.getElementById('nicknameInputChat'),
+    roomSelect:       document.getElementById('roomSelect'),
+    passwordField:    document.getElementById('passwordField'),
+    passwordInput:    document.getElementById('passwordInput'),
+    loginError:       document.getElementById('loginError'),
+    msgInput:         document.getElementById('msgInput'),
+    sendBtn:          document.getElementById('sendBtn'),
+    presence:         document.getElementById('presence'),
+    statusDot:        document.getElementById('statusDot'),
+    statusText:       document.getElementById('statusText'),
+    roomLabel:        document.getElementById('roomLabel'),
+    typing:           document.getElementById('typing'),
+    motdBanner:       document.getElementById('motdBanner'),
+    streakBadge:      document.getElementById('streakBadge'),
+    lastSeenEl:       document.getElementById('lastSeenEl'),
+    unreadBadge:      document.getElementById('unreadBadge'),
+    extrasPanel:      document.getElementById('extrasPanel'),
+    moodInput:        document.getElementById('moodInput'),
+    jokesInput:       document.getElementById('jokesInput'),
+    countdownLabel:   document.getElementById('countdownLabel'),
+    countdownDate:    document.getElementById('countdownDate'),
     countdownDisplay: document.getElementById('countdownDisplay'),
-    emojiPicker: document.getElementById('emojiPicker'),
-    gameMenu: document.getElementById('gameMenu'),
-    gifPanel: document.getElementById('gifPanel'),
-    gifGrid: document.getElementById('gifGrid'),
-    gifSearch: document.getElementById('gifSearch'),
-    ambience: document.getElementById('ambience'),
-    soundBtn: document.getElementById('soundBtn'),
-    photoInput: document.getElementById('photoInput'),
-    feelingsPanel: document.getElementById('feelingsPanel'),
-    feelingsGrid: document.getElementById('feelingsGrid'),
-    theirFeeling: document.getElementById('theirFeeling'),
-    feelingGlow: document.getElementById('feelingGlow'),
-    pulseOverlay: document.getElementById('pulseOverlay')
+    emojiPicker:      document.getElementById('emojiPicker'),
+    gameMenu:         document.getElementById('gameMenu'),
+    gifPanel:         document.getElementById('gifPanel'),
+    gifGrid:          document.getElementById('gifGrid'),
+    gifSearch:        document.getElementById('gifSearch'),
+    ambience:         document.getElementById('ambience'),
+    soundBtn:         document.getElementById('soundBtn'),
+    photoInput:       document.getElementById('photoInput'),
+    feelingsPanel:    document.getElementById('feelingsPanel'),
+    feelingsGrid:     document.getElementById('feelingsGrid'),
+    theirFeeling:     document.getElementById('theirFeeling'),
+    feelingGlow:      document.getElementById('feelingGlow'),
+    pulseOverlay:     document.getElementById('pulseOverlay'),
+    searchBar:        document.getElementById('searchBar'),
+    searchInput:      document.getElementById('searchInput'),
+    pinnedBanner:     document.getElementById('pinnedBanner'),
+    pinnedText:       document.getElementById('pinnedText'),
+    replyBar:         document.getElementById('replyBar'),
+    replyPreview:     document.getElementById('replyPreview'),
+    secretToggle:     document.getElementById('secretToggle'),
+    secretIndicator:  document.getElementById('secretIndicator'),
+    galleryModal:     document.getElementById('galleryModal'),
+    galleryGrid:      document.getElementById('galleryGrid'),
+    galleryEmpty:     document.getElementById('galleryEmpty'),
+    doodleModal:      document.getElementById('doodleModal'),
+    doodleCanvas:     document.getElementById('doodleCanvas'),
+    doodleSize:       document.getElementById('doodleSize'),
+    lightbox:         document.getElementById('lightbox'),
+    lightboxImg:      document.getElementById('lightboxImg'),
+    contextMenu:      document.getElementById('contextMenu'),
+    charCount:        document.getElementById('charCount'),
   };
 
+  // ═══════════════════ SOUND ═══════════════════
   const sounds = {
-    send: () => playTone(520, 0.08, 0.05),
-    receive: () => playTone(660, 0.1, 0.07),
-    hug: () => { playTone(440, 0.06, 0.04); setTimeout(() => playTone(554, 0.08, 0.05), 80); },
-    milestone: () => { playTone(523, 0.1, 0.06); setTimeout(() => playTone(659, 0.12, 0.07), 100); }
+    send:      () => playTone(520, 0.08, 0.05),
+    receive:   () => playTone(660, 0.10, 0.07),
+    hug:       () => { playTone(440, 0.06, 0.04); setTimeout(() => playTone(554, 0.08, 0.05), 80); },
+    milestone: () => { playTone(523, 0.10, 0.06); setTimeout(() => playTone(659, 0.12, 0.07), 100); }
   };
-
-  function soundEnabled() {
-    return localStorage.getItem('bestieSound') !== 'off';
-  }
-
+  function soundEnabled() { return localStorage.getItem('bestieSound') !== 'off'; }
   function playTone(freq, dur, vol) {
     if (!soundEnabled()) return;
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.frequency.value = freq;
-      gain.gain.value = vol;
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = freq; gain.gain.value = vol;
       osc.start();
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
       osc.stop(ctx.currentTime + dur);
     } catch (_) { /* ignore */ }
   }
+  function playSound(name) { if (sounds[name]) sounds[name](); }
 
-  function playSound(name) {
-    if (sounds[name]) sounds[name]();
-  }
-
+  // ═══════════════════ AMBIENT ═══════════════════
   function initAmbience() {
     const symbols = ['✨', '💕', '⭐', '🌸', '💫'];
     for (let i = 0; i < 12; i++) {
@@ -116,21 +147,21 @@
       p.textContent = symbols[i % symbols.length];
       p.style.left = `${Math.random() * 100}%`;
       p.style.animationDuration = `${12 + Math.random() * 18}s`;
-      p.style.animationDelay = `${Math.random() * 10}s`;
+      p.style.animationDelay    = `${Math.random() * 10}s`;
       els.ambience.appendChild(p);
     }
   }
 
   function confetti() {
-    const colors = ['#ff6fae', '#8b5cf6', '#f59e0b', '#06b6d4', '#84cc16', '#fb7185', '#a78bfa', '#fcd34d'];
+    const colors = ['#ff6fae','#8b5cf6','#f59e0b','#06b6d4','#84cc16','#fb7185','#a78bfa','#fcd34d'];
     for (let i = 0; i < 40; i++) {
       const piece = document.createElement('div');
       piece.className = 'confetti-piece';
-      piece.style.left = `${10 + Math.random() * 80}%`;
+      piece.style.left            = `${10 + Math.random() * 80}%`;
       piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-      piece.style.animationDelay = `${Math.random() * 0.4}s`;
+      piece.style.animationDelay  = `${Math.random() * 0.4}s`;
       piece.style.animationDuration = `${1.2 + Math.random() * 1.8}s`;
-      piece.style.width = `${6 + Math.random() * 6}px`;
+      piece.style.width  = `${6 + Math.random() * 6}px`;
       piece.style.height = `${8 + Math.random() * 10}px`;
       els.ambience.appendChild(piece);
       setTimeout(() => piece.remove(), 3500);
@@ -138,8 +169,8 @@
   }
 
   function applyNightGlow() {
-    const hour = new Date().getHours();
-    document.body.classList.toggle('night-glow', hour >= 22 || hour < 6);
+    const h = new Date().getHours();
+    document.body.classList.toggle('night-glow', h >= 22 || h < 6);
   }
 
   function applyRoomTheme(room) {
@@ -148,14 +179,12 @@
     if (cls) document.body.classList.add(cls);
   }
 
+  // ═══════════════════ HELPERS ═══════════════════
   function getDisplayName(username) {
     const p = profiles[username] || {};
     return p.nickname || username;
   }
-
-  function getProfile(username) {
-    return profiles[username] || myProfile;
-  }
+  function getProfile(username) { return profiles[username] || myProfile; }
 
   function escapeHtml(str) {
     const d = document.createElement('div');
@@ -164,11 +193,9 @@
   }
 
   function formatDateLabel(ts) {
-    const d = new Date(ts);
-    const today = new Date();
-    const yesterday = new Date(today);
+    const d = new Date(ts), today = new Date(), yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    if (d.toDateString() === today.toDateString()) return 'Today';
+    if (d.toDateString() === today.toDateString())     return 'Today';
     if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
     return d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
   }
@@ -176,9 +203,9 @@
   function formatLastSeen(ts) {
     if (!ts) return '';
     const diff = Date.now() - ts;
-    if (diff < 60000) return 'Active just now';
+    if (diff < 60000)   return 'Active just now';
     if (diff < 3600000) return `Active ${Math.floor(diff / 60000)}m ago`;
-    if (diff < 86400000) return `Active ${Math.floor(diff / 3600000)}h ago`;
+    if (diff < 86400000)return `Active ${Math.floor(diff / 3600000)}h ago`;
     return `Active ${new Date(ts).toLocaleDateString()}`;
   }
 
@@ -192,10 +219,19 @@
     els.messages.appendChild(div);
   }
 
-  function scrollBottom() {
-    els.messages.scrollTop = els.messages.scrollHeight;
+  function scrollBottom() { els.messages.scrollTop = els.messages.scrollHeight; }
+
+  function isMusicUrl(text) { return MUSIC_DOMAINS.test((text || '').trim()); }
+
+  function getMusicPlatform(url) {
+    if (/spotify/i.test(url))   return { name: 'Spotify',      icon: '🎵', color: '#1db954' };
+    if (/youtube|youtu\.be/i.test(url)) return { name: 'YouTube', icon: '▶️', color: '#ff0000' };
+    if (/soundcloud/i.test(url))return { name: 'SoundCloud',   icon: '🔊', color: '#ff5500' };
+    if (/apple/i.test(url))     return { name: 'Apple Music',  icon: '🎵', color: '#fa57c1' };
+    return { name: 'Music', icon: '🎵', color: '#8b5cf6' };
   }
 
+  // ═══════════════════ RENDER HELPERS ═══════════════════
   function renderReactionBar(msgId) {
     return REACTIONS.map((e) =>
       `<button class="reaction-btn" onclick="BestieChat.react('${msgId}','${e}')">${e}</button>`
@@ -211,77 +247,149 @@
   }
 
   function renderMessage(msg, skipSound) {
-    maybeAddDateDivider(msg.time);
-    const mine = msg.user === myName;
+    if (!msg || !msg.id) return;
+    maybeAddDateDivider(msg.time || Date.now());
+
+    const mine    = msg.user === myName;
     const profile = getProfile(msg.user);
     const display = getDisplayName(msg.user);
-    const time = new Date(msg.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const time    = new Date(msg.time || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     const wrap = document.createElement('div');
-    wrap.className = `msg-wrap ${mine ? 'me' : 'them'}`;
+    wrap.className  = `msg-wrap ${mine ? 'me' : 'them'}`;
     wrap.dataset.id = msg.id;
 
+    // Reply quote snippet
+    const replyQuote = msg.replyTo
+      ? `<div class="reply-quote" onclick="BestieChat.scrollToMessage('${msg.replyTo.id}')">
+           <span class="reply-author">${escapeHtml(msg.replyTo.user)}</span>
+           ${escapeHtml((msg.replyTo.text || '').slice(0, 60))}${(msg.replyTo.text || '').length > 60 ? '…' : ''}
+         </div>`
+      : '';
+
+    const metaLine = `<div class="meta"><span class="nick-dot" style="background:${profile.color || '#888'}"></span>${mine ? 'You' : escapeHtml(display)} · ${time}</div>`;
+    const editedTag = msg.editedAt ? `<div class="edited-tag">edited</div>` : '';
+
     let body = '';
-    if (msg.type === 'hug') {
-      body = `<div class="msg hug ${mine ? 'me' : 'them'}">${profile.avatar || '💌'} ${escapeHtml(display)} ${escapeHtml(msg.text)}</div>`;
+
+    if (msg.deleted) {
+      body = `<div class="msg deleted ${mine ? 'me' : 'them'}">🗑️ Message deleted</div>`;
+
+    } else if (msg.type === 'hug') {
+      body = `<div class="msg hug ${mine ? 'me' : 'them'}">${profile.avatar || '💌'} ${escapeHtml(display)} sent a hug 💌</div>`;
+
     } else if (msg.type === 'image') {
       body = `<div class="msg ${mine ? 'me' : 'them'}">
-        <div class="meta"><span class="nick-dot" style="background:${profile.color || '#888'}"></span>${mine ? 'You' : escapeHtml(display)} · ${time}</div>
-        ${msg.text ? escapeHtml(msg.text) : ''}
-        <img class="chat-img" src="${escapeHtml(msg.url)}" alt="shared image" onclick="window.open(this.src)" />
+        ${metaLine}${replyQuote}
+        ${msg.text ? `<div>${escapeHtml(msg.text)}</div>` : ''}
+        <img class="chat-img" src="${escapeHtml(msg.url)}" alt="shared image" onclick="BestieChat.openLightbox('${escapeHtml(msg.url)}')" loading="lazy" />
+        ${editedTag}
       </div>`;
+      // Track for gallery
+      if (!allImageMessages.find((m) => m.id === msg.id)) {
+        allImageMessages.push({ id: msg.id, url: msg.url, user: msg.user, time: msg.time });
+      }
+
     } else if (msg.type === 'voice') {
       const dur = msg.duration ? `${Math.floor(msg.duration / 60)}:${String(msg.duration % 60).padStart(2, '0')}` : '';
       body = `<div class="msg ${mine ? 'me' : 'them'}">
-        <div class="meta"><span class="nick-dot" style="background:${profile.color || '#888'}"></span>${mine ? 'You' : escapeHtml(display)} · ${time}</div>
+        ${metaLine}${replyQuote}
         🎤 Voice note
         <audio controls src="${escapeHtml(msg.url)}"></audio>
         ${dur ? `<div class="voice-duration">${dur}</div>` : ''}
+        ${editedTag}
       </div>`;
+
+    } else if (msg.type === 'music') {
+      const platform = getMusicPlatform(msg.url || '');
+      body = `<div class="msg ${mine ? 'me' : 'them'}">
+        ${metaLine}${replyQuote}
+        <a class="music-card" href="${escapeHtml(msg.url)}" target="_blank" rel="noopener noreferrer">
+          <div class="music-icon" style="background:${platform.color}">${platform.icon}</div>
+          <div class="music-info">
+            <div class="music-platform">${escapeHtml(platform.name)}</div>
+            <span class="music-link">${escapeHtml(msg.text || msg.url)}</span>
+          </div>
+        </a>
+        ${editedTag}
+      </div>`;
+
+    } else if (msg.type === 'secret') {
+      body = `<div class="msg secret ${mine ? 'me' : 'them'}">
+        ${metaLine}
+        <div class="secret-content" onclick="this.classList.toggle('revealed')">🤫 ${escapeHtml(msg.text)}</div>
+        <div class="secret-timer" id="stimer-${msg.id}">Vanishes in 30s</div>
+      </div>`;
+      setTimeout(() => startSecretCountdown(msg.id, msg.time), 0);
+
     } else if (msg.type === 'poll') {
       const opts = (msg.options || []).map((o) => {
         const voted = msg.votes && msg.votes[myName] === o;
         return `<button class="poll-opt${voted ? ' voted' : ''}" data-option="${escapeHtml(o)}">${escapeHtml(o)}</button>`;
       }).join('');
       body = `<div class="msg ${mine ? 'me' : 'them'}">
-        <div class="meta">${mine ? 'You' : escapeHtml(display)} · ${time}</div>
+        ${metaLine}
         📊 ${escapeHtml(msg.text)}
         <div class="poll-options">${opts}</div>
+        ${editedTag}
       </div>`;
+
     } else {
       body = `<div class="msg ${mine ? 'me' : 'them'}">
-        <div class="meta"><span class="nick-dot" style="background:${profile.color || '#888'}"></span>${mine ? 'You' : escapeHtml(display)} · ${time}</div>
+        ${metaLine}${replyQuote}
         ${escapeHtml(msg.text)}
+        ${editedTag}
       </div>`;
     }
+
+    // Read tick (for own messages)
+    const tickHtml = mine ? `<div class="read-tick delivered" id="tick-${msg.id}">✓</div>` : '';
 
     wrap.innerHTML = `
       ${!mine ? `<div class="msg-avatar">${profile.avatar || '✨'}</div>` : ''}
       ${body}
       <div class="react-bar">${renderReactionBar(msg.id)}</div>
       <div class="reactions" id="reactions-${msg.id}">${renderReactions(msg)}</div>
+      ${tickHtml}
     `;
+
+    // Poll vote listeners
     wrap.querySelectorAll('.poll-opt').forEach((btn) => {
       btn.addEventListener('click', () => votePoll(msg.id, btn.dataset.option));
     });
 
+    // Double-click to react with ❤️
     wrap.addEventListener('dblclick', (e) => {
       e.preventDefault();
       if (!mine) react(msg.id, '❤️');
     });
 
+    // Touch double-tap
     wrap.addEventListener('touchstart', (e) => {
       if (e.touches.length > 1) return;
       const now = Date.now();
-      if (now - lastTapTime < 300) {
-        if (!mine) react(msg.id, '❤️');
-      }
+      if (now - lastTapTime < 300 && !mine) react(msg.id, '❤️');
       lastTapTime = now;
     });
 
+    // Long-press context menu
+    wrap.addEventListener('pointerdown', (e) => {
+      if (e.button && e.button !== 0) return;
+      longPressTimer = setTimeout(() => showContextMenu(e, msg), 550);
+    });
+    wrap.addEventListener('pointerup',   () => clearTimeout(longPressTimer));
+    wrap.addEventListener('pointermove', () => clearTimeout(longPressTimer));
+
+    // Right-click context menu
+    wrap.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      showContextMenu(e, msg);
+    });
+
+    // Tap to show react bar on touch
     if ('ontouchstart' in window) {
       wrap.addEventListener('click', (e) => {
-        if (e.target.closest('.reaction-pill') || e.target.closest('.reaction-btn') || e.target.closest('.poll-opt')) return;
+        if (e.target.closest('.reaction-pill,.reaction-btn,.poll-opt,.reply-quote,.chat-img,.music-card')) return;
         wrap.classList.toggle('touched');
         document.querySelectorAll('.msg-wrap.touched').forEach((el) => {
           if (el !== wrap) el.classList.remove('touched');
@@ -292,7 +400,29 @@
     els.messages.appendChild(wrap);
     scrollBottom();
 
-    if (!skipSound && !mine && msg.type !== 'poll') playSound('receive');
+    if (!skipSound && !mine && !['poll'].includes(msg.type)) playSound('receive');
+
+    // Update read tick if other person has already read past this
+    updateReadTickForMessage(msg.id);
+
+    // Emit read receipt if visible
+    if (!document.hidden && msg.user !== myName) {
+      emitReadReceipt(msg.id);
+    }
+  }
+
+  function startSecretCountdown(msgId, startTime) {
+    const endTime = (startTime || Date.now()) + 30000;
+    const timerEl = document.getElementById(`stimer-${msgId}`);
+    if (!timerEl) return;
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+      if (timerEl && timerEl.isConnected) {
+        timerEl.textContent = remaining > 0 ? `Vanishes in ${remaining}s` : 'Vanished 💨';
+      }
+      if (remaining > 0) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
   }
 
   function updateReactions(messageId, reactions) {
@@ -306,7 +436,7 @@
 
   function renderSystem(text) {
     const div = document.createElement('div');
-    div.className = 'system';
+    div.className  = 'system';
     div.textContent = text;
     els.messages.appendChild(div);
     scrollBottom();
@@ -314,7 +444,7 @@
 
   function renderMilestone(data) {
     const div = document.createElement('div');
-    div.className = 'milestone-msg';
+    div.className  = 'milestone-msg';
     div.textContent = data.text;
     els.messages.appendChild(div);
     scrollBottom();
@@ -334,14 +464,91 @@
     scrollBottom();
   }
 
+  // ═══════════════════ READ RECEIPTS ═══════════════════
+  function emitReadReceipt(msgId) {
+    if (!joined || !socket || !msgId) return;
+    socket.emit('read-receipt', { messageId: msgId });
+  }
+
+  function emitReadReceiptForLastVisible() {
+    const wraps = els.messages.querySelectorAll('.msg-wrap');
+    let lastOtherMsgId = null;
+    wraps.forEach((w) => {
+      const msg = w.querySelector('.msg');
+      if (msg && !w.classList.contains('me')) lastOtherMsgId = w.dataset.id;
+    });
+    if (lastOtherMsgId) emitReadReceipt(lastOtherMsgId);
+  }
+
+  function updateReadTickForMessage(msgId) {
+    const tick = document.getElementById(`tick-${msgId}`);
+    if (!tick) return;
+    // Check if any other user has read this or beyond
+    const others = Object.entries(readBy).filter(([name]) => name !== myName);
+    if (others.length) {
+      tick.textContent = '✓✓';
+      tick.className   = 'read-tick';
+    }
+  }
+
+  function applyReadReceipts(rb) {
+    readBy = rb || {};
+    // Update ticks for all sent messages
+    els.messages.querySelectorAll('.msg-wrap.me').forEach((wrap) => {
+      updateReadTickForMessage(wrap.dataset.id);
+    });
+  }
+
+  // ═══════════════════ CONTEXT MENU ═══════════════════
+  function showContextMenu(e, msg) {
+    const mine = msg.user === myName;
+    const isPinned = pinnedMsg && pinnedMsg.id === msg.id;
+
+    let html = '';
+    if (!msg.deleted) {
+      html += `<button onclick="BestieChat.replyToMessage('${msg.id}','${escapeHtml(msg.user)}','${escapeHtml((msg.text||'').replace(/'/g,"&#39;"))}','${msg.type||'text'}')">💬 Reply</button>`;
+      if (mine && (msg.type === 'text' || !msg.type)) {
+        html += `<button onclick="BestieChat.startEditMessage('${msg.id}','${escapeHtml((msg.text||'').replace(/'/g,"&#39;"))}')">✏️ Edit</button>`;
+      }
+      if (mine) {
+        html += `<div class="ctx-divider"></div>`;
+        html += `<button class="danger" onclick="BestieChat.deleteMessage('${msg.id}')">🗑️ Delete</button>`;
+      }
+      html += `<div class="ctx-divider"></div>`;
+      if (isPinned) {
+        html += `<button onclick="BestieChat.unpinMessage()">📌 Unpin</button>`;
+      } else {
+        html += `<button onclick="BestieChat.pinMessageById('${msg.id}')">📌 Pin</button>`;
+      }
+      if (msg.text) {
+        html += `<button onclick="BestieChat.copyText('${escapeHtml((msg.text||'').replace(/'/g,"&#39;"))}')">📋 Copy</button>`;
+      }
+    }
+
+    els.contextMenu.innerHTML = html;
+    els.contextMenu.classList.add('open');
+
+    const x = e.clientX || (e.changedTouches && e.changedTouches[0] && e.changedTouches[0].clientX) || window.innerWidth / 2;
+    const y = e.clientY || (e.changedTouches && e.changedTouches[0] && e.changedTouches[0].clientY) || window.innerHeight / 2;
+
+    const menuW = 175;
+    const menuH = els.contextMenu.scrollHeight || 200;
+    els.contextMenu.style.left = `${Math.min(x, window.innerWidth  - menuW - 10)}px`;
+    els.contextMenu.style.top  = `${Math.min(y, window.innerHeight - menuH - 10)}px`;
+  }
+
+  function hideContextMenu() { els.contextMenu.classList.remove('open'); }
+
+  // ═══════════════════ CONNECTION STATUS ═══════════════════
   function setConnected(online) {
     els.statusDot.classList.toggle('online', online);
-    els.statusText.textContent = online ? 'Connected' : 'Reconnecting...';
+    els.statusText.textContent = online ? 'Connected' : 'Reconnecting…';
     els.msgInput.disabled = !online;
-    els.sendBtn.disabled = !online;
+    els.sendBtn.disabled  = !online;
     document.body.classList.toggle('reconnecting', !online);
   }
 
+  // ═══════════════════ UI UPDATES ═══════════════════
   function updateStreak(streak) {
     if (!streak) return;
     const days = streak.days || 0;
@@ -350,10 +557,7 @@
 
   function updateLastSeen(lastSeen) {
     const others = Object.entries(lastSeen || {}).filter(([name]) => name !== myName);
-    if (!others.length) {
-      els.lastSeenEl.textContent = '';
-      return;
-    }
+    if (!others.length) { els.lastSeenEl.textContent = ''; return; }
     const [name, ts] = others.sort((a, b) => b[1] - a[1])[0];
     els.lastSeenEl.textContent = `${getDisplayName(name)}: ${formatLastSeen(ts)}`;
   }
@@ -361,7 +565,7 @@
   function updateUnreadBadge() {
     if (unreadCount > 0 && document.hidden) {
       els.unreadBadge.style.display = 'inline';
-      els.unreadBadge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+      els.unreadBadge.textContent   = unreadCount > 99 ? '99+' : unreadCount;
       document.title = `(${unreadCount}) Bestie Chat 💬`;
     } else {
       els.unreadBadge.style.display = 'none';
@@ -369,25 +573,30 @@
     }
   }
 
-  function clearUnread() {
-    unreadCount = 0;
-    updateUnreadBadge();
-  }
+  function clearUnread() { unreadCount = 0; updateUnreadBadge(); }
 
   function updateCountdown(countdown) {
-    if (!countdown || !countdown.date) {
-      els.countdownDisplay.textContent = '';
-      return;
-    }
-    const target = new Date(countdown.date).getTime();
-    const diff = target - Date.now();
-    if (diff <= 0) {
-      els.countdownDisplay.textContent = `${countdown.label || 'It\'s here!'} 🎉`;
-      return;
-    }
+    if (!countdown || !countdown.date) { els.countdownDisplay.textContent = ''; return; }
+    const diff = new Date(countdown.date).getTime() - Date.now();
+    if (diff <= 0) { els.countdownDisplay.textContent = `${countdown.label || "It's here!"} 🎉`; return; }
     const days = Math.floor(diff / 86400000);
-    const hrs = Math.floor((diff % 86400000) / 3600000);
-    els.countdownDisplay.textContent = `${countdown.label || 'Countdown'}: ${days}d ${hrs}h`;
+    const hrs  = Math.floor((diff % 86400000) / 3600000);
+    const mins = Math.floor((diff % 3600000)  / 60000);
+    els.countdownDisplay.textContent = `${countdown.label || 'Countdown'}: ${days}d ${hrs}h ${mins}m`;
+  }
+
+  function updatePinnedBanner(msg) {
+    pinnedMsg = msg;
+    if (!msg) {
+      els.pinnedBanner.classList.remove('visible');
+      return;
+    }
+    const display = getDisplayName(msg.user);
+    const preview = msg.type === 'image' ? '📸 Photo' :
+                    msg.type === 'voice' ? '🎤 Voice note' :
+                    (msg.text || '').slice(0, 60);
+    els.pinnedText.textContent = `${display}: ${preview}`;
+    els.pinnedBanner.classList.add('visible');
   }
 
   function startIntervals() {
@@ -395,7 +604,7 @@
     clearInterval(reminderInterval);
     clearInterval(countdownInterval);
 
-    heartbeatInterval = setInterval(() => socket.emit('heartbeat'), 30000);
+    heartbeatInterval = setInterval(() => socket && socket.emit('heartbeat'), 30000);
     applyNightGlow();
     setInterval(applyNightGlow, 60000);
 
@@ -403,14 +612,13 @@
       if (!joined) return;
       const hour = new Date().getHours();
       if (hour !== REMINDER_HOUR) return;
-      const key = `reminder-${new Date().toISOString().slice(0, 10)}`;
+      const key  = `reminder-${new Date().toISOString().slice(0, 10)}`;
       if (localStorage.getItem(key)) return;
       const lastMsg = localStorage.getItem('bestieLastMsgDate');
-      const today = new Date().toISOString().slice(0, 10);
-      if (lastMsg === today) return;
+      if (lastMsg === new Date().toISOString().slice(0, 10)) return;
       if ('Notification' in window && Notification.permission === 'granted') {
         new Notification('Bestie check-in 👀', {
-          body: 'You haven\'t chatted with your bestie today!',
+          body: "You haven't chatted with your bestie today!",
           icon: '/icon-192.png'
         });
         localStorage.setItem(key, '1');
@@ -419,11 +627,12 @@
 
     countdownInterval = setInterval(() => {
       const label = els.countdownLabel.value;
-      const date = els.countdownDate.value;
+      const date  = els.countdownDate.value;
       if (date) updateCountdown({ label, date });
     }, 60000);
   }
 
+  // ═══════════════════ FILE UPLOAD ═══════════════════
   async function uploadFile(base64, mime, kind) {
     const res = await fetch('/api/upload', {
       method: 'POST',
@@ -434,56 +643,86 @@
     return res.json();
   }
 
+  // ═══════════════════ JOIN / LEAVE ═══════════════════
   function joinChat() {
     const name = els.nameInput.value.trim();
     const room = els.roomSelect.value.trim();
     const nickname = els.nicknameInput.value.trim();
-    if (!name) {
-      els.loginError.textContent = 'Enter your name first';
-      return;
-    }
+    if (!name) { els.loginError.textContent = 'Enter your name first 🥺'; return; }
     els.loginError.textContent = '';
-    if (!socket) {
-      els.loginError.textContent = 'Not connected to server — is the server running?';
-      return;
-    }
-    myName = name;
-    myRoom = room;
-    localStorage.setItem('bestieChatName', name);
-    localStorage.setItem('bestieChatRoom', room);
+    if (!socket) { els.loginError.textContent = 'Not connected to server — is the server running?'; return; }
+    myName = name; myRoom = room;
+    localStorage.setItem('bestieChatName',     name);
+    localStorage.setItem('bestieChatRoom',     room);
     if (nickname) localStorage.setItem('bestieChatNickname', nickname);
     applyRoomTheme(room);
     socket.emit('join', { name, room, nickname, password: els.passwordInput.value });
   }
 
   function leaveChat() {
-    joined = false;
-    lastDateLabel = '';
+    joined = false; lastDateLabel = '';
     clearInterval(heartbeatInterval);
     clearInterval(reminderInterval);
     clearInterval(countdownInterval);
-    if (socket) {
-      socket.disconnect();
-      socket.connect();
-    }
-    els.messages.innerHTML = '';
-    els.typing.innerHTML = '';
-    els.chat.style.display = 'none';
-    els.login.style.display = 'block';
-    els.loginError.textContent = '';
+    if (socket) { socket.disconnect(); socket.connect(); }
+    els.messages.innerHTML       = '';
+    els.typing.innerHTML         = '';
+    els.chat.style.display       = 'none';
+    els.login.style.display      = 'block';
+    els.loginError.textContent   = '';
     els.extrasPanel.classList.remove('open');
     els.feelingsPanel.classList.remove('open');
     els.feelingGlow.classList.remove('active');
-    feelings = {};
-    myFeelingKey = null;
+    feelings = {}; myFeelingKey = null;
+    allImageMessages = [];
+    pinnedMsg = null;
+    replyingTo = null;
+    editingMessageId = null;
+    els.replyBar.classList.remove('open');
+    els.replyBar.style.display = 'none';
+    els.secretIndicator.style.display = 'none';
+    secretMode = false;
     clearUnread();
+    hideContextMenu();
   }
 
+  // ═══════════════════ SEND MESSAGE ═══════════════════
   function sendMessage() {
-    const text = els.msgInput.value;
-    if (!text.trim() || !joined) return;
-    socket.emit('message', text);
+    const text = els.msgInput.value.trim();
+    if (!text || !joined) return;
+
+    // Editing mode
+    if (editingMessageId) {
+      socket.emit('edit-message', { messageId: editingMessageId, text });
+      els.msgInput.value     = '';
+      editingMessageId       = null;
+      els.sendBtn.innerHTML  = '<span>Send</span><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21L23 12 2 3v7l15 2-15 2z"/></svg>';
+      cancelReply();
+      return;
+    }
+
+    // Check for music URL
+    if (isMusicUrl(text)) {
+      socket.emit('message', { type: 'music', url: text, text, replyTo: replyingTo });
+      els.msgInput.value = '';
+      cancelReply();
+      playSound('send');
+      localStorage.setItem('bestieLastMsgDate', new Date().toISOString().slice(0, 10));
+      return;
+    }
+
+    // Secret mode
+    if (secretMode) {
+      socket.emit('secret-message', { text });
+      els.msgInput.value = '';
+      cancelReply();
+      playSound('send');
+      return;
+    }
+
+    socket.emit('message', { text, replyTo: replyingTo });
     els.msgInput.value = '';
+    cancelReply();
     playSound('send');
     localStorage.setItem('bestieLastMsgDate', new Date().toISOString().slice(0, 10));
   }
@@ -491,8 +730,7 @@
   function sendHug() {
     if (!joined) return;
     socket.emit('message', { type: 'hug' });
-    playSound('hug');
-    confetti();
+    playSound('hug'); confetti();
     localStorage.setItem('bestieLastMsgDate', new Date().toISOString().slice(0, 10));
   }
 
@@ -502,15 +740,79 @@
     reader.onload = async () => {
       try {
         const { url } = await uploadFile(reader.result, file.type, 'image');
-        socket.emit('message', { type: 'image', url });
+        socket.emit('message', { type: 'image', url, replyTo: replyingTo });
+        cancelReply();
         playSound('send');
-      } catch {
-        renderSystem('Could not upload photo — try a smaller image');
-      }
+      } catch { renderSystem('Could not upload photo — try a smaller image'); }
     };
     reader.readAsDataURL(file);
   }
 
+  // ═══════════════════ REPLY ═══════════════════
+  function replyToMessage(msgId, user, text, type) {
+    replyingTo = { id: msgId, user, text, type };
+    const preview = type === 'image' ? '📸 Photo' : type === 'voice' ? '🎤 Voice note' : text;
+    els.replyPreview.innerHTML = `<strong>${escapeHtml(user)}</strong>${escapeHtml(preview.slice(0, 80))}${preview.length > 80 ? '…' : ''}`;
+    els.replyBar.style.display = 'flex';
+    els.replyBar.classList.add('open');
+    els.msgInput.focus();
+    hideContextMenu();
+  }
+
+  function cancelReply() {
+    replyingTo = null;
+    els.replyBar.style.display = 'none';
+    els.replyBar.classList.remove('open');
+    els.replyPreview.innerHTML = '';
+  }
+
+  function scrollToMessage(msgId) {
+    const el = els.messages.querySelector(`[data-id="${msgId}"]`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('pinned-msg-highlight');
+    setTimeout(() => el.classList.remove('pinned-msg-highlight'), 1300);
+  }
+
+  // ═══════════════════ EDIT / DELETE ═══════════════════
+  function startEditMessage(msgId, text) {
+    editingMessageId = msgId;
+    els.msgInput.value = text;
+    els.msgInput.focus();
+    els.sendBtn.innerHTML = '<span>Save</span> ✓';
+    hideContextMenu();
+  }
+
+  function deleteMessage(msgId) {
+    if (!joined) return;
+    socket.emit('delete-message', { messageId: msgId });
+    hideContextMenu();
+  }
+
+  // ═══════════════════ PIN ═══════════════════
+  function pinMessageById(msgId) {
+    if (!joined) return;
+    socket.emit('pin-message', { messageId: msgId });
+    hideContextMenu();
+  }
+
+  function unpinMessage() {
+    if (!joined) return;
+    socket.emit('unpin-message');
+    hideContextMenu();
+  }
+
+  function scrollToPinned() {
+    if (pinnedMsg) scrollToMessage(pinnedMsg.id);
+  }
+
+  // ═══════════════════ COPY ═══════════════════
+  function copyText(text) {
+    navigator.clipboard.writeText(text).catch(() => {});
+    hideContextMenu();
+  }
+
+  // ═══════════════════ VOICE RECORDING ═══════════════════
   async function toggleRecord() {
     const btn = document.getElementById('recordBtn');
     if (mediaRecorder && mediaRecorder.state === 'recording') {
@@ -532,11 +834,10 @@
         reader.onload = async () => {
           try {
             const { url } = await uploadFile(reader.result, 'audio/webm', 'voice');
-            socket.emit('message', { type: 'voice', url, duration });
+            socket.emit('message', { type: 'voice', url, duration, replyTo: replyingTo });
+            cancelReply();
             playSound('send');
-          } catch {
-            renderSystem('Could not send voice note');
-          }
+          } catch { renderSystem('Could not send voice note'); }
         };
         reader.readAsDataURL(blob);
       };
@@ -544,46 +845,36 @@
       btn.classList.add('recording');
       setTimeout(() => {
         if (mediaRecorder && mediaRecorder.state === 'recording') {
-          mediaRecorder.stop();
-          btn.classList.remove('recording');
+          mediaRecorder.stop(); btn.classList.remove('recording');
         }
-      }, 15000);
-    } catch {
-      renderSystem('Microphone access needed for voice notes');
-    }
+      }, 60000);
+    } catch { renderSystem('Microphone access needed for voice notes'); }
   }
 
+  // ═══════════════════ REACTIONS ═══════════════════
   function react(messageId, emoji) {
     if (!joined) return;
-    const el = document.getElementById(`reactions-${messageId}`);
+    const el   = document.getElementById(`reactions-${messageId}`);
     const pill = el && [...el.querySelectorAll('.reaction-pill')].find((p) => p.textContent.startsWith(emoji));
     const already = pill && pill.classList.contains('mine');
     socket.emit('react', { messageId, emoji, add: !already });
   }
 
-  function votePoll(messageId, option) {
-    socket.emit('poll-vote', { messageId, option });
-  }
+  function votePoll(messageId, option) { socket.emit('poll-vote', { messageId, option }); }
 
+  // ═══════════════════ EMOJI / GAMES / GIF ═══════════════════
   function toggleEmojiPicker() {
     els.emojiPicker.classList.toggle('open');
     els.gameMenu.classList.remove('open');
+    els.gifPanel.classList.remove('open');
   }
-
   function toggleGameMenu() {
     els.gameMenu.classList.toggle('open');
     els.emojiPicker.classList.remove('open');
+    els.gifPanel.classList.remove('open');
   }
-
-  function insertEmoji(emoji) {
-    els.msgInput.value += emoji;
-    els.msgInput.focus();
-  }
-
-  function startGame(type) {
-    socket.emit('start-game', type);
-    els.gameMenu.classList.remove('open');
-  }
+  function insertEmoji(emoji) { els.msgInput.value += emoji; els.msgInput.focus(); }
+  function startGame(type) { socket.emit('start-game', type); els.gameMenu.classList.remove('open'); }
 
   function toggleGifPanel() {
     const isOpen = els.gifPanel.classList.toggle('open');
@@ -596,16 +887,24 @@
 
   function renderGifGrid(stickers) {
     els.gifGrid.innerHTML = stickers.map((s) =>
-      `<img src="${escapeHtml(s.url)}" loading="lazy" onclick="BestieChat.sendSticker('${escapeHtml(s.url)}')" />`
+      `<img src="${escapeHtml(s.url)}" loading="lazy" alt="sticker" onclick="BestieChat.sendSticker('${escapeHtml(s.url)}')" />`
     ).join('');
   }
 
-  function searchGifs() {
-    const q = els.gifSearch.value.trim().toLowerCase();
-    if (!q) {
-      renderGifGrid(STICKERS);
-      return;
+  async function searchGifs() {
+    const q = (els.gifSearch.value || '').trim().toLowerCase();
+    if (!q) { renderGifGrid(STICKERS); return; }
+
+    // Try Tenor API first
+    if (tenorApiKey) {
+      try {
+        const res  = await fetch(`https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(q)}&key=${tenorApiKey}&limit=12&media_filter=gif`);
+        const data = await res.json();
+        const results = (data.results || []).map((r) => ({ url: r.media_formats.gif.url, tags: [q] }));
+        if (results.length) { renderGifGrid(results); return; }
+      } catch (_) { /* fall through */ }
     }
+    // Local fallback
     const filtered = STICKERS.filter((s) => s.tags.some((t) => t.includes(q)));
     renderGifGrid(filtered.length ? filtered : STICKERS);
   }
@@ -617,13 +916,9 @@
     els.gifPanel.classList.remove('open');
   }
 
-  function toggleExtras() {
-    els.extrasPanel.classList.toggle('open');
-  }
-
-  function toggleFeelings() {
-    els.feelingsPanel.classList.toggle('open');
-  }
+  // ═══════════════════ EXTRAS ═══════════════════
+  function toggleExtras()   { els.extrasPanel.classList.toggle('open'); }
+  function toggleFeelings() { els.feelingsPanel.classList.toggle('open'); }
 
   function buildFeelingsGrid() {
     els.feelingsGrid.innerHTML = Object.entries(feelingsPalette).map(([key, f]) => `
@@ -640,8 +935,6 @@
     buildFeelingsGrid();
   }
 
-  // Renders your bestie's current feeling as a badge, and tints the whole
-  // screen with a soft glow in that feeling's color — the "feel what they feel" effect.
   function renderTheirFeeling() {
     const others = Object.keys(feelings).filter((name) => name !== myName);
     if (!others.length) {
@@ -649,10 +942,7 @@
       els.feelingGlow.classList.remove('active');
       return;
     }
-    // Most recently-updated other feeling wins if there happen to be several
-    const [name, f] = others
-      .map((n) => [n, feelings[n]])
-      .sort((a, b) => b[1].updatedAt - a[1].updatedAt)[0];
+    const [name, f] = others.map((n) => [n, feelings[n]]).sort((a, b) => b[1].updatedAt - a[1].updatedAt)[0];
     const info = feelingsPalette[f.key];
     if (!info) return;
     els.theirFeeling.innerHTML = `<span class="feeling-pill">${info.emoji} ${escapeHtml(getDisplayName(name))} is feeling ${escapeHtml(info.label.toLowerCase())}</span>`;
@@ -675,7 +965,7 @@
       els.pulseOverlay.appendChild(ring);
     }
     const label = document.createElement('div');
-    label.className = 'pulse-label';
+    label.className  = 'pulse-label';
     label.textContent = fromLabel === 'You' ? '💓 Pulse sent' : `💓 ${fromLabel} is thinking of you`;
     els.pulseOverlay.appendChild(label);
     playSound('hug');
@@ -689,35 +979,198 @@
     els.soundBtn.textContent = on ? '🔇' : '🔊';
   }
 
-  function saveMood() {
-    socket.emit('update-mood', els.moodInput.value);
-  }
-
-  function saveJokes() {
-    const lines = els.jokesInput.value.split('\n').filter(Boolean);
-    socket.emit('update-jokes', lines);
-  }
-
-  function saveCountdown() {
-    socket.emit('update-countdown', {
-      label: els.countdownLabel.value,
-      date: els.countdownDate.value || null
-    });
-    updateCountdown({ label: els.countdownLabel.value, date: els.countdownDate.value });
-  }
-
+  // ═══════════════════ ROOM META ═══════════════════
+  function saveMood()     { socket.emit('update-mood', els.moodInput.value); }
+  function saveJokes()    { socket.emit('update-jokes', els.jokesInput.value.split('\n').filter(Boolean)); }
+  function saveCountdown(){ socket.emit('update-countdown', { label: els.countdownLabel.value, date: els.countdownDate.value || null }); updateCountdown({ label: els.countdownLabel.value, date: els.countdownDate.value }); }
   function saveNickname() {
-    const nick = els.nicknameInput.value.trim();
+    const nick = (els.nicknameInputChat ? els.nicknameInputChat.value : '').trim();
     if (nick) localStorage.setItem('bestieChatNickname', nick);
     if (nick && joined) socket.emit('update-nickname', nick);
   }
 
+  // ═══════════════════ SEARCH ═══════════════════
+  function toggleSearch() {
+    searchActive = !searchActive;
+    els.searchBar.classList.toggle('open', searchActive);
+    if (searchActive) { els.searchInput.focus(); }
+    else { clearSearch(); }
+    document.getElementById('searchToggleBtn').classList.toggle('active', searchActive);
+  }
+
+  function performSearch() {
+    const q = (els.searchInput.value || '').toLowerCase().trim();
+    els.messages.querySelectorAll('.msg-wrap').forEach((wrap) => {
+      const msgEl = wrap.querySelector('.msg');
+      if (!msgEl) return;
+      if (!q) {
+        wrap.style.display = '';
+        return;
+      }
+      const text = (msgEl.textContent || '').toLowerCase();
+      wrap.style.display = text.includes(q) ? '' : 'none';
+    });
+  }
+
+  function clearSearch() {
+    els.searchInput.value = '';
+    els.messages.querySelectorAll('.msg-wrap').forEach((w) => { w.style.display = ''; });
+    els.searchBar.classList.remove('open');
+    searchActive = false;
+    document.getElementById('searchToggleBtn').classList.remove('active');
+  }
+
+  // ═══════════════════ GALLERY ═══════════════════
+  function openGallery() {
+    const imgs = allImageMessages;
+    if (!imgs.length) {
+      els.galleryGrid.innerHTML = '';
+      els.galleryEmpty.style.display = 'block';
+    } else {
+      els.galleryEmpty.style.display = 'none';
+      els.galleryGrid.innerHTML = imgs.map((m) =>
+        `<img src="${escapeHtml(m.url)}" loading="lazy" alt="shared photo" onclick="BestieChat.openLightbox('${escapeHtml(m.url)}')" />`
+      ).join('');
+    }
+    els.galleryModal.style.display = 'block';
+  }
+
+  function closeGallery() { els.galleryModal.style.display = 'none'; }
+
+  function openLightbox(url) {
+    els.lightboxImg.src = url;
+    els.lightbox.style.display = 'block';
+  }
+
+  function closeLightbox() { els.lightbox.style.display = 'none'; els.lightboxImg.src = ''; }
+
+  // ═══════════════════ SECRET MODE ═══════════════════
+  function toggleSecretMode() {
+    secretMode = !secretMode;
+    els.secretToggle.classList.toggle('active', secretMode);
+    els.secretIndicator.style.display = secretMode ? 'block' : 'none';
+  }
+
+  // ═══════════════════ DOODLE PAD ═══════════════════
+  function openDoodle() {
+    els.doodleModal.style.display = 'block';
+    if (!doodleCtx) initDoodleCanvas();
+  }
+
+  function closeDoodle() { els.doodleModal.style.display = 'none'; }
+
+  function initDoodleCanvas() {
+    const canvas = els.doodleCanvas;
+    const dpr = window.devicePixelRatio || 1;
+    const w   = canvas.parentElement.clientWidth - 0;
+    const h   = Math.min(300, window.innerHeight * 0.35);
+    canvas.width  = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.height = `${h}px`;
+    doodleCtx = canvas.getContext('2d');
+    doodleCtx.scale(dpr, dpr);
+    doodleCtx.lineCap     = 'round';
+    doodleCtx.lineJoin    = 'round';
+    doodleCtx.strokeStyle = doodleColor;
+    doodleCtx.lineWidth   = doodleSize;
+
+    function getPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const src  = e.touches ? e.touches[0] : e;
+      return { x: src.clientX - rect.left, y: src.clientY - rect.top };
+    }
+
+    function startDraw(e) {
+      e.preventDefault();
+      doodleDrawing = true;
+      const { x, y } = getPos(e);
+      doodleLastX = x; doodleLastY = y;
+      doodleCtx.beginPath();
+      doodleCtx.arc(x, y, doodleCtx.lineWidth / 2, 0, Math.PI * 2);
+      doodleCtx.fillStyle = doodleTool === 'eraser' ? '#1a1a2e' : doodleColor;
+      doodleCtx.fill();
+    }
+
+    function draw(e) {
+      e.preventDefault();
+      if (!doodleDrawing) return;
+      const { x, y } = getPos(e);
+      doodleCtx.strokeStyle = doodleTool === 'eraser' ? '#1a1a2e' : doodleColor;
+      doodleCtx.lineWidth   = doodleTool === 'eraser' ? doodleSize * 3 : doodleSize;
+      doodleCtx.beginPath();
+      doodleCtx.moveTo(doodleLastX, doodleLastY);
+      doodleCtx.lineTo(x, y);
+      doodleCtx.stroke();
+      doodleLastX = x; doodleLastY = y;
+    }
+
+    function endDraw() { doodleDrawing = false; }
+
+    canvas.addEventListener('mousedown',  startDraw);
+    canvas.addEventListener('mousemove',  draw);
+    canvas.addEventListener('mouseup',    endDraw);
+    canvas.addEventListener('mouseleave', endDraw);
+    canvas.addEventListener('touchstart', startDraw, { passive: false });
+    canvas.addEventListener('touchmove',  draw,      { passive: false });
+    canvas.addEventListener('touchend',   endDraw);
+  }
+
+  function setDoodleColor(color, btn) {
+    doodleColor = color;
+    document.querySelectorAll('.doodle-color').forEach((b) => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    if (doodleCtx) { doodleCtx.strokeStyle = color; doodleTool = 'brush'; }
+    document.getElementById('doodleBrushBtn').classList.add('active');
+    document.getElementById('doodleEraserBtn').classList.remove('active');
+  }
+
+  function setDoodleTool(tool, btn) {
+    doodleTool = tool;
+    document.querySelectorAll('.doodle-tool').forEach((b) => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+  }
+
+  function setDoodleSize(val) { doodleSize = parseInt(val, 10); }
+
+  function clearDoodle() {
+    if (!doodleCtx) return;
+    const canvas = els.doodleCanvas;
+    doodleCtx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  async function sendDoodle() {
+    if (!joined || !doodleCtx) return;
+    const canvas = els.doodleCanvas;
+    // Check if canvas is blank
+    const data = doodleCtx.getImageData(0, 0, canvas.width, canvas.height).data;
+    const blank = !data.some((v) => v !== 0);
+    if (blank) { renderSystem('Draw something first! ✏️'); return; }
+
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const { url } = await uploadFile(reader.result, 'image/png', 'image');
+          socket.emit('message', { type: 'image', url, text: '✏️ Doodle', replyTo: replyingTo });
+          cancelReply();
+          closeDoodle();
+          clearDoodle();
+          playSound('send');
+        } catch { renderSystem('Could not send doodle — try again'); }
+      };
+      reader.readAsDataURL(blob);
+    }, 'image/png');
+  }
+
+  // ═══════════════════ EMOJI PICKER INIT ═══════════════════
   function buildEmojiPicker() {
     els.emojiPicker.innerHTML = EMOJIS.map((e) =>
       `<button type="button" onclick="BestieChat.insertEmoji('${e}')">${e}</button>`
     ).join('');
   }
 
+  // ═══════════════════ SOCKET.IO ═══════════════════
   function initSocket() {
     if (typeof io === 'undefined') {
       console.error('Socket.io library not loaded. Is the server running?');
@@ -731,8 +1184,7 @@
       setConnected(true);
       if (joined) {
         socket.emit('join', {
-          name: myName,
-          room: myRoom,
+          name: myName, room: myRoom,
           nickname: els.nicknameInput.value.trim(),
           password: els.passwordInput.value
         });
@@ -744,36 +1196,36 @@
     socket.on('join-error', (msg) => {
       els.loginError.textContent = msg;
       joined = false;
-      els.chat.style.display = 'none';
+      els.chat.style.display  = 'none';
       els.login.style.display = 'block';
     });
 
     socket.on('joined', (payload) => {
       joined = true;
       myProfile = payload.profile || {};
+      allImageMessages = [];
       els.login.style.display = 'none';
-      els.chat.style.display = 'flex';
+      els.chat.style.display  = 'flex';
       els.roomLabel.textContent = ROOM_LABELS[myRoom] || myRoom;
-      els.motdBanner.textContent = `✨ Message of the day: ${payload.motd}`;
-      els.moodInput.value = payload.mood || '';
+      els.motdBanner.textContent = `✨ ${payload.motd}`;
+      els.moodInput.value  = payload.mood  || '';
       els.jokesInput.value = (payload.jokes || []).join('\n');
       if (payload.countdown) {
         els.countdownLabel.value = payload.countdown.label || '';
-        els.countdownDate.value = payload.countdown.date ? payload.countdown.date.slice(0, 16) : '';
+        els.countdownDate.value  = payload.countdown.date ? payload.countdown.date.slice(0, 16) : '';
         updateCountdown(payload.countdown);
       }
       updateStreak(payload.streak);
       updateLastSeen(payload.lastSeen);
 
       feelingsPalette = payload.feelingsPalette || {};
-      feelings = payload.feelings || {};
-      myFeelingKey = feelings[myName] ? feelings[myName].key : null;
+      feelings        = payload.feelings        || {};
+      myFeelingKey    = feelings[myName] ? feelings[myName].key : null;
       buildFeelingsGrid();
       renderTheirFeeling();
 
-      (payload.history || []).forEach((m) => {
-        if (m.user) profiles[m.user] = profiles[m.user] || {};
-      });
+      // Pre-populate profiles
+      (payload.history || []).forEach((m) => { if (m.user) profiles[m.user] = profiles[m.user] || {}; });
 
       els.messages.innerHTML = '';
       lastDateLabel = '';
@@ -782,6 +1234,16 @@
       startIntervals();
       clearUnread();
       setTimeout(confetti, 300);
+
+      // Restore pinned message
+      updatePinnedBanner(payload.pinnedMsg || null);
+
+      // Restore read receipts
+      applyReadReceipts(payload.readBy || {});
+
+      // Restore nickname in chat extras panel
+      const savedNick = localStorage.getItem('bestieChatNickname') || '';
+      if (els.nicknameInputChat) els.nicknameInputChat.value = savedNick;
     });
 
     socket.on('message', (msg) => {
@@ -792,7 +1254,10 @@
           updateUnreadBadge();
           if ('Notification' in window && Notification.permission === 'granted') {
             new Notification(getDisplayName(msg.user), {
-              body: msg.type === 'hug' ? 'sent you a hug 💌' : (msg.text || 'New message'),
+              body: msg.type === 'hug'   ? 'sent you a hug 💌'   :
+                    msg.type === 'image' ? 'sent a photo 📸'      :
+                    msg.type === 'voice' ? 'sent a voice note 🎤' :
+                    (msg.text || 'New message'),
               icon: '/icon-192.png'
             });
           }
@@ -802,10 +1267,41 @@
       }
     });
 
-    socket.on('system', renderSystem);
-    socket.on('milestone', renderMilestone);
-    socket.on('game-prompt', renderGamePrompt);
+    socket.on('message-edited', ({ messageId, text, editedAt }) => {
+      const wrap = els.messages.querySelector(`[data-id="${messageId}"]`);
+      if (!wrap) return;
+      const msgEl = wrap.querySelector('.msg');
+      if (!msgEl) return;
+      // Find the text node (last text in .msg, after meta/replyQuote)
+      const existing = msgEl.lastChild;
+      // Update: re-render text content nodes
+      const textNodes = [...msgEl.childNodes].filter((n) => n.nodeType === Node.TEXT_NODE || (n.nodeType === Node.ELEMENT_NODE && !['DIV','AUDIO','IMG','A'].includes(n.tagName)));
+      // Simpler: update the full text by replacing the last text content
+      const textEl = msgEl.querySelector('.msg-text') || null;
+      if (textEl) { textEl.textContent = text; }
+      // Add/update edited tag
+      let editTag = msgEl.querySelector('.edited-tag');
+      if (!editTag) { editTag = document.createElement('div'); editTag.className = 'edited-tag'; msgEl.appendChild(editTag); }
+      editTag.textContent = 'edited';
+    });
+
+    socket.on('message-deleted', ({ messageId }) => {
+      const wrap = els.messages.querySelector(`[data-id="${messageId}"]`);
+      if (!wrap) return;
+      const msgEl = wrap.querySelector('.msg');
+      if (!msgEl) return;
+      msgEl.className = `msg deleted ${msgEl.classList.contains('me') ? 'me' : 'them'}`;
+      msgEl.innerHTML = '🗑️ Message deleted';
+      wrap.querySelector('.react-bar')?.remove();
+      wrap.querySelector('.reactions')?.remove();
+    });
+
+    socket.on('system',       renderSystem);
+    socket.on('milestone',    renderMilestone);
+    socket.on('game-prompt',  renderGamePrompt);
+
     socket.on('reaction-update', ({ messageId, reactions }) => updateReactions(messageId, reactions));
+
     socket.on('poll-update', ({ messageId, votes }) => {
       const wrap = els.messages.querySelector(`[data-id="${messageId}"]`);
       if (!wrap) return;
@@ -814,10 +1310,7 @@
       });
     });
 
-    socket.on('streak-update', (streak) => {
-      updateStreak(streak);
-      confetti();
-    });
+    socket.on('streak-update', (streak) => { updateStreak(streak); confetti(); });
 
     socket.on('presence', ({ users, profiles: profs, lastSeen }) => {
       (profs || []).forEach((p) => { profiles[p.name] = p; });
@@ -825,21 +1318,19 @@
       if (others.length) {
         els.presence.innerHTML = others.map((u) => {
           const p = profiles[u] || {};
-          const avatar = p.avatar || '✨';
-          const display = getDisplayName(u);
-          return `<span class="presence-user"><span class="presence-avatar">${avatar}</span>${escapeHtml(display)}</span>`;
+          return `<span class="presence-user"><span class="presence-avatar">${p.avatar || '✨'}</span>${escapeHtml(getDisplayName(u))}</span>`;
         }).join('<span style="margin:0 4px;opacity:0.4">·</span>');
       } else {
-        els.presence.textContent = 'Just you — waiting for your bestie';
+        els.presence.textContent = 'Waiting for your bestie…';
       }
       updateLastSeen(lastSeen);
     });
 
     socket.on('typing', (name) => {
       if (name === getDisplayName(myName) || name === myName) return;
-      els.typing.innerHTML = `<span class="typing-dots"><span></span><span></span><span></span></span> ${escapeHtml(name)} is scribbling…`;
+      els.typing.innerHTML = `<span class="typing-dots"><span></span><span></span><span></span></span> ${escapeHtml(name)} is typing…`;
       clearTimeout(typingTimeout);
-      typingTimeout = setTimeout(() => { els.typing.innerHTML = ''; }, 1800);
+      typingTimeout = setTimeout(() => { els.typing.innerHTML = ''; }, 2000);
     });
 
     socket.on('feelings-update', (updated) => {
@@ -857,15 +1348,22 @@
       }
     });
 
-    socket.on('mood-update', (mood) => { els.moodInput.value = mood; });
-    socket.on('jokes-update', (jokes) => { els.jokesInput.value = (jokes || []).join('\n'); });
-    socket.on('countdown-update', (cd) => {
+    socket.on('mood-update',      (mood)  => { els.moodInput.value = mood; });
+    socket.on('jokes-update',     (jokes) => { els.jokesInput.value = (jokes || []).join('\n'); });
+    socket.on('countdown-update', (cd)    => {
       els.countdownLabel.value = cd.label || '';
-      els.countdownDate.value = cd.date ? cd.date.slice(0, 16) : '';
+      els.countdownDate.value  = cd.date ? cd.date.slice(0, 16) : '';
       updateCountdown(cd);
     });
+
+    socket.on('pinned-update', ({ messageId, msg }) => {
+      updatePinnedBanner(msg || null);
+    });
+
+    socket.on('receipt-update', (rb) => { applyReadReceipts(rb); });
   }
 
+  // ═══════════════════ INIT ═══════════════════
   function init() {
     initAmbience();
     applyNightGlow();
@@ -883,73 +1381,114 @@
 
     fetch('/api/config')
       .then((r) => r.json())
-      .then((cfg) => { if (cfg.passwordRequired) els.passwordField.style.display = 'block'; })
+      .then((cfg) => {
+        if (cfg.passwordRequired) els.passwordField.style.display = 'block';
+        tenorApiKey = cfg.tenorKey || '';
+      })
       .catch(() => {});
 
-    els.nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') joinChat(); });
+    // Input events
+    els.nameInput.addEventListener('keydown',     (e) => { if (e.key === 'Enter') joinChat(); });
     els.passwordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') joinChat(); });
-    els.msgInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
-    els.msgInput.addEventListener('input', () => { if (joined) socket.emit('typing'); });
+    els.msgInput.addEventListener('keydown',      (e) => { if (e.key === 'Enter' && !e.shiftKey) sendMessage(); });
+    els.msgInput.addEventListener('input', () => {
+      if (joined && socket) socket.emit('typing');
+      const len = els.msgInput.value.length;
+      els.charCount.textContent = len > 1800 ? `${len}/2000` : '';
+    });
+
+    // Search
+    els.searchInput.addEventListener('input', performSearch);
+    els.searchInput.addEventListener('keydown', (e) => { if (e.key === 'Escape') clearSearch(); });
+
+    // Room meta
     els.moodInput.addEventListener('change', saveMood);
-    els.moodInput.addEventListener('focus', () => {
+    els.moodInput.addEventListener('focus',  () => {
       if (!els.moodInput.value) {
-        const suggestion = VIBE_SUGGESTIONS[Math.floor(Math.random() * VIBE_SUGGESTIONS.length)];
-        els.moodInput.dataset.original = els.moodInput.placeholder;
-        els.moodInput.placeholder = `Try: ${suggestion}`;
+        els.moodInput.placeholder = `Try: ${VIBE_SUGGESTIONS[Math.floor(Math.random() * VIBE_SUGGESTIONS.length)]}`;
       }
     });
-    els.moodInput.addEventListener('blur', () => {
-      if (els.moodInput.dataset.original) {
-        els.moodInput.placeholder = els.moodInput.dataset.original;
-        delete els.moodInput.dataset.original;
-      }
-    });
-    els.jokesInput.addEventListener('blur', saveJokes);
+    els.jokesInput.addEventListener('blur',  saveJokes);
     els.countdownLabel.addEventListener('change', saveCountdown);
-    els.countdownDate.addEventListener('change', saveCountdown);
-    els.nicknameInput.addEventListener('input', saveNickname);
+    els.countdownDate.addEventListener('change',  saveCountdown);
+    if (els.nicknameInputChat) els.nicknameInputChat.addEventListener('input', saveNickname);
+
+    // Photo input
     els.photoInput.addEventListener('change', (e) => {
       if (e.target.files[0]) sendPhoto(e.target.files[0]);
       e.target.value = '';
     });
 
+    // Tab visibility
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) clearUnread();
+      if (!document.hidden) {
+        clearUnread();
+        emitReadReceiptForLastVisible();
+      }
     });
 
+    // Scroll to bottom → read receipt
+    els.messages.addEventListener('scroll', () => {
+      const { scrollTop, scrollHeight, clientHeight } = els.messages;
+      if (scrollHeight - scrollTop - clientHeight < 80) {
+        emitReadReceiptForLastVisible();
+      }
+    });
+
+    // Global click → close menus / context menu
     document.addEventListener('click', (e) => {
-      if (!e.target.closest('#emojiPicker') && !e.target.closest('[data-emoji-toggle]')) {
-        els.emojiPicker.classList.remove('open');
+      if (!e.target.closest('#emojiPicker')  && !e.target.closest('[data-emoji-toggle]')) els.emojiPicker.classList.remove('open');
+      if (!e.target.closest('#gameMenu')     && !e.target.closest('[data-game-toggle]'))  els.gameMenu.classList.remove('open');
+      if (!e.target.closest('#gifPanel')     && !e.target.closest('[title="GIFs & Stickers"]')) els.gifPanel.classList.remove('open');
+      if (!e.target.closest('#feelingsPanel')&& !e.target.closest('[title="Feelings"]'))  els.feelingsPanel.classList.remove('open');
+      if (!e.target.closest('#contextMenu')  && !e.target.closest('.msg-wrap'))           hideContextMenu();
+      if (!e.target.closest('.msg-wrap'))    document.querySelectorAll('.msg-wrap.touched').forEach((el) => el.classList.remove('touched'));
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        hideContextMenu();
+        if (searchActive) clearSearch();
+        if (editingMessageId) {
+          editingMessageId = null;
+          els.msgInput.value = '';
+          els.sendBtn.innerHTML = '<span>Send</span><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21L23 12 2 3v7l15 2-15 2z"/></svg>';
+        }
+        cancelReply();
       }
-      if (!e.target.closest('#gameMenu') && !e.target.closest('[data-game-toggle]')) {
-        els.gameMenu.classList.remove('open');
-      }
-      if (!e.target.closest('#gifPanel') && !e.target.closest('[title="Stickers"]')) {
-        els.gifPanel.classList.remove('open');
-      }
-      if (!e.target.closest('#feelingsPanel') && !e.target.closest('[title="How are you feeling?"]')) {
-        els.feelingsPanel.classList.remove('open');
-      }
-      if (!e.target.closest('.msg-wrap')) {
-        document.querySelectorAll('.msg-wrap.touched').forEach((el) => el.classList.remove('touched'));
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f' && joined) {
+        e.preventDefault();
+        toggleSearch();
       }
     });
 
+    // Notifications
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
     }
 
     initSocket();
-
     if (savedName) joinChat();
   }
 
+  // ═══════════════════ PUBLIC API ═══════════════════
   window.BestieChat = {
-    joinChat, leaveChat, sendMessage, sendHug, toggleRecord, react, votePoll,
-    toggleEmojiPicker, toggleGameMenu, insertEmoji, startGame, toggleExtras,
+    joinChat, leaveChat, sendMessage, sendHug,
+    toggleRecord, react, votePoll,
+    toggleEmojiPicker, toggleGameMenu, insertEmoji, startGame,
+    toggleExtras, toggleFeelings, setFeeling, sendPulse,
     toggleSound, saveMood, saveJokes, saveCountdown, saveNickname,
     toggleGifPanel, searchGifs, sendSticker,
-    toggleFeelings, setFeeling, sendPulse
+    toggleSearch, clearSearch,
+    openGallery, closeGallery, openLightbox, closeLightbox,
+    openDoodle, closeDoodle, clearDoodle, sendDoodle,
+    setDoodleColor, setDoodleTool, setDoodleSize,
+    toggleSecretMode,
+    replyToMessage, cancelReply, scrollToMessage,
+    startEditMessage, deleteMessage,
+    pinMessageById, unpinMessage, scrollToPinned,
+    copyText,
   };
 
   if (document.readyState === 'loading') {
