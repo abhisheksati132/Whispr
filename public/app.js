@@ -3397,6 +3397,53 @@
     }
   }
 
+  function sendQuickReply(text) {
+    if (!text || !joined) return;
+    if (els.messageInput) {
+      els.messageInput.value = text;
+      sendMessage();
+    }
+  }
+
+  async function captureDualCamera() {
+    if (!joined || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      showToast('Camera not supported on this device');
+      return;
+    }
+    try {
+      showToast('📸 Taking Dual-Cam Snapshot...');
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      await video.play();
+      
+      const canvas = document.createElement('canvas');
+      canvas.width = 640;
+      canvas.height = 480;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, 640, 480);
+      
+      // Stop stream
+      stream.getTracks().forEach((t) => t.stop());
+      
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      
+      // Upload
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: dataUrl, mime: 'image/jpeg', kind: 'image' })
+      });
+      const json = await res.json();
+      if (json.url) {
+        socket.emit('message', { user: myName, type: 'image', url: json.url });
+        showToast('📸 Dual-Cam Moment sent!');
+      }
+    } catch (err) {
+      showToast('Could not access camera');
+    }
+  }
+
   // ═══════════════════ PUBLIC API ═══════════════════
   window.BestieChat = {
     joinChat, leaveChat, sendMessage, sendHug,
@@ -3433,7 +3480,8 @@
     togglePushNotifications,
     confirmClearHistory, exportChat, setRoomPassword, setDisappearingTimer, jumpToDate,
     openProfile, closeProfile, selectAvatar, saveProfileStatus, saveProfileColor,
-    toggleVoiceSpeed, openConnect4, closeConnect4, dropConnect4Token
+    toggleVoiceSpeed, openConnect4, closeConnect4, dropConnect4Token,
+    sendQuickReply, captureDualCamera
   };
 
   if (document.readyState === 'loading') {
