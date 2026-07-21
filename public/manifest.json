@@ -1,10 +1,10 @@
 {
-  "name": "Bestie Chat — Just Us 💜",
-  "short_name": "BestieChat",
-  "description": "Private, cozy real-time chat for besties.",
+  "name": "hmm — Just Us 💭",
+  "short_name": "hmm",
+  "description": "Private, cozy real-time space for you and your bestie.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f081d",
+  "background_color": "#0d0d1a",
   "theme_color": "#8b5cf6",
   "orientation": "portrait-primary",
   "icons": [
