@@ -3415,42 +3415,75 @@
     }
   }
 
-  async function captureDualCamera() {
-    if (!joined || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      showToast('Camera not supported on this device');
-      return;
-    }
-    try {
-      showToast('📸 Taking Dual-Cam Snapshot...');
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-      const video = document.createElement('video');
-      video.srcObject = stream;
-      await video.play();
-      
-      const canvas = document.createElement('canvas');
-      canvas.width = 640;
-      canvas.height = 480;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, 640, 480);
-      
-      // Stop stream
-      stream.getTracks().forEach((t) => t.stop());
-      
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-      
-      // Upload
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: dataUrl, mime: 'image/jpeg', kind: 'image' })
-      });
-      const json = await res.json();
-      if (json.url) {
-        socket.emit('message', { user: myName, type: 'image', url: json.url });
-        showToast('📸 Dual-Cam Moment sent!');
+  function uploadCameraFile(input) {
+    if (!input || !input.files || !input.files[0]) return;
+    const file = input.files[0];
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const dataUrl = e.target.result;
+      const mime = file.type || 'image/jpeg';
+      try {
+        showToast('📸 Uploading camera photo...');
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: dataUrl, mime, kind: 'image' })
+        });
+        const json = await res.json();
+        if (json.url) {
+          socket.emit('message', { user: myName, type: 'image', url: json.url });
+          showToast('📸 Camera Moment sent!');
+        }
+      } catch (err) {
+        showToast('Could not upload photo');
       }
-    } catch (err) {
-      showToast('Could not access camera');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function captureDualCamera() {
+    if (!joined) return;
+    const cameraInput = document.getElementById('cameraFileInput');
+    
+    // First try WebRTC MediaDevices getUserMedia
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        showToast('📸 Opening camera...');
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'user' } }, audio: false });
+        const video = document.createElement('video');
+        video.srcObject = stream;
+        await video.play();
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = 640;
+        canvas.height = 480;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, 640, 480);
+        
+        stream.getTracks().forEach((t) => t.stop());
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: dataUrl, mime: 'image/jpeg', kind: 'image' })
+        });
+        const json = await res.json();
+        if (json.url) {
+          socket.emit('message', { user: myName, type: 'image', url: json.url });
+          showToast('📸 Camera Moment sent!');
+          return;
+        }
+      } catch (err) {
+        console.warn('getUserMedia failed, falling back to native file picker', err);
+      }
+    }
+    
+    // Fallback for mobile devices: click the native camera file input
+    if (cameraInput) {
+      cameraInput.click();
+    } else {
+      showToast('Camera not supported');
     }
   }
 
@@ -3501,7 +3534,7 @@
     confirmClearHistory, exportChat, setRoomPassword, setDisappearingTimer, jumpToDate,
     openProfile, closeProfile, selectAvatar, saveProfileStatus, saveProfileColor,
     toggleVoiceSpeed, openConnect4, closeConnect4, dropConnect4Token,
-    sendQuickReply, captureDualCamera, toggleQuickMenu
+    sendQuickReply, captureDualCamera, uploadCameraFile, toggleQuickMenu
   };
 
   if (document.readyState === 'loading') {

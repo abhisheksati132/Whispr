@@ -1991,12 +1991,12 @@ header h2 {
 }
 .header-btns {
   display: flex;
-  gap: 2px;
+  gap: 4px;
   align-items: center;
-  max-width: 200px;
   overflow-x: auto;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
+  max-width: 100%;
 }
 .header-btns::-webkit-scrollbar {
   display: none;
