@@ -494,9 +494,9 @@ io.on('connection', (socket) => {
   });
 
   // ── Connect 4 ────────────────────────────────────────────────────────
-  socket.on('c4-move', ({ col }) => {
+  socket.on('c4-move', ({ col, color }) => {
     if (!currentRoom) return;
-    socket.to(currentRoom).emit('c4-move', { user: username, col });
+    socket.to(currentRoom).emit('c4-move', { user: username, col, color });
   });
 
   // ── Typing ──────────────────────────────────────────────────────────

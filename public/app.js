@@ -1776,6 +1776,12 @@
       const label = data.durationMs === 3600000 ? '1 Hour' : data.durationMs === 86400000 ? '24 Hours' : data.durationMs === 604800000 ? '7 Days' : 'Off';
       showToast(`⏱️ Disappearing messages set to: ${label}`);
     });
+
+    socket.on('c4-move', (data) => {
+      if (data && typeof data.col === 'number') {
+        dropConnect4Token(data.col, false);
+      }
+    });
   }
 
   // ═══════════════════ WEBRTC CALLING ═══════════════════
@@ -3338,11 +3344,13 @@
     if (avatarDisplay) avatarDisplay.textContent = emoji;
     socket.emit('update-profile-bio', { avatar: emoji });
     showToast(`Avatar updated: ${emoji}`);
+    updatePrefsProfileDisplay();
   }
 
   function saveProfileStatus(bio) {
     socket.emit('update-profile-bio', { statusBio: String(bio || '').trim() });
     showToast('Status bio saved! 💭');
+    updatePrefsProfileDisplay();
   }
 
   function saveProfileColor(color) {
@@ -3365,11 +3373,13 @@
 
   // ── Connect 4 Mini Game ───────────────────────────────────────────────
   let c4BoardState = Array(6).fill(null).map(() => Array(7).fill(null));
+  let c4Turn = 'red';
 
   function openConnect4() {
     const modal = document.getElementById('connect4Modal');
     if (modal) modal.style.display = 'flex';
     c4BoardState = Array(6).fill(null).map(() => Array(7).fill(null));
+    c4Turn = 'red';
     renderConnect4Board();
   }
 
@@ -3389,19 +3399,24 @@
         cell.style.cssText = 'aspect-ratio:1; border-radius:50%; border:none; cursor:pointer; font-size:1.2rem; transition:transform 0.1s;';
         const val = c4BoardState[r][c];
         cell.style.background = val === 'red' ? '#ef4444' : val === 'yellow' ? '#f59e0b' : 'rgba(255,255,255,0.12)';
-        cell.onclick = () => dropConnect4Token(c);
+        cell.onclick = () => dropConnect4Token(c, true);
         boardEl.appendChild(cell);
       }
     }
   }
 
-  function dropConnect4Token(c) {
+  function dropConnect4Token(c, isLocal = true) {
     for (let r = 5; r >= 0; r--) {
       if (!c4BoardState[r][c]) {
-        c4BoardState[r][c] = 'red';
+        const activeColor = c4Turn;
+        c4BoardState[r][c] = activeColor;
+        c4Turn = c4Turn === 'red' ? 'yellow' : 'red';
         renderConnect4Board();
-        socket.emit('c4-move', { col: c });
-        showToast('🔴 Token dropped!');
+        const statusEl = document.getElementById('c4Status');
+        if (statusEl) statusEl.textContent = `Turn: ${c4Turn === 'red' ? '🔴 Red' : '🟡 Yellow'}`;
+        if (isLocal && socket) {
+          socket.emit('c4-move', { col: c, color: activeColor });
+        }
         return;
       }
     }
