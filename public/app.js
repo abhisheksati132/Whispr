@@ -1789,6 +1789,22 @@
     socket.on('score-update', (scores) => {
       updateScoreboardDisplay(scores);
     });
+
+    socket.on('pictionary-start', (data) => {
+      openCoDraw();
+      showToast(`🎨 Pictionary: ${data.drawer} is drawing!`);
+    });
+
+    socket.on('pictionary-word', (data) => {
+      showToast(`✏️ Secret Word: "${data.word}" — Start drawing!`);
+    });
+
+    socket.on('pictionary-correct', (data) => {
+      confetti();
+      playSound('milestone');
+      showToast(`🏆 ${data.winner} guessed the word: "${data.word}"!`);
+      closeCoDraw();
+    });
   }
 
   // ═══════════════════ WEBRTC CALLING ═══════════════════
@@ -3076,6 +3092,17 @@
         const toggleBtn = document.getElementById('themeToggle');
         if (toggleBtn) toggleBtn.textContent = '☀️';
       }
+
+      // Parse PWA Share Target URL params
+      const params = new URLSearchParams(window.location.search);
+      const sharedTitle = params.get('title') || '';
+      const sharedText = params.get('text') || '';
+      const sharedUrl = params.get('url') || '';
+      const sharedPayload = [sharedTitle, sharedText, sharedUrl].filter(Boolean).join(' ');
+      if (sharedPayload && els.msgInput) {
+        els.msgInput.value = sharedPayload;
+        toggleSendMicIcons();
+      }
     } catch (err) {
       console.error('Init crash:', err);
       const boundary = document.getElementById('errorBoundary');
@@ -3182,6 +3209,73 @@
     }
   }
 
+  async function togglePushNotifications() {
+    const statusText = document.getElementById('pushStatusText');
+    const btn = document.getElementById('pushToggleBtn');
+    
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      showToast('Push Notifications not supported in this browser.');
+      return;
+    }
+    
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const existingSub = await reg.pushManager.getSubscription();
+      
+      if (existingSub) {
+        await existingSub.unsubscribe();
+        await fetch('/api/push-unsubscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endpoint: existingSub.endpoint })
+        });
+        if (statusText) statusText.textContent = 'Disabled';
+        if (btn) btn.textContent = 'Enable Notifications';
+        showToast('Push notifications disabled');
+        return;
+      }
+      
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') {
+        showToast('Notification permission denied.');
+        return;
+      }
+      
+      const res = await fetch('/api/push-vapid-key');
+      const { publicKey } = await res.json();
+      
+      const convertedKey = urlBase64ToUint8Array(publicKey);
+      const newSub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: convertedKey
+      });
+      
+      await fetch('/api/push-subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: myName, subscription: newSub })
+      });
+      
+      if (statusText) statusText.textContent = 'Active 🔔';
+      if (btn) btn.textContent = 'Disable Notifications';
+      showToast('🔔 Push notifications enabled!');
+    } catch (err) {
+      console.error('Push setup error:', err);
+      showToast('Could not set up notifications');
+    }
+  }
+
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  }
+
   // ═══════════════════ PUBLIC API ═══════════════════
   window.BestieChat = {
     joinChat, leaveChat, sendMessage, sendHug,
@@ -3215,6 +3309,7 @@
     openHapticSync, closeHapticSync, startHapticPulse, stopHapticPulse,
     sendNudge, toggleLofi, setLofiVolume,
     toggleTheme, dismissDailyQuestion, quickReact,
+    togglePushNotifications
   };
 
   if (document.readyState === 'loading') {

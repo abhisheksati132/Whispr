@@ -3,8 +3,10 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const crypto = require('crypto');
+const webpush = require('web-push');
 
 const store = require('./store');
+const { initDb, migrateLegacyJson, query } = require('./db');
 const {
   normalizeName,
   normalizeRoom,
@@ -17,6 +19,31 @@ const {
 
 const CHAT_PASSWORD = process.env.CHAT_PASSWORD || '';
 const GIPHY_API_KEY = process.env.GIPHY_API_KEY || '';
+
+// ── VAPID Keys & Push Setup ────────────────────────────────────────────────
+let vapidKeys = {
+  publicKey: process.env.VAPID_PUBLIC_KEY,
+  privateKey: process.env.VAPID_PRIVATE_KEY
+};
+if (!vapidKeys.publicKey || !vapidKeys.privateKey) {
+  vapidKeys = webpush.generateVAPIDKeys();
+}
+webpush.setVapidDetails(
+  'mailto:bestie@chat.local',
+  vapidKeys.publicKey,
+  vapidKeys.privateKey
+);
+
+// ── SQLite DB Initialization ─────────────────────────────────────────────
+(async () => {
+  try {
+    await initDb();
+    await migrateLegacyJson();
+    console.log('⚡ SQLite Database & Schema Ready');
+  } catch (err) {
+    console.error('Database initialization error:', err);
+  }
+})();
 
 const app = express();
 const server = http.createServer(app);
@@ -40,6 +67,71 @@ app.get('/api/daily-question', (_req, res) => {
   res.json({ question: store.getDailyQuestion() });
 });
 
+// ── Web Push Notification Endpoints ─────────────────────────────────────────
+app.get('/api/push-vapid-key', (_req, res) => {
+  res.json({ publicKey: vapidKeys.publicKey });
+});
+
+app.post('/api/push-subscribe', async (req, res) => {
+  try {
+    const { username, subscription } = req.body;
+    if (!username || !subscription || !subscription.endpoint) {
+      return res.status(400).json({ error: 'Missing subscription details' });
+    }
+    await query.run(
+      'INSERT OR REPLACE INTO push_subscriptions (username, endpoint, keys_json, created_at) VALUES (?, ?, ?, ?)',
+      [username, subscription.endpoint, JSON.stringify(subscription.keys || {}), Date.now()]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/push-unsubscribe', async (req, res) => {
+  try {
+    const { endpoint } = req.body;
+    if (!endpoint) return res.status(400).json({ error: 'Missing endpoint' });
+    await query.run('DELETE FROM push_subscriptions WHERE endpoint = ?', [endpoint]);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+async function sendPushToRoom(room, senderName, titleText, bodyText) {
+  try {
+    const onlineUsers = new Set();
+    const usersMap = rooms.get(room);
+    if (usersMap) {
+      for (const u of usersMap.values()) onlineUsers.add(u.name);
+    }
+    
+    const subs = await query.all('SELECT username, endpoint, keys_json FROM push_subscriptions');
+    for (const sub of subs) {
+      if (sub.username !== senderName && !onlineUsers.has(sub.username)) {
+        const payload = JSON.stringify({
+          title: titleText,
+          body: bodyText,
+          icon: '/icon-192.png',
+          url: '/'
+        });
+        const pushSub = {
+          endpoint: sub.endpoint,
+          keys: JSON.parse(sub.keys_json || '{}')
+        };
+        webpush.sendNotification(pushSub, payload).catch((err) => {
+          if (err.statusCode === 410 || err.statusCode === 404) {
+            query.run('DELETE FROM push_subscriptions WHERE endpoint = ?', [sub.endpoint]).catch(() => {});
+          }
+        });
+      }
+    }
+  } catch (err) {
+    console.error('Push notification error:', err);
+  }
+}
+
 // ── OpenGraph Link Scraper ──────────────────────────────────────────────────
 app.get('/api/link-preview', async (req, res) => {
   const targetUrl = req.query.url;
@@ -54,7 +146,6 @@ app.get('/api/link-preview', async (req, res) => {
       return res.status(400).json({ error: 'Disallowed host' });
     }
     
-    // Fetch page text with a 3-second abort signal
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 3000);
     const response = await fetch(targetUrl, {
@@ -66,7 +157,6 @@ app.get('/api/link-preview', async (req, res) => {
     if (!response.ok) return res.status(response.status).json({ error: 'Failed to fetch link' });
     const html = await response.text();
     
-    // Simple regex matching
     const getMeta = (propName) => {
       const regex = new RegExp(`<meta[^>]+(?:property|name)=["']${propName}["'][^>]+content=["']([^"']+)["']`, 'i');
       const match = html.match(regex);
@@ -120,6 +210,12 @@ app.post('/api/upload', (req, res) => {
 
 // ── Online users per room ────────────────────────────────────────────────
 const rooms = new Map(); // Map<room, Map<socketId, {name, profile}>>
+const roomPictionaryState = new Map(); // Map<room, {word, drawer}>
+
+const PICTIONARY_WORDS = [
+  'cat', 'sun', 'pizza', 'tree', 'heart', 'coffee', 'star', 'cake', 'rainbow', 'moon',
+  'guitar', 'flower', 'butterfly', 'icecream', 'camera', 'cookie', 'balloon', 'house', 'car', 'smile'
+];
 
 function getRoomUsers(room) {
   if (!rooms.has(room)) rooms.set(room, new Map());
@@ -152,6 +248,7 @@ io.on('connection', (socket) => {
   let username = null;
   let currentRoom = null;
   let longPressTimer = null;
+
   let msgCount = 0;
   let msgResetAt = Date.now() + 5000;
 
@@ -239,7 +336,6 @@ io.on('connection', (socket) => {
         const replyTo = payload.replyTo || null;
         msgData = { user: username, text, type: 'text', ...(replyTo ? { replyTo } : {}) };
       }
-      // Attach replyTo for other types too
       if (payload.replyTo && msgData && !msgData.replyTo) {
         msgData.replyTo = payload.replyTo;
       }
@@ -251,6 +347,24 @@ io.on('connection', (socket) => {
     store.setLastSeen(username);
     io.to(currentRoom).emit('message', message);
 
+    // Send push notification to offline bestie
+    sendPushToRoom(currentRoom, username, `${store.getProfile(username).nickname || username} 💌`, msgData.text || 'sent a message');
+
+    // Check Pictionary Game Guessing
+    const pState = roomPictionaryState.get(currentRoom);
+    if (pState && msgData.text && msgData.user !== pState.drawer) {
+      const cleanGuess = msgData.text.trim().toLowerCase();
+      if (cleanGuess === pState.word.toLowerCase()) {
+        roomPictionaryState.delete(currentRoom);
+        const profile = store.getProfile(username);
+        const display = profile.nickname || username;
+        const scores = store.updateGameScore(currentRoom, username);
+        io.to(currentRoom).emit('score-update', scores);
+        io.to(currentRoom).emit('pictionary-correct', { winner: display, word: pState.word });
+        io.to(currentRoom).emit('system', `🎉 ${display} guessed the secret word: "${pState.word}"!! 🏆`);
+      }
+    }
+
     if (milestone) {
       io.to(currentRoom).emit('milestone', {
         count: milestone,
@@ -259,7 +373,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  // ── Secret message (not persisted, auto-destroys) ───────────────────
+  // ── Secret message ──────────────────────────────────────────────────
   socket.on('secret-message', ({ text } = {}) => {
     if (!username || !currentRoom) return;
     const safe = normalizeText(text);
@@ -276,7 +390,6 @@ io.on('connection', (socket) => {
       profile: { avatar: profile.avatar, color: profile.color, nickname: profile.nickname }
     };
     io.to(currentRoom).emit('message', msg);
-    // Destroy after 30 seconds
     setTimeout(() => {
       io.to(currentRoom).emit('message-deleted', { messageId: id });
     }, 30000);
@@ -351,6 +464,16 @@ io.on('connection', (socket) => {
   // ── Games ───────────────────────────────────────────────────────────
   socket.on('start-game', (type) => {
     if (!username || !currentRoom) return;
+    if (type === 'pictionary') {
+      const word = PICTIONARY_WORDS[Math.floor(Math.random() * PICTIONARY_WORDS.length)];
+      const profile = store.getProfile(username);
+      const display = profile.nickname || username;
+      roomPictionaryState.set(currentRoom, { word, drawer: username });
+      socket.emit('pictionary-word', { word });
+      io.to(currentRoom).emit('pictionary-start', { drawer: display });
+      io.to(currentRoom).emit('system', `🎨 ${display} started Pictionary! Guess their drawing in chat!`);
+      return;
+    }
     const prompt = randomGamePrompt(type);
     if (!prompt) return;
     const profile = store.getProfile(username);
@@ -406,6 +529,7 @@ io.on('connection', (socket) => {
     if (!username || !currentRoom) return;
     const profile = store.getProfile(username);
     socket.to(currentRoom).emit('empathy-pulse', { from: profile.nickname || username });
+    sendPushToRoom(currentRoom, username, `${profile.nickname || username} 💓`, 'sent you an empathy pulse');
   });
 
   // ── Poll vote ───────────────────────────────────────────────────────
@@ -422,7 +546,10 @@ io.on('connection', (socket) => {
 
   // ── WebRTC Calling Relays ──────────────────────────────────────────
   socket.on('call-invite', (payload) => {
-    if (currentRoom) socket.to(currentRoom).emit('call-invite', { from: username, offer: payload.offer, type: payload.type });
+    if (currentRoom) {
+      socket.to(currentRoom).emit('call-invite', { from: username, offer: payload.offer, type: payload.type });
+      sendPushToRoom(currentRoom, username, `Incoming ${payload.type || 'voice'} call! 📞`, `From ${username}`);
+    }
   });
 
   socket.on('call-accept', (payload) => {
@@ -539,10 +666,12 @@ io.on('connection', (socket) => {
   });
 });
 
+// Clean expired rooms on startup and every 24h
+store.cleanExpiredRooms();
+setInterval(store.cleanExpiredRooms, 24 * 60 * 60 * 1000);
+
 // ── Start server ───────────────────────────────────────────────────────────
 if (require.main === module) {
-  store.cleanExpiredRooms();
-  setInterval(store.cleanExpiredRooms, 24 * 60 * 60 * 1000);
   const PORT = process.env.PORT || 3000;
   server.listen(PORT, () => console.log(`Bestie Chat running on port ${PORT}`));
 }

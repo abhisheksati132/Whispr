@@ -1,14 +1,33 @@
 {
-  "name": "Bestie Chat",
-  "short_name": "Bestie Chat",
-  "description": "A private chat just for you and your bestie",
+  "name": "Bestie Chat — Just Us 💜",
+  "short_name": "BestieChat",
+  "description": "Private, cozy real-time chat for besties.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f0f1a",
-  "theme_color": "#0f0f1a",
-  "orientation": "portrait",
+  "background_color": "#0f081d",
+  "theme_color": "#8b5cf6",
+  "orientation": "portrait-primary",
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
-  ]
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "share_target": {
+    "action": "/",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
 }

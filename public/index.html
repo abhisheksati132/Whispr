@@ -270,6 +270,14 @@
         <div id="e2eeFingerprint"></div>
       </div>
       <div class="extra-block">
+        <label>Background Push Notifications 🔔</label>
+        <div class="e2e-row">
+          <span id="pushStatusText" style="font-size:0.82rem; opacity:0.8;">Disabled</span>
+          <button id="pushToggleBtn" onclick="BestieChat.togglePushNotifications()">Enable Notifications</button>
+        </div>
+        <div class="e2e-hint">Receive push alerts on your phone or desktop when your bestie texts while you're offline.</div>
+      </div>
+      <div class="extra-block">
         <label>Nickname 🏷️</label>
         <input id="nicknameInputChat" type="text" placeholder="Change nickname" maxlength="24" />
       </div>
@@ -377,6 +385,7 @@
   <!-- Game Menu -->
   <div id="gameMenu">
     <div class="game-menu-title">🎮 Mini Games</div>
+    <button onclick="BestieChat.startGame('pictionary')">🎨 Pictionary (Draw & Guess)</button>
     <button onclick="BestieChat.startGame('would-you-rather')">🤔 Would You Rather</button>
     <button onclick="BestieChat.startGame('this-or-that')">⚡ This or That</button>
     <button onclick="BestieChat.startGame('truth')">💭 Truth</button>

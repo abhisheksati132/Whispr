@@ -1,4 +1,4 @@
-const CACHE = 'bestie-v4';
+const CACHE = 'bestie-v5';
 const SHELL = ['/', '/styles.css', '/manifest.json'];
 
 self.addEventListener('install', (e) => {
@@ -29,6 +29,41 @@ self.addEventListener('fetch', (e) => {
       }).catch(() => {
         if (e.request.mode === 'navigate') return caches.match('/');
       });
+    })
+  );
+});
+
+// Push Notification Handler
+self.addEventListener('push', (e) => {
+  let data = { title: 'Bestie Chat', body: 'New message from your bestie! 💌', icon: '/icon-192.png' };
+  if (e.data) {
+    try {
+      data = e.data.json();
+    } catch {
+      data.body = e.data.text();
+    }
+  }
+  const options = {
+    body: data.body,
+    icon: data.icon || '/icon-192.png',
+    badge: '/icon-192.png',
+    data: { url: data.url || '/' },
+    vibrate: [100, 50, 100]
+  };
+  e.waitUntil(self.registration.showNotification(data.title, options));
+});
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const urlToOpen = (e.notification.data && e.notification.data.url) ? e.notification.data.url : '/';
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      for (const client of windowClients) {
+        if (client.url.includes(urlToOpen) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) return clients.openWindow(urlToOpen);
     })
   );
 });
