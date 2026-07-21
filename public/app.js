@@ -3303,7 +3303,16 @@
     showToast(`No messages found on ${dateStr}`);
   }
 
-  // ── Profile Management ────────────────────────────────────────────────
+  function updatePrefsProfileDisplay() {
+    const profile = getProfile(myName);
+    const prefsAvatar = document.getElementById('prefsProfileAvatar');
+    const prefsName = document.getElementById('prefsProfileName');
+    const prefsStatus = document.getElementById('prefsProfileStatus');
+    if (prefsAvatar) prefsAvatar.textContent = profile.avatar || '✨';
+    if (prefsName) prefsName.textContent = getDisplayName(myName);
+    if (prefsStatus) prefsStatus.textContent = profile.statusBio || 'No status bio set';
+  }
+
   function openProfile() {
     const modal = document.getElementById('profileModal');
     if (modal) modal.style.display = 'flex';
@@ -3316,6 +3325,7 @@
     if (statusInput) statusInput.value = profile.statusBio || '';
     if (statMsgs) statMsgs.textContent = allMessagesCached.filter(m => m.user === myName).length;
     if (statStreak) statStreak.textContent = currentStreakDays || 1;
+    updatePrefsProfileDisplay();
   }
 
   function closeProfile() {
