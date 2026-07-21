@@ -115,6 +115,9 @@
         <button class="icon-btn" title="Extras" onclick="BestieChat.toggleExtras()">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
         </button>
+        <button class="icon-btn" title="Quick Options" onclick="BestieChat.toggleQuickMenu()" style="font-weight:900; font-size:1.3rem; line-height:1;">
+          ⋮
+        </button>
         <button class="icon-btn leave-btn" title="Leave" onclick="BestieChat.leaveChat()">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
         </button>
@@ -685,6 +688,42 @@
     </div>
     <div id="c4Status" style="font-size:0.88rem; font-weight:700; margin:10px 0; color:var(--accent);">Your Turn!</div>
     <div id="c4Board" style="display:grid; grid-template-columns:repeat(7, 1fr); gap:6px; background:rgba(255,255,255,0.08); padding:10px; border-radius:16px; margin:0 auto; width:100%;"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════ QUICK OPTIONS MENU DRAWER ═══════════════════ -->
+<div id="quickMenu" class="modal-overlay" style="display:none">
+  <div class="modal-card" style="max-width:400px; width:100%;">
+    <div class="modal-header">
+      <h3>⚙️ Chat Options & Quick Tools</h3>
+      <button class="modal-close" onclick="BestieChat.toggleQuickMenu()">✕</button>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; padding:16px;">
+      <button onclick="BestieChat.toggleQuickMenu(); BestieChat.openProfile();" style="display:flex; align-items:center; gap:8px; padding:12px; background:rgba(255,255,255,0.07); border:1px solid var(--glass-border); border-radius:14px; color:var(--text); font-weight:700; cursor:pointer;">
+        <span style="font-size:1.3rem;">👤</span> My Profile
+      </button>
+      <button onclick="BestieChat.toggleQuickMenu(); BestieChat.confirmClearHistory();" style="display:flex; align-items:center; gap:8px; padding:12px; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); border-radius:14px; color:#f87171; font-weight:700; cursor:pointer;">
+        <span style="font-size:1.3rem;">🧹</span> Clear History
+      </button>
+      <button onclick="BestieChat.toggleQuickMenu(); BestieChat.exportChat();" style="display:flex; align-items:center; gap:8px; padding:12px; background:rgba(255,255,255,0.07); border:1px solid var(--glass-border); border-radius:14px; color:var(--text); font-weight:700; cursor:pointer;">
+        <span style="font-size:1.3rem;">📥</span> Export Chat
+      </button>
+      <button onclick="BestieChat.toggleQuickMenu(); BestieChat.openConnect4();" style="display:flex; align-items:center; gap:8px; padding:12px; background:rgba(255,255,255,0.07); border:1px solid var(--glass-border); border-radius:14px; color:var(--text); font-weight:700; cursor:pointer;">
+        <span style="font-size:1.3rem;">🔴</span> Connect 4
+      </button>
+      <button onclick="BestieChat.toggleQuickMenu(); BestieChat.captureDualCamera();" style="display:flex; align-items:center; gap:8px; padding:12px; background:rgba(255,255,255,0.07); border:1px solid var(--glass-border); border-radius:14px; color:var(--text); font-weight:700; cursor:pointer;">
+        <span style="font-size:1.3rem;">📸</span> Dual-Cam
+      </button>
+      <button onclick="BestieChat.toggleQuickMenu(); BestieChat.toggleExtras(); BestieChat.switchExtrasTab('prefs');" style="display:flex; align-items:center; gap:8px; padding:12px; background:rgba(255,255,255,0.07); border:1px solid var(--glass-border); border-radius:14px; color:var(--text); font-weight:700; cursor:pointer;">
+        <span style="font-size:1.3rem;">🔒</span> Security & Lock
+      </button>
+      <button onclick="BestieChat.toggleQuickMenu(); BestieChat.toggleLofi();" style="display:flex; align-items:center; gap:8px; padding:12px; background:rgba(255,255,255,0.07); border:1px solid var(--glass-border); border-radius:14px; color:var(--text); font-weight:700; cursor:pointer;">
+        <span style="font-size:1.3rem;">🎶</span> Lo-Fi Music
+      </button>
+      <button onclick="BestieChat.toggleQuickMenu(); BestieChat.openGallery();" style="display:flex; align-items:center; gap:8px; padding:12px; background:rgba(255,255,255,0.07); border:1px solid var(--glass-border); border-radius:14px; color:var(--text); font-weight:700; cursor:pointer;">
+        <span style="font-size:1.3rem;">🖼️</span> Gallery
+      </button>
+    </div>
   </div>
 </div>
 

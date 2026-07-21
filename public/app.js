@@ -3454,6 +3454,16 @@
     }
   }
 
+  function toggleQuickMenu() {
+    const menu = document.getElementById('quickMenu');
+    if (!menu) return;
+    if (menu.style.display === 'flex') {
+      menu.style.display = 'none';
+    } else {
+      menu.style.display = 'flex';
+    }
+  }
+
   // ═══════════════════ PUBLIC API ═══════════════════
   window.BestieChat = {
     joinChat, leaveChat, sendMessage, sendHug,
@@ -3491,7 +3501,7 @@
     confirmClearHistory, exportChat, setRoomPassword, setDisappearingTimer, jumpToDate,
     openProfile, closeProfile, selectAvatar, saveProfileStatus, saveProfileColor,
     toggleVoiceSpeed, openConnect4, closeConnect4, dropConnect4Token,
-    sendQuickReply, captureDualCamera
+    sendQuickReply, captureDualCamera, toggleQuickMenu
   };
 
   if (document.readyState === 'loading') {
