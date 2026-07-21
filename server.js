@@ -49,6 +49,10 @@ app.get('/api/link-preview', async (req, res) => {
     if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
       return res.status(400).json({ error: 'Invalid protocol' });
     }
+    const host = parsedUrl.hostname.toLowerCase();
+    if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0' || host === '::1' || host.endsWith('.local')) {
+      return res.status(400).json({ error: 'Disallowed host' });
+    }
     
     // Fetch page text with a 3-second abort signal
     const controller = new AbortController();
@@ -100,7 +104,10 @@ app.post('/api/upload', (req, res) => {
     const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'audio/webm', 'audio/ogg'];
     if (!allowed.includes(mime)) return res.status(400).json({ error: 'Unsupported mime type' });
     const ext = mime.split('/')[1].replace('jpeg', 'jpg');
-    const base64Data = data.includes(',') ? data.split(',')[1] : data;
+    const base64Data = (data.includes(',') ? data.split(',')[1] : data).trim();
+    if (!/^[A-Za-z0-9+/=]+$/.test(base64Data)) {
+      return res.status(400).json({ error: 'Invalid base64 payload' });
+    }
     const buffer = Buffer.from(base64Data, 'base64');
     if (buffer.length > 8 * 1024 * 1024) return res.status(413).json({ error: 'File too large' });
     const url = store.saveUpload(buffer, ext);

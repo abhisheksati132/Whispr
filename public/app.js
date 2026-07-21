@@ -1071,23 +1071,32 @@
     const btn = els.sendBtn;
     if (mediaRecorder && mediaRecorder.state === 'recording') {
       mediaRecorder.stop();
-      btn.classList.remove('recording');
+      if (btn) btn.classList.remove('recording');
       return;
     }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       recordChunks = [];
-      mediaRecorder = new MediaRecorder(stream);
+      const recorderOpts = { audioBitsPerSecond: 128000 };
+      if (typeof MediaRecorder.isTypeSupported === 'function') {
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+          recorderOpts.mimeType = 'audio/webm;codecs=opus';
+        } else if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
+          recorderOpts.mimeType = 'audio/ogg;codecs=opus';
+        }
+      }
+      mediaRecorder = new MediaRecorder(stream, recorderOpts);
       recordStartTime = Date.now();
-      mediaRecorder.ondataavailable = (e) => recordChunks.push(e.data);
+      mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) recordChunks.push(e.data); };
       mediaRecorder.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
-        const duration = Math.round((Date.now() - recordStartTime) / 1000);
-        const blob = new Blob(recordChunks, { type: 'audio/webm' });
+        const duration = Math.max(1, Math.round((Date.now() - recordStartTime) / 1000));
+        const mimeType = recorderOpts.mimeType || 'audio/webm';
+        const blob = new Blob(recordChunks, { type: mimeType });
         const reader = new FileReader();
         reader.onload = async () => {
           try {
-            const { url } = await uploadFile(reader.result, 'audio/webm', 'voice');
+            const { url } = await uploadFile(reader.result, mimeType, 'voice');
             socket.emit('message', { type: 'voice', url, duration, replyTo: replyingTo });
             cancelReply();
             playSound('send');
@@ -1096,10 +1105,11 @@
         reader.readAsDataURL(blob);
       };
       mediaRecorder.start();
-      btn.classList.add('recording');
+      if (btn) btn.classList.add('recording');
       setTimeout(() => {
         if (mediaRecorder && mediaRecorder.state === 'recording') {
-          mediaRecorder.stop(); btn.classList.remove('recording');
+          mediaRecorder.stop();
+          if (btn) btn.classList.remove('recording');
         }
       }, 60000);
     } catch { renderSystem('Microphone access needed for voice notes'); }
@@ -1369,7 +1379,10 @@
       doodleCtx.strokeStyle = doodleTool === 'eraser' ? '#1a1a2e' : doodleColor;
       doodleCtx.lineWidth   = doodleTool === 'eraser' ? doodleSize * 3 : doodleSize;
       doodleCtx.beginPath();
+      const midX = (doodleLastX + x) / 2;
+      const midY = (doodleLastY + y) / 2;
       doodleCtx.moveTo(doodleLastX, doodleLastY);
+      doodleCtx.quadraticCurveTo(doodleLastX, doodleLastY, midX, midY);
       doodleCtx.lineTo(x, y);
       doodleCtx.stroke();
       doodleLastX = x; doodleLastY = y;
@@ -2165,12 +2178,20 @@
   }
 
   function seekWaveform(event, msgId) {
-    if (!activeAudio || !activeAudioBtn) return;
     const wave = event.currentTarget;
-    const rect = wave.getBoundingClientRect();
-    const clickX = event.clientX - rect.left;
-    const pct = clickX / rect.width;
-    activeAudio.currentTime = activeAudio.duration * pct;
+    if (!wave) return;
+    const player = wave.closest('.custom-audio-player');
+    if (!player) return;
+    const btn = player.querySelector('.wave-play-btn');
+    if (!activeAudio || activeAudioBtn !== btn) {
+      if (btn) playWaveform(msgId, btn);
+    }
+    if (activeAudio && activeAudio.duration) {
+      const rect = wave.getBoundingClientRect();
+      const clickX = Math.max(0, Math.min(event.clientX - rect.left, rect.width));
+      const pct = clickX / rect.width;
+      activeAudio.currentTime = activeAudio.duration * pct;
+    }
   }
 
   function transcribeAudio(msgId, url) {
@@ -2398,12 +2419,41 @@
     return '⛈️';
   }
 
-  // ── Shared Bonsai Garden state ──
+  let bonsaiWateringCooldown = false;
   function waterBonsai() {
+    if (bonsaiWateringCooldown) {
+      showToast('🌱 The tree is hydrated! Give it a second.');
+      return;
+    }
+    bonsaiWateringCooldown = true;
+    const btn = document.getElementById('waterBonsaiBtn');
+    if (btn) {
+      btn.disabled = true;
+      btn.classList.add('cooldown');
+    }
+    
+    // Water drop splash visual effect
+    const container = document.querySelector('.bonsai-visual');
+    if (container) {
+      const drop = document.createElement('div');
+      drop.className = 'bonsai-drop-anim';
+      drop.textContent = '💧';
+      container.appendChild(drop);
+      setTimeout(() => drop.remove(), 900);
+    }
+    
     if (!sharedBonsai) sharedBonsai = { growth: 0, lastWatered: null };
     sharedBonsai.growth += 1;
     sharedBonsai.lastWatered = Date.now();
     socket.emit('update-bonsai', sharedBonsai);
+
+    setTimeout(() => {
+      bonsaiWateringCooldown = false;
+      if (btn) {
+        btn.disabled = false;
+        btn.classList.remove('cooldown');
+      }
+    }, 1500);
   }
 
   let lastBonsaiLvl = -1;
@@ -2525,7 +2575,10 @@
   function drawCoDrawStrokeLocal(stroke) {
     if (!coDrawCtx) return;
     coDrawCtx.beginPath();
+    const midX = (stroke.lastX + stroke.x) / 2;
+    const midY = (stroke.lastY + stroke.y) / 2;
     coDrawCtx.moveTo(stroke.lastX, stroke.lastY);
+    coDrawCtx.quadraticCurveTo(stroke.lastX, stroke.lastY, midX, midY);
     coDrawCtx.lineTo(stroke.x, stroke.y);
     coDrawCtx.strokeStyle = stroke.color;
     coDrawCtx.lineWidth = stroke.size;

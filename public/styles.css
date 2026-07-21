@@ -1768,3 +1768,54 @@ mark.search-highlight { background: #fde68a; color: #1a1a2e; border-radius: 3px;
 #errorBoundary h2 { font-size: 2rem; margin: 0; }
 #errorBoundary p { opacity: 0.7; max-width: 320px; line-height: 1.5; }
 #errorBoundary button { padding: 12px 28px; background: linear-gradient(135deg, #c084fc, #818cf8); border: none; border-radius: 24px; color: #fff; font-weight: 700; font-size: 1rem; cursor: pointer; }
+
+/* ═══════════════════════════════════════════════
+   POLISH & OPTIMIZATION ENHANCEMENTS
+═══════════════════════════════════════════════ */
+
+/* Smooth Theme & Color Transitions */
+body, #chat, #login, .input-bar, header, .msg-in .bubble, .msg-out .bubble, .tab-content, .extra-block {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Mobile Viewport Locking (dvh for soft keyboard handling) */
+#chat, #login {
+  min-height: 100dvh;
+  height: 100dvh;
+}
+
+/* Mic Recording Pulse Animation */
+@keyframes micPulse {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); transform: scale(1); }
+  50% { box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); transform: scale(1.08); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); transform: scale(1); }
+}
+.icon-btn.recording, #sendBtn.recording {
+  background: #ef4444 !important;
+  color: #fff !important;
+  animation: micPulse 1.4s infinite ease-in-out !important;
+}
+
+/* Bonsai Water Droplet Splash & Cooldown */
+.bonsai-visual {
+  position: relative;
+}
+.bonsai-drop-anim {
+  position: absolute;
+  top: 55%;
+  left: 45%;
+  font-size: 1.5rem;
+  pointer-events: none;
+  animation: dropSplash 0.9s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  z-index: 10;
+}
+@keyframes dropSplash {
+  0% { transform: translateY(0) scale(0.6); opacity: 1; }
+  50% { transform: translateY(-30px) scale(1.2); opacity: 0.9; }
+  100% { transform: translateY(-48px) scale(1.4); opacity: 0; }
+}
+#waterBonsaiBtn.cooldown {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
