@@ -1,4 +1,4 @@
-const CACHE = 'bestie-v5';
+const CACHE = 'hmm-v6';
 const SHELL = ['/', '/styles.css', '/manifest.json'];
 
 self.addEventListener('install', (e) => {
@@ -35,7 +35,7 @@ self.addEventListener('fetch', (e) => {
 
 // Push Notification Handler
 self.addEventListener('push', (e) => {
-  let data = { title: 'Bestie Chat', body: 'New message from your bestie! 💌', icon: '/icon-192.png' };
+  let data = { title: 'hmm', body: 'New message from your bestie! 💌', icon: '/icon-192.png' };
   if (e.data) {
     try {
       data = e.data.json();

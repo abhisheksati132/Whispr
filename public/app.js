@@ -711,10 +711,10 @@
     if (unreadCount > 0 && document.hidden) {
       els.unreadBadge.style.display = 'inline';
       els.unreadBadge.textContent   = unreadCount > 99 ? '99+' : unreadCount;
-      document.title = `(${unreadCount}) Bestie Chat 💬`;
+      document.title = `(${unreadCount}) hmm 💭`;
     } else {
       els.unreadBadge.style.display = 'none';
-      document.title = 'Bestie Chat 💬';
+      document.title = 'hmm 💭';
     }
   }
 
