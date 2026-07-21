@@ -387,6 +387,10 @@ function updateGameScore(room, winner) {
   if (!state.gameScores) state.gameScores = { wins: {}, losses: {} };
   if (!winner) return state.gameScores;
   state.gameScores.wins[winner] = (state.gameScores.wins[winner] || 0) + 1;
+  persist();
+  return state.gameScores;
+}
+
 function clearHistory(room) {
   const state = getRoom(room);
   state.messages = [];
