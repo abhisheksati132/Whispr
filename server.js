@@ -254,10 +254,16 @@ io.on('connection', (socket) => {
 
   // ── Join ──────────────────────────────────────────────────────────────
   socket.on('join', ({ name, room, nickname, password } = {}) => {
+    const roomState = store.getRoom(currentRoom);
     if (CHAT_PASSWORD && password !== CHAT_PASSWORD) {
       socket.emit('join-error', 'Wrong password — ask your bestie!');
       return;
     }
+    if (roomState.roomPassword && password !== roomState.roomPassword) {
+      socket.emit('join-error', 'Incorrect room password — ask your bestie!');
+      return;
+    }
+
     username = normalizeName(name);
     currentRoom = normalizeRoom(room || 'just-us');
     const displayNick = normalizeNickname(nickname, username);
@@ -271,7 +277,6 @@ io.on('connection', (socket) => {
     socket.join(currentRoom);
     getRoomUsers(currentRoom).set(socket.id, { name: username, profile });
 
-    const roomState = store.getRoom(currentRoom);
     const streak = store.recordActivity(username);
     store.setLastSeen(username);
 
@@ -296,11 +301,36 @@ io.on('connection', (socket) => {
       calendar: roomState.calendar || [],
       glossary: roomState.glossary || [],
       bonsai: roomState.bonsai || { growth: 0, lastWatered: null },
-      gameScores: roomState.gameScores || { wins: {}, losses: {} }
+      gameScores: roomState.gameScores || { wins: {}, losses: {} },
+      hasPassword: Boolean(roomState.roomPassword),
+      disappearingTimer: roomState.disappearingTimer || 0
     });
 
     io.to(currentRoom).emit('system', randomJoinMessage(profile.nickname || username));
     broadcastPresence(currentRoom);
+  });
+
+  // ── History & Room Security Utilities ─────────────────────────────────
+  socket.on('clear-history', () => {
+    if (!currentRoom) return;
+    store.clearHistory(currentRoom);
+    io.to(currentRoom).emit('history-cleared');
+    io.to(currentRoom).emit('system', '🧹 Chat history was cleared.');
+  });
+
+  socket.on('set-room-password', (pass) => {
+    if (!currentRoom) return;
+    const safePass = String(pass || '').trim();
+    store.updateRoomMeta(currentRoom, { roomPassword: safePass });
+    socket.emit('password-updated', { hasPassword: Boolean(safePass) });
+    io.to(currentRoom).emit('system', safePass ? '🔒 Room password updated.' : '🔓 Room password removed.');
+  });
+
+  socket.on('set-disappearing-timer', (durationMs) => {
+    if (!currentRoom) return;
+    const ms = typeof durationMs === 'number' ? Math.max(0, durationMs) : 0;
+    store.updateRoomMeta(currentRoom, { disappearingTimer: ms });
+    io.to(currentRoom).emit('disappearing-updated', { durationMs: ms });
   });
 
   // ── Message ─────────────────────────────────────────────────────────
@@ -669,6 +699,7 @@ io.on('connection', (socket) => {
 // Clean expired rooms on startup and every 24h
 store.cleanExpiredRooms();
 setInterval(store.cleanExpiredRooms, 24 * 60 * 60 * 1000);
+setInterval(store.cleanDisappearingMessages, 60 * 1000);
 
 // ── Start server ───────────────────────────────────────────────────────────
 if (require.main === module) {

@@ -387,8 +387,28 @@ function updateGameScore(room, winner) {
   if (!state.gameScores) state.gameScores = { wins: {}, losses: {} };
   if (!winner) return state.gameScores;
   state.gameScores.wins[winner] = (state.gameScores.wins[winner] || 0) + 1;
+function clearHistory(room) {
+  const state = getRoom(room);
+  state.messages = [];
+  state.messageCount = 0;
+  state.pinnedMessageId = null;
+  state.readBy = {};
   persist();
-  return state.gameScores;
+  return state;
+}
+
+function cleanDisappearingMessages() {
+  const now = Date.now();
+  let changed = false;
+  for (const room of Object.values(data.rooms)) {
+    if (room.disappearingTimer && room.disappearingTimer > 0) {
+      const cutoff = now - room.disappearingTimer;
+      const initialCount = room.messages.length;
+      room.messages = room.messages.filter((m) => m.time > cutoff);
+      if (room.messages.length !== initialCount) changed = true;
+    }
+  }
+  if (changed) persist();
 }
 
 module.exports = {
@@ -416,6 +436,8 @@ module.exports = {
   getDailyQuestion,
   cleanExpiredRooms,
   updateGameScore,
+  clearHistory,
+  cleanDisappearingMessages,
   MOTD_PROMPTS,
   MILESTONES,
   FEELINGS

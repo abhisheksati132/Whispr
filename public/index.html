@@ -278,6 +278,31 @@
         <div class="e2e-hint">Receive push alerts on your phone or desktop when your bestie texts while you're offline.</div>
       </div>
       <div class="extra-block">
+        <label>Room Lock Password 🔒</label>
+        <div class="e2e-row">
+          <input id="roomPasswordInput" type="password" placeholder="Set room password..." />
+          <button onclick="BestieChat.setRoomPassword()">Save Password</button>
+        </div>
+        <div class="e2e-hint">Requires anyone joining your private space to enter this password.</div>
+      </div>
+      <div class="extra-block">
+        <label>Disappearing Messages ⏱️</label>
+        <select id="disappearingSelect" onchange="BestieChat.setDisappearingTimer(this.value)">
+          <option value="0">Off (Keep forever)</option>
+          <option value="3600000">1 Hour</option>
+          <option value="86400000">24 Hours</option>
+          <option value="604800000">7 Days</option>
+        </select>
+        <div class="e2e-hint">Automatically erases messages older than the selected duration.</div>
+      </div>
+      <div class="extra-block">
+        <label>Data Management 🧹</label>
+        <div style="display:flex; gap:8px; margin-top:6px;">
+          <button onclick="BestieChat.exportChat()" style="flex:1; padding:8px 12px; background:rgba(255,255,255,0.1); border:1px solid var(--glass-border); border-radius:12px; color:var(--text); cursor:pointer; font-weight:700;">📥 Export Chat (.txt)</button>
+          <button onclick="BestieChat.confirmClearHistory()" style="flex:1; padding:8px 12px; background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); border-radius:12px; color:#f87171; cursor:pointer; font-weight:700;">🗑️ Clear History</button>
+        </div>
+      </div>
+      <div class="extra-block">
         <label>Nickname 🏷️</label>
         <input id="nicknameInputChat" type="text" placeholder="Change nickname" maxlength="24" />
       </div>
@@ -293,6 +318,7 @@
   <div id="searchBar">
     <span class="search-icon">🔍</span>
     <input id="searchInput" type="text" placeholder="Search messages…" autocomplete="off" />
+    <input id="jumpToDateInput" type="date" title="Jump to date" onchange="BestieChat.jumpToDate(this.value)" style="background:none; border:none; color:inherit; font-size:0.85rem; cursor:pointer;" />
     <button class="search-clear" onclick="BestieChat.clearSearch()">✕</button>
   </div>
 

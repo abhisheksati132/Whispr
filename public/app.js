@@ -1761,6 +1761,21 @@
       showToast(`🏆 ${data.winner} guessed the word: "${data.word}"!`);
       closeCoDraw();
     });
+
+    socket.on('history-cleared', () => {
+      allMessagesCached = [];
+      if (els.messages) els.messages.innerHTML = '';
+      showToast('🧹 Chat history was cleared');
+    });
+
+    socket.on('password-updated', (data) => {
+      showToast(data.hasPassword ? '🔒 Room password saved' : '🔓 Password removed');
+    });
+
+    socket.on('disappearing-updated', (data) => {
+      const label = data.durationMs === 3600000 ? '1 Hour' : data.durationMs === 86400000 ? '24 Hours' : data.durationMs === 604800000 ? '7 Days' : 'Off';
+      showToast(`⏱️ Disappearing messages set to: ${label}`);
+    });
   }
 
   // ═══════════════════ WEBRTC CALLING ═══════════════════
@@ -3232,6 +3247,62 @@
     return outputArray;
   }
 
+  function confirmClearHistory() {
+    if (!joined) return;
+    if (confirm('Are you sure you want to clear all chat history for both besties?')) {
+      socket.emit('clear-history');
+    }
+  }
+
+  function exportChat() {
+    if (!allMessagesCached || !allMessagesCached.length) {
+      showToast('No messages to export yet!');
+      return;
+    }
+    const lines = allMessagesCached.map((m) => {
+      const date = new Date(m.time).toLocaleString();
+      const user = getDisplayName(m.user);
+      const text = m.type === 'hug' ? 'sent a hug 💌' : m.type === 'image' ? `[Photo: ${m.url}]` : m.type === 'voice' ? `[Voice note: ${m.url}]` : decryptE2EE(m.text || '');
+      return `[${date}] ${user}: ${text}`;
+    });
+    const header = `=======================================\n  BESTIE CHAT TRANSCRIPT EXPORT  \n=======================================\nExport Date: ${new Date().toLocaleString()}\nTotal Messages: ${allMessagesCached.length}\n---------------------------------------\n\n`;
+    const blob = new Blob([header + lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `bestie-chat-export-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.click();
+    showToast('📥 Chat transcript exported!');
+  }
+
+  function setRoomPassword() {
+    const input = document.getElementById('roomPasswordInput');
+    if (!input || !joined) return;
+    socket.emit('set-room-password', input.value.trim());
+  }
+
+  function setDisappearingTimer(val) {
+    if (!joined) return;
+    socket.emit('set-disappearing-timer', parseInt(val, 10));
+  }
+
+  function jumpToDate(dateStr) {
+    if (!dateStr || !els.messages) return;
+    const targetDate = new Date(dateStr).toDateString();
+    const msgs = els.messages.querySelectorAll('.msg-wrap');
+    for (const msgEl of msgs) {
+      const id = msgEl.dataset.id;
+      const m = allMessagesCached.find((msg) => msg.id === id);
+      if (m && new Date(m.time).toDateString() === targetDate) {
+        msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        msgEl.classList.add('pinned-msg-highlight');
+        setTimeout(() => msgEl.classList.remove('pinned-msg-highlight'), 1600);
+        showToast(`📅 Jumped to ${dateStr}`);
+        return;
+      }
+    }
+    showToast(`No messages found on ${dateStr}`);
+  }
+
   // ═══════════════════ PUBLIC API ═══════════════════
   window.BestieChat = {
     joinChat, leaveChat, sendMessage, sendHug,
@@ -3265,7 +3336,8 @@
     openHapticSync, closeHapticSync, startHapticPulse, stopHapticPulse,
     sendNudge, toggleLofi, setLofiVolume,
     toggleTheme, dismissDailyQuestion, quickReact,
-    togglePushNotifications
+    togglePushNotifications,
+    confirmClearHistory, exportChat, setRoomPassword, setDisappearingTimer, jumpToDate
   };
 
   if (document.readyState === 'loading') {
