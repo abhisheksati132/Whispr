@@ -479,6 +479,26 @@ io.on('connection', (socket) => {
     io.to(currentRoom).emit('reaction-update', { messageId, reactions: msg.reactions });
   });
 
+  // ── Profile Bio & Avatar Updates ─────────────────────────────────────
+  socket.on('update-profile-bio', ({ avatar, statusBio, color }) => {
+    if (!username) return;
+    const updates = {};
+    if (avatar) updates.avatar = avatar;
+    if (statusBio !== undefined) updates.statusBio = statusBio;
+    if (color) updates.color = color;
+    const updated = store.updateProfile(username, updates);
+    if (currentRoom) {
+      getRoomUsers(currentRoom).set(socket.id, { name: username, profile: updated });
+      io.to(currentRoom).emit('profile-updated', { username, profile: updated });
+    }
+  });
+
+  // ── Connect 4 ────────────────────────────────────────────────────────
+  socket.on('c4-move', ({ col }) => {
+    if (!currentRoom) return;
+    socket.to(currentRoom).emit('c4-move', { user: username, col });
+  });
+
   // ── Typing ──────────────────────────────────────────────────────────
   socket.on('typing', () => {
     if (!username || !currentRoom) return;

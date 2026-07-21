@@ -72,7 +72,7 @@
 
   <header>
     <div class="header-left">
-      <div class="header-profile">
+      <div class="header-profile" onclick="BestieChat.openProfile()" style="cursor:pointer" title="View Profile">
         <div id="bestieAvatar" class="bestie-avatar">✨</div>
         <div class="header-user-info">
           <div class="header-title-row">
@@ -607,6 +607,51 @@
       <button class="call-btn accept-call" onclick="BestieChat.acceptCall()" title="Accept Call">📞 Accept</button>
       <button class="call-btn decline-call" onclick="BestieChat.endCall()" title="Decline Call">✕ Decline</button>
     </div>
+  </div>
+<!-- ═══════════════════ MY PROFILE MODAL ═══════════════════ -->
+<div id="profileModal" class="modal-overlay" style="display:none">
+  <div class="modal-card profile-card" style="max-width:380px;">
+    <div class="modal-header">
+      <h3>My Profile 👤</h3>
+      <button class="modal-close" onclick="BestieChat.closeProfile()">✕</button>
+    </div>
+    <div class="profile-body" style="display:flex; flex-direction:column; gap:14px; padding:16px;">
+      <div class="profile-avatar-select" style="text-align:center;">
+        <div id="profileAvatarDisplay" class="profile-big-avatar" style="font-size:3rem; margin-bottom:8px;">✨</div>
+        <div class="avatar-palette" style="display:flex; gap:6px; flex-wrap:wrap; justify-content:center;">
+          <button class="avatar-opt" onclick="BestieChat.selectAvatar('✨')" style="font-size:1.4rem; background:none; border:1px solid rgba(255,255,255,0.1); border-radius:50%; padding:6px; cursor:pointer;">✨</button>
+          <button class="avatar-opt" onclick="BestieChat.selectAvatar('🐱')" style="font-size:1.4rem; background:none; border:1px solid rgba(255,255,255,0.1); border-radius:50%; padding:6px; cursor:pointer;">🐱</button>
+          <button class="avatar-opt" onclick="BestieChat.selectAvatar('🌸')" style="font-size:1.4rem; background:none; border:1px solid rgba(255,255,255,0.1); border-radius:50%; padding:6px; cursor:pointer;">🌸</button>
+          <button class="avatar-opt" onclick="BestieChat.selectAvatar('⚡')" style="font-size:1.4rem; background:none; border:1px solid rgba(255,255,255,0.1); border-radius:50%; padding:6px; cursor:pointer;">⚡</button>
+          <button class="avatar-opt" onclick="BestieChat.selectAvatar('💎')" style="font-size:1.4rem; background:none; border:1px solid rgba(255,255,255,0.1); border-radius:50%; padding:6px; cursor:pointer;">💎</button>
+          <button class="avatar-opt" onclick="BestieChat.selectAvatar('🦊')" style="font-size:1.4rem; background:none; border:1px solid rgba(255,255,255,0.1); border-radius:50%; padding:6px; cursor:pointer;">🦊</button>
+          <button class="avatar-opt" onclick="BestieChat.selectAvatar('🍓')" style="font-size:1.4rem; background:none; border:1px solid rgba(255,255,255,0.1); border-radius:50%; padding:6px; cursor:pointer;">🍓</button>
+          <button class="avatar-opt" onclick="BestieChat.selectAvatar('🚀')" style="font-size:1.4rem; background:none; border:1px solid rgba(255,255,255,0.1); border-radius:50%; padding:6px; cursor:pointer;">🚀</button>
+          <button class="avatar-opt" onclick="BestieChat.selectAvatar('🧸')" style="font-size:1.4rem; background:none; border:1px solid rgba(255,255,255,0.1); border-radius:50%; padding:6px; cursor:pointer;">🧸</button>
+          <button class="avatar-opt" onclick="BestieChat.selectAvatar('🔮')" style="font-size:1.4rem; background:none; border:1px solid rgba(255,255,255,0.1); border-radius:50%; padding:6px; cursor:pointer;">🔮</button>
+        </div>
+      </div>
+      <div class="extra-block">
+        <label>Status Bio 💭</label>
+        <input id="profileStatusInput" type="text" placeholder="What's on your mind?..." maxlength="40" onchange="BestieChat.saveProfileStatus(this.value)" style="width:100%; background:rgba(255,255,255,0.06); border:1px solid var(--glass-border); border-radius:10px; padding:8px 12px; color:var(--text);" />
+      </div>
+      <div class="profile-stats" style="display:flex; gap:10px; justify-content:space-around;">
+        <div class="stat-pill" style="background:rgba(255,255,255,0.06); border-radius:12px; padding:8px 14px; font-size:0.85rem; font-weight:700;"><span id="statMsgs">0</span> Messages</div>
+        <div class="stat-pill" style="background:rgba(255,255,255,0.06); border-radius:12px; padding:8px 14px; font-size:0.85rem; font-weight:700;"><span id="statStreak">0</span> Day Streak</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ CONNECT 4 GAME MODAL ═══════════════════ -->
+<div id="connect4Modal" class="modal-overlay" style="display:none">
+  <div class="modal-card" style="max-width:380px; text-align:center;">
+    <div class="modal-header">
+      <h3>🔴 Connect 4</h3>
+      <button class="modal-close" onclick="BestieChat.closeConnect4()">✕</button>
+    </div>
+    <div id="c4Status" style="font-size:0.88rem; font-weight:700; margin:10px 0; color:var(--accent);">Your Turn!</div>
+    <div id="c4Board" style="display:grid; grid-template-columns:repeat(7, 1fr); gap:6px; background:rgba(255,255,255,0.08); padding:10px; border-radius:16px; margin:0 auto; width:100%;"></div>
   </div>
 </div>
 

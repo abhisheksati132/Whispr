@@ -3303,6 +3303,100 @@
     showToast(`No messages found on ${dateStr}`);
   }
 
+  // ── Profile Management ────────────────────────────────────────────────
+  function openProfile() {
+    const modal = document.getElementById('profileModal');
+    if (modal) modal.style.display = 'flex';
+    const profile = getProfile(myName);
+    const avatarDisplay = document.getElementById('profileAvatarDisplay');
+    const statusInput = document.getElementById('profileStatusInput');
+    const statMsgs = document.getElementById('statMsgs');
+    const statStreak = document.getElementById('statStreak');
+    if (avatarDisplay) avatarDisplay.textContent = profile.avatar || '✨';
+    if (statusInput) statusInput.value = profile.statusBio || '';
+    if (statMsgs) statMsgs.textContent = allMessagesCached.filter(m => m.user === myName).length;
+    if (statStreak) statStreak.textContent = currentStreakDays || 1;
+  }
+
+  function closeProfile() {
+    const modal = document.getElementById('profileModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function selectAvatar(emoji) {
+    const avatarDisplay = document.getElementById('profileAvatarDisplay');
+    if (avatarDisplay) avatarDisplay.textContent = emoji;
+    socket.emit('update-profile-bio', { avatar: emoji });
+    showToast(`Avatar updated: ${emoji}`);
+  }
+
+  function saveProfileStatus(bio) {
+    socket.emit('update-profile-bio', { statusBio: String(bio || '').trim() });
+    showToast('Status bio saved! 💭');
+  }
+
+  function saveProfileColor(color) {
+    socket.emit('update-profile-bio', { color });
+    showToast('Bubble accent updated! 🎨');
+  }
+
+  // ── Voice Note Speed Control ──────────────────────────────────────────
+  function toggleVoiceSpeed(btn, audioId) {
+    const audio = document.getElementById(audioId);
+    if (!audio) return;
+    const current = audio.playbackRate || 1;
+    let next = 1;
+    if (current === 1) next = 1.5;
+    else if (current === 1.5) next = 2;
+    else next = 1;
+    audio.playbackRate = next;
+    if (btn) btn.textContent = `${next}x`;
+  }
+
+  // ── Connect 4 Mini Game ───────────────────────────────────────────────
+  let c4BoardState = Array(6).fill(null).map(() => Array(7).fill(null));
+
+  function openConnect4() {
+    const modal = document.getElementById('connect4Modal');
+    if (modal) modal.style.display = 'flex';
+    c4BoardState = Array(6).fill(null).map(() => Array(7).fill(null));
+    renderConnect4Board();
+  }
+
+  function closeConnect4() {
+    const modal = document.getElementById('connect4Modal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function renderConnect4Board() {
+    const boardEl = document.getElementById('c4Board');
+    if (!boardEl) return;
+    boardEl.innerHTML = '';
+    for (let r = 0; r < 6; r++) {
+      for (let c = 0; c < 7; c++) {
+        const cell = document.createElement('button');
+        cell.className = 'c4-cell';
+        cell.style.cssText = 'aspect-ratio:1; border-radius:50%; border:none; cursor:pointer; font-size:1.2rem; transition:transform 0.1s;';
+        const val = c4BoardState[r][c];
+        cell.style.background = val === 'red' ? '#ef4444' : val === 'yellow' ? '#f59e0b' : 'rgba(255,255,255,0.12)';
+        cell.onclick = () => dropConnect4Token(c);
+        boardEl.appendChild(cell);
+      }
+    }
+  }
+
+  function dropConnect4Token(c) {
+    for (let r = 5; r >= 0; r--) {
+      if (!c4BoardState[r][c]) {
+        c4BoardState[r][c] = 'red';
+        renderConnect4Board();
+        socket.emit('c4-move', { col: c });
+        showToast('🔴 Token dropped!');
+        return;
+      }
+    }
+  }
+
   // ═══════════════════ PUBLIC API ═══════════════════
   window.BestieChat = {
     joinChat, leaveChat, sendMessage, sendHug,
@@ -3337,7 +3431,9 @@
     sendNudge, toggleLofi, setLofiVolume,
     toggleTheme, dismissDailyQuestion, quickReact,
     togglePushNotifications,
-    confirmClearHistory, exportChat, setRoomPassword, setDisappearingTimer, jumpToDate
+    confirmClearHistory, exportChat, setRoomPassword, setDisappearingTimer, jumpToDate,
+    openProfile, closeProfile, selectAvatar, saveProfileStatus, saveProfileColor,
+    toggleVoiceSpeed, openConnect4, closeConnect4, dropConnect4Token
   };
 
   if (document.readyState === 'loading') {
