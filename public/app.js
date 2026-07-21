@@ -53,70 +53,17 @@
   let doodleLastX    = 0;
   let doodleLastY    = 0;
 
-  // ═══════════════════ ELEMENT CACHE ═══════════════════
-  const els = {
-    login:            document.getElementById('login'),
-    chat:             document.getElementById('chat'),
-    messages:         document.getElementById('messages'),
-    nameInput:        document.getElementById('nameInput'),
-    nicknameInput:    document.getElementById('nicknameInput'),
-    nicknameInputChat:document.getElementById('nicknameInputChat'),
-    roomSelect:       document.getElementById('roomSelect'),
-    passwordField:    document.getElementById('passwordField'),
-    passwordInput:    document.getElementById('passwordInput'),
-    loginError:       document.getElementById('loginError'),
-    msgInput:         document.getElementById('msgInput'),
-    sendBtn:          document.getElementById('sendBtn'),
-    bestieAvatar:     document.getElementById('bestieAvatar'),
-    bestieName:       document.getElementById('bestieName'),
-    bestieStatus:     document.getElementById('bestieStatus'),
-    motdBanner:       document.getElementById('motdBanner'),
-    streakBadge:      document.getElementById('streakBadge'),
-    unreadBadge:      document.getElementById('unreadBadge'),
-    extrasPanel:      document.getElementById('extrasPanel'),
-    moodInput:        document.getElementById('moodInput'),
-    jokesInput:       document.getElementById('jokesInput'),
-    countdownLabel:   document.getElementById('countdownLabel'),
-    countdownDate:    document.getElementById('countdownDate'),
-    countdownDisplay: document.getElementById('countdownDisplay'),
-    emojiPicker:      document.getElementById('emojiPicker'),
-    gameMenu:         document.getElementById('gameMenu'),
-    gifPanel:         document.getElementById('gifPanel'),
-    gifGrid:          document.getElementById('gifGrid'),
-    gifSearch:        document.getElementById('gifSearch'),
-    ambience:         document.getElementById('ambience'),
-    soundBtn:         document.getElementById('soundBtn'),
-    photoInput:       document.getElementById('photoInput'),
-    feelingsPanel:    document.getElementById('feelingsPanel'),
-    feelingsGrid:     document.getElementById('feelingsGrid'),
-    theirFeeling:     document.getElementById('theirFeeling'),
-    feelingGlow:      document.getElementById('feelingGlow'),
-    pulseOverlay:     document.getElementById('pulseOverlay'),
-    searchBar:        document.getElementById('searchBar'),
-    searchInput:      document.getElementById('searchInput'),
-    pinnedBanner:     document.getElementById('pinnedBanner'),
-    pinnedText:       document.getElementById('pinnedText'),
-    replyBar:         document.getElementById('replyBar'),
-    replyPreview:     document.getElementById('replyPreview'),
-    secretToggle:     document.getElementById('secretToggle'),
-    secretIndicator:  document.getElementById('secretIndicator'),
-    galleryModal:     document.getElementById('galleryModal'),
-    galleryGrid:      document.getElementById('galleryGrid'),
-    galleryEmpty:     document.getElementById('galleryEmpty'),
-    doodleModal:      document.getElementById('doodleModal'),
-    doodleCanvas:     document.getElementById('doodleCanvas'),
-    doodleSize:       document.getElementById('doodleSize'),
-    lightbox:         document.getElementById('lightbox'),
-    lightboxImg:      document.getElementById('lightboxImg'),
-    contextMenu:      document.getElementById('contextMenu'),
-    charCount:        document.getElementById('charCount'),
-    wallpaperSelect:  document.getElementById('wallpaperSelect'),
-    wallpaperUrlInput:document.getElementById('wallpaperUrlInput'),
-    attachMenu:       document.getElementById('attachMenu'),
-    attachBtn:        document.getElementById('attachBtn'),
-    sendIcon:         document.getElementById('sendIcon'),
-    micIcon:          document.getElementById('micIcon'),
-  };
+  // ═══════════════════ DYNAMIC ELEMENT CACHE ═══════════════════
+  const elsCache = {};
+  const els = new Proxy({}, {
+    get(_target, prop) {
+      if (typeof prop !== 'string') return undefined;
+      if (!elsCache[prop] || !elsCache[prop].isConnected) {
+        elsCache[prop] = document.getElementById(prop);
+      }
+      return elsCache[prop];
+    }
+  });
 
   // State caches
   let allMessagesCached = [];
@@ -843,18 +790,25 @@
 
   // ═══════════════════ JOIN / LEAVE ═══════════════════
   function joinChat() {
-    const name = els.nameInput.value.trim();
+    const name = els.nameInput ? els.nameInput.value.trim() : '';
     const room = 'our-private-space';
-    const nickname = els.nicknameInput.value.trim();
-    if (!name) { els.loginError.textContent = 'Enter your name first 🥺'; return; }
-    els.loginError.textContent = '';
-    if (!socket) { els.loginError.textContent = 'Not connected to server — is the server running?'; return; }
+    const nickname = els.nicknameInput ? els.nicknameInput.value.trim() : '';
+    if (!name) {
+      if (els.loginError) els.loginError.textContent = 'Enter your name first 🥺';
+      return;
+    }
+    if (els.loginError) els.loginError.textContent = '';
+    if (!socket) {
+      if (els.loginError) els.loginError.textContent = 'Not connected to server — is the server running?';
+      return;
+    }
     myName = name; myRoom = room;
-    localStorage.setItem('bestieChatName',     name);
-    localStorage.setItem('bestieChatRoom',     room);
+    localStorage.setItem('bestieChatName', name);
+    localStorage.setItem('bestieChatRoom', room);
     if (nickname) localStorage.setItem('bestieChatNickname', nickname);
     applyRoomTheme(room);
-    socket.emit('join', { name, room, nickname, password: els.passwordInput.value });
+    const passVal = els.passwordInput ? els.passwordInput.value : '';
+    socket.emit('join', { name, room, nickname, password: passVal });
   }
 
   function leaveChat() {
@@ -863,21 +817,23 @@
     clearInterval(reminderInterval);
     clearInterval(countdownInterval);
     if (socket) { socket.disconnect(); socket.connect(); }
-    els.messages.innerHTML       = '';
-    els.chat.style.display       = 'none';
-    els.login.style.display      = 'block';
-    els.loginError.textContent   = '';
-    els.extrasPanel.classList.remove('open');
-    els.feelingsPanel.classList.remove('open');
-    els.feelingGlow.classList.remove('active');
+    if (els.messages) els.messages.innerHTML = '';
+    if (els.chat) els.chat.style.display = 'none';
+    if (els.login) els.login.style.display = 'block';
+    if (els.loginError) els.loginError.textContent = '';
+    if (els.extrasPanel) els.extrasPanel.classList.remove('open');
+    if (els.feelingsPanel) els.feelingsPanel.classList.remove('open');
+    if (els.feelingGlow) els.feelingGlow.classList.remove('active');
     feelings = {}; myFeelingKey = null;
     allImageMessages = [];
     pinnedMsg = null;
     replyingTo = null;
     editingMessageId = null;
-    els.replyBar.classList.remove('open');
-    els.replyBar.style.display = 'none';
-    els.secretIndicator.style.display = 'none';
+    if (els.replyBar) {
+      els.replyBar.classList.remove('open');
+      els.replyBar.style.display = 'none';
+    }
+    if (els.secretIndicator) els.secretIndicator.style.display = 'none';
     secretMode = false;
     clearUnread();
     hideContextMenu();
@@ -1494,14 +1450,14 @@
       joined = true;
       myProfile = payload.profile || {};
       allImageMessages = [];
-      els.login.style.display = 'none';
-      els.chat.style.display  = 'flex';
-      els.motdBanner.textContent = `✨ ${payload.motd}`;
-      els.moodInput.value  = payload.mood  || '';
+      if (els.login) els.login.style.display = 'none';
+      if (els.chat) els.chat.style.display  = 'flex';
+      if (els.motdBanner) els.motdBanner.textContent = `✨ ${payload.motd || ''}`;
+      if (els.moodInput) els.moodInput.value  = payload.mood  || '';
       if (els.jokesInput) els.jokesInput.value = (payload.jokes || []).join('\n');
       if (payload.countdown) {
-        els.countdownLabel.value = payload.countdown.label || '';
-        els.countdownDate.value  = payload.countdown.date ? payload.countdown.date.slice(0, 16) : '';
+        if (els.countdownLabel) els.countdownLabel.value = payload.countdown.label || '';
+        if (els.countdownDate) els.countdownDate.value  = payload.countdown.date ? payload.countdown.date.slice(0, 16) : '';
         updateCountdown(payload.countdown);
       }
       updateStreak(payload.streak);
@@ -1517,10 +1473,10 @@
       (payload.history || []).forEach((m) => { if (m.user) profiles[m.user] = profiles[m.user] || {}; });
 
       allMessagesCached = payload.history || [];
-      els.messages.innerHTML = '';
+      if (els.messages) els.messages.innerHTML = '';
       lastDateLabel = '';
       allMessagesCached.forEach((m) => renderMessage(m, true));
-      els.msgInput.focus();
+      if (els.msgInput) els.msgInput.focus();
       startIntervals();
       clearUnread();
       setTimeout(confetti, 300);
