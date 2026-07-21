@@ -74,6 +74,7 @@
   let allMessagesCached = [];
   let sharedDiary = [];
   let sharedBucketList = [];
+  let sharedCalendar = [];
   let sharedGlossary = [];
   let sharedBonsai = { growth: 0, lastWatered: null };
 
@@ -1501,6 +1502,8 @@
       renderDiaryList(sharedDiary);
       sharedBucketList = payload.bucketList || [];
       renderBucketList(sharedBucketList);
+      sharedCalendar = payload.calendar || [];
+      renderCalendarList(sharedCalendar);
       sharedGlossary = payload.glossary || [];
       renderGlossaryList(sharedGlossary);
       sharedBonsai = payload.bonsai || { growth: 0, lastWatered: null };
@@ -1786,6 +1789,19 @@
       if (data && typeof data.col === 'number') {
         dropConnect4Token(data.col, false);
       }
+    });
+
+    socket.on('profile-updated', ({ username, profile }) => {
+      if (username) {
+        profiles[username] = Object.assign(profiles[username] || {}, profile);
+        updateBestieHeaderState();
+        refreshMessagesLayout();
+      }
+    });
+
+    socket.on('calendar-update', (cal) => {
+      sharedCalendar = cal || [];
+      renderCalendarList(sharedCalendar);
     });
   }
 
@@ -2235,6 +2251,36 @@
           <span>${escapeHtml(d.text)}</span>
         </div>
         <button class="delete-item-btn" onclick="BestieChat.deleteDiaryEntry(${idx})">✕</button>
+      </div>
+    `).join('');
+  }
+
+  // ── Shared Calendar & Dates ──
+  function addCalendarEvent() {
+    const labelEl = document.getElementById('calLabelInput');
+    const dateEl = document.getElementById('calDateInput');
+    if (!labelEl || !dateEl || !labelEl.value.trim() || !dateEl.value) return;
+    sharedCalendar.push({ label: labelEl.value.trim(), date: dateEl.value });
+    socket.emit('update-calendar', sharedCalendar);
+    labelEl.value = '';
+    dateEl.value = '';
+  }
+
+  function deleteCalendarEvent(index) {
+    sharedCalendar.splice(index, 1);
+    socket.emit('update-calendar', sharedCalendar);
+  }
+
+  function renderCalendarList(cal) {
+    const container = document.getElementById('calendarList');
+    if (!container) return;
+    container.innerHTML = (cal || []).map((c, idx) => `
+      <div class="diary-item">
+        <div class="diary-item-text">
+          <span class="diary-date">📅 ${new Date(c.date).toLocaleDateString()}</span>
+          <span>${escapeHtml(c.label)}</span>
+        </div>
+        <button class="delete-item-btn" onclick="BestieChat.deleteCalendarEvent(${idx})">✕</button>
       </div>
     `).join('');
   }
@@ -3330,13 +3376,25 @@
     const profile = getProfile(myName);
     const avatarDisplay = document.getElementById('profileAvatarDisplay');
     const statusInput = document.getElementById('profileStatusInput');
+    const nicknameInput = document.getElementById('profileNicknameInput');
     const statMsgs = document.getElementById('statMsgs');
     const statStreak = document.getElementById('statStreak');
     if (avatarDisplay) avatarDisplay.textContent = profile.avatar || '✨';
     if (statusInput) statusInput.value = profile.statusBio || '';
+    if (nicknameInput) nicknameInput.value = localStorage.getItem('bestieChatNickname') || '';
     if (statMsgs) statMsgs.textContent = allMessagesCached.filter(m => m.user === myName).length;
     if (statStreak) statStreak.textContent = currentStreakDays || 1;
     updatePrefsProfileDisplay();
+  }
+
+  function saveNicknameFromProfile(nick) {
+    const trimmed = String(nick || '').trim();
+    if (trimmed) {
+      localStorage.setItem('bestieChatNickname', trimmed);
+      if (els.nicknameInputChat) els.nicknameInputChat.value = trimmed;
+      if (joined) socket.emit('update-nickname', trimmed);
+      showToast('Nickname updated! ✨');
+    }
   }
 
   function closeProfile() {
@@ -3542,6 +3600,7 @@
     switchExtrasTab, changeAccent, changeSoundPack, updateE2EEKey, toggleE2EE,
     playWaveform, seekWaveform, transcribeAudio,
     addDiaryEntry, deleteDiaryEntry, addBucketItem, toggleBucketItem, deleteBucketItem,
+    addCalendarEvent, deleteCalendarEvent,
     addGlossaryWord, deleteGlossaryWord,
     saveWeatherCity, waterBonsai,
     openCoDraw, closeCoDraw, clearCoDraw, setCoDrawColor, setCoDrawTool, setCoDrawSize,
@@ -3552,7 +3611,7 @@
     toggleTheme, dismissDailyQuestion, quickReact,
     togglePushNotifications,
     confirmClearHistory, exportChat, setRoomPassword, setDisappearingTimer, jumpToDate,
-    openProfile, closeProfile, selectAvatar, saveProfileStatus, saveProfileColor,
+    openProfile, closeProfile, selectAvatar, saveProfileStatus, saveProfileColor, saveNicknameFromProfile,
     toggleVoiceSpeed, openConnect4, closeConnect4, dropConnect4Token,
     sendQuickReply, captureDualCamera, uploadCameraFile, toggleQuickMenu
   };
