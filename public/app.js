@@ -43,6 +43,11 @@
   let searchActive    = false;
   let contextTarget   = null;
   let longPressTimer  = null;
+  let currentStreakDays = 0;
+
+  // E2EE state
+  let e2eEnabled = localStorage.getItem('bestieChatE2EEActive') === 'true';
+  let e2eKey = localStorage.getItem('bestieChatE2EEKey') || '';
 
   // Doodle state
   let doodleCtx      = null;
@@ -1198,8 +1203,7 @@
   function toggleSound() {
     const on = localStorage.getItem('bestieSound') !== 'off';
     localStorage.setItem('bestieSound', on ? 'off' : 'on');
-    els.soundBtn.classList.toggle('active', !on);
-    els.soundBtn.textContent = on ? '🔇' : '🔊';
+    if (els.soundBtn) els.soundBtn.classList.toggle('active', !on);
   }
 
   // ═══════════════════ ROOM META ═══════════════════
@@ -1460,6 +1464,7 @@
         if (els.countdownDate) els.countdownDate.value  = payload.countdown.date ? payload.countdown.date.slice(0, 16) : '';
         updateCountdown(payload.countdown);
       }
+      currentStreakDays = (payload.streak && payload.streak.days) || 0;
       updateStreak(payload.streak);
       updateBestieHeaderState(null, payload.lastSeen);
 
@@ -1574,7 +1579,7 @@
       });
     });
 
-    socket.on('streak-update', (streak) => { updateStreak(streak); confetti(); });
+    socket.on('streak-update', (streak) => { currentStreakDays = (streak && streak.days) || 0; updateStreak(streak); confetti(); });
 
     socket.on('presence', ({ users, profiles: profs, lastSeen }) => {
       (profs || []).forEach((p) => { profiles[p.name] = p; });
@@ -2334,7 +2339,7 @@
     container.innerHTML = '';
     lastDateLabel = '';
     allMessagesCached.forEach(m => renderMessage(m, true));
-    scrollToBottom();
+    scrollBottom();
   }
 
   // ── Conversation Heatmap ──
@@ -3424,8 +3429,8 @@
 
   function sendQuickReply(text) {
     if (!text || !joined) return;
-    if (els.messageInput) {
-      els.messageInput.value = text;
+    if (els.msgInput) {
+      els.msgInput.value = text;
       sendMessage();
     }
   }

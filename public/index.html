@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
 <title>hmm 💭</title>
 <meta name="description" content="A private, real-time cozy chat just for you and your bestie. No accounts, no ads." />
-<link rel="manifest" href="/manifest.json?v=200" />
-<link rel="icon" type="image/x-icon" href="/favicon.ico?v=200" />
-<link rel="shortcut icon" type="image/png" href="/icon-192.png?v=200" />
-<link rel="apple-touch-icon" href="/icon-192.png?v=200" />
+<link rel="manifest" href="/manifest.json?v=300" />
+<link rel="icon" type="image/x-icon" href="/favicon.ico?v=300" />
+<link rel="shortcut icon" type="image/png" href="/icon-192.png?v=300" />
+<link rel="apple-touch-icon" href="/icon-192.png?v=300" />
 <meta name="theme-color" content="#0d0d1a" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="/styles.css?v=200" />
+<link rel="stylesheet" href="/styles.css?v=300" />
 </head>
 <body>
 
@@ -728,12 +728,12 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="/app.js?v=200"></script>
+<script src="/app.js?v=300"></script>
 <script>
   // Force SW cache refresh
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js?v=200').then((reg) => {
+      navigator.serviceWorker.register('/sw.js?v=300').then((reg) => {
         reg.update();
       }).catch(console.error);
     });
@@ -743,16 +743,18 @@
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     _deferredPrompt = e;
-    _installBtn.style.display = 'block';
+    if (_installBtn) _installBtn.style.display = 'block';
   });
-  _installBtn.addEventListener('click', async () => {
-    if (!_deferredPrompt) return;
-    _deferredPrompt.prompt();
-    await _deferredPrompt.userChoice;
-    _deferredPrompt = null;
-    _installBtn.style.display = 'none';
-  });
-  window.addEventListener('appinstalled', () => { _installBtn.style.display = 'none'; });
+  if (_installBtn) {
+    _installBtn.addEventListener('click', async () => {
+      if (!_deferredPrompt) return;
+      _deferredPrompt.prompt();
+      await _deferredPrompt.userChoice;
+      _deferredPrompt = null;
+      _installBtn.style.display = 'none';
+    });
+  }
+  window.addEventListener('appinstalled', () => { if (_installBtn) _installBtn.style.display = 'none'; });
 </script>
 </body>
 </html>
