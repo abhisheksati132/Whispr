@@ -1220,10 +1220,11 @@
   // ═══════════════════ SEARCH ═══════════════════
   function toggleSearch() {
     searchActive = !searchActive;
-    els.searchBar.classList.toggle('open', searchActive);
-    if (searchActive) { els.searchInput.focus(); }
+    if (els.searchBar) els.searchBar.classList.toggle('open', searchActive);
+    if (searchActive && els.searchInput) { els.searchInput.focus(); }
     else { clearSearch(); }
-    document.getElementById('searchToggleBtn').classList.toggle('active', searchActive);
+    const btn = document.getElementById('searchToggleBtn');
+    if (btn) btn.classList.toggle('active', searchActive);
   }
 
   function performSearch() {
@@ -1255,11 +1256,12 @@
   }
 
   function clearSearch() {
-    els.searchInput.value = '';
-    els.messages.querySelectorAll('.msg-wrap').forEach((w) => { w.style.display = ''; });
-    els.searchBar.classList.remove('open');
+    if (els.searchInput) els.searchInput.value = '';
+    if (els.messages) els.messages.querySelectorAll('.msg-wrap').forEach((w) => { w.style.display = ''; });
+    if (els.searchBar) els.searchBar.classList.remove('open');
     searchActive = false;
-    document.getElementById('searchToggleBtn').classList.remove('active');
+    const btn = document.getElementById('searchToggleBtn');
+    if (btn) btn.classList.remove('active');
   }
 
   // ═══════════════════ GALLERY ═══════════════════
@@ -1365,8 +1367,10 @@
     document.querySelectorAll('.doodle-color').forEach((b) => b.classList.remove('active'));
     if (btn) btn.classList.add('active');
     if (doodleCtx) { doodleCtx.strokeStyle = color; doodleTool = 'brush'; }
-    document.getElementById('doodleBrushBtn').classList.add('active');
-    document.getElementById('doodleEraserBtn').classList.remove('active');
+    const brushBtn = document.getElementById('doodleBrushBtn');
+    const eraserBtn = document.getElementById('doodleEraserBtn');
+    if (brushBtn) brushBtn.classList.add('active');
+    if (eraserBtn) eraserBtn.classList.remove('active');
   }
 
   function setDoodleTool(tool, btn) {
