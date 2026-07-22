@@ -174,20 +174,25 @@ body {
 #login {
   position: relative; z-index: 2;
   margin: auto;
-  background: rgba(16,16,34,0.92);
-  backdrop-filter: blur(32px);
-  -webkit-backdrop-filter: blur(32px);
-  border: 1px solid rgba(255,111,174,0.25);
-  border-radius: 24px;
-  padding: 36px 32px 32px;
+  align-self: center;
+  justify-self: center;
+  background: rgba(16,16,34,0.94);
+  backdrop-filter: blur(36px);
+  -webkit-backdrop-filter: blur(36px);
+  border: 1px solid rgba(255,111,174,0.3);
+  border-radius: 28px;
+  padding: 32px 28px 28px;
   text-align: center;
-  width: 90%; max-width: 390px;
-  box-shadow: 0 30px 70px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.06);
+  width: 90%; max-width: 400px;
+  height: auto !important;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05), inset 0 1px 0 rgba(255,255,255,0.1);
   animation: loginGlow 5s ease-in-out infinite;
 }
 @keyframes loginGlow {
-  0%,100% { box-shadow: 0 30px 70px rgba(0,0,0,0.55), 0 0 60px rgba(139,92,246,0.1); }
-  50%      { box-shadow: 0 30px 70px rgba(0,0,0,0.55), 0 0 100px rgba(255,111,174,0.18); }
+  0%,100% { box-shadow: 0 24px 60px rgba(0,0,0,0.6), 0 0 50px rgba(139,92,246,0.12); }
+  50%      { box-shadow: 0 24px 60px rgba(0,0,0,0.6), 0 0 90px rgba(255,111,174,0.22); }
 }
 .login-logo {
   font-size: 3em; margin-bottom: 8px;
@@ -1062,6 +1067,13 @@ header h2 { font-size: 1.15rem; font-weight: 800; margin: 0; }
   padding: 20px;
   animation: fadeIn 0.2s ease-out;
   overflow-y: auto;
+}
+
+.modal-overlay.open {
+  display: flex !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  visibility: visible !important;
 }
 
 .modal-card {
