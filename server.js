@@ -49,12 +49,28 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(store.getUploadsDir()));
 
 // ── Health & Config ────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => res.send('ok'));
+app.get('/api/health', (_req, res) => {
+  res.json({
+    status: 'ok',
+    uptime: Math.floor(process.uptime()),
+    timestamp: Date.now(),
+    environment: process.env.NODE_ENV || 'production'
+  });
+});
 
 app.get('/api/config', (_req, res) => {
   res.json({

@@ -3095,6 +3095,15 @@
         if (!e.target.closest('.msg-wrap'))    document.querySelectorAll('.msg-wrap.touched').forEach((el) => el.classList.remove('touched'));
       });
 
+      // Network Online / Offline Detection
+      window.addEventListener('online', () => {
+        showToast('📶 Back online! Reconnecting...');
+        if (socket && !socket.connected) socket.connect();
+      });
+      window.addEventListener('offline', () => {
+        showToast('⚠️ Network connection lost. Waiting for internet...');
+      });
+
       // Keyboard shortcuts
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
