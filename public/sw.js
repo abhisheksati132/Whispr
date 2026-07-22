@@ -1,5 +1,5 @@
 // Cache Version - force complete cache wipe
-const CACHE = 'hmm-v700-flush';
+const CACHE = 'hmm-v800-flush';
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();
