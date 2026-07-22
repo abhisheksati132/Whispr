@@ -3067,10 +3067,15 @@
         }
       });
 
-      // Scroll to bottom → read receipt
+      // Scroll to bottom button toggle & read receipt
       els.messages.addEventListener('scroll', () => {
         const { scrollTop, scrollHeight, clientHeight } = els.messages;
-        if (scrollHeight - scrollTop - clientHeight < 80) {
+        const distFromBottom = scrollHeight - scrollTop - clientHeight;
+        const btn = document.getElementById('scrollBottomBtn');
+        if (btn) {
+          btn.style.display = distFromBottom > 140 ? 'flex' : 'none';
+        }
+        if (distFromBottom < 80) {
           emitReadReceiptForLastVisible();
         }
       });
@@ -3613,7 +3618,8 @@
     confirmClearHistory, exportChat, setRoomPassword, setDisappearingTimer, jumpToDate,
     openProfile, closeProfile, selectAvatar, saveProfileStatus, saveProfileColor, saveNicknameFromProfile,
     toggleVoiceSpeed, openConnect4, closeConnect4, dropConnect4Token,
-    sendQuickReply, captureDualCamera, uploadCameraFile, toggleQuickMenu
+    sendQuickReply, captureDualCamera, uploadCameraFile, toggleQuickMenu,
+    scrollToBottom: scrollBottom
   };
 
   if (document.readyState === 'loading') {

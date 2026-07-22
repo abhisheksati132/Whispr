@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
 <title>hmm 💭</title>
 <meta name="description" content="A private, real-time cozy chat just for you and your bestie. No accounts, no ads." />
-<link rel="manifest" href="/manifest.json?v=400" />
-<link rel="icon" type="image/x-icon" href="/favicon.ico?v=400" />
-<link rel="shortcut icon" type="image/png" href="/icon-192.png?v=400" />
-<link rel="apple-touch-icon" href="/icon-192.png?v=400" />
+<link rel="manifest" href="/manifest.json?v=500" />
+<link rel="icon" type="image/x-icon" href="/favicon.ico?v=500" />
+<link rel="shortcut icon" type="image/png" href="/icon-192.png?v=500" />
+<link rel="apple-touch-icon" href="/icon-192.png?v=500" />
 <meta name="theme-color" content="#0d0d1a" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="/styles.css?v=400" />
+<link rel="stylesheet" href="/styles.css?v=500" />
 </head>
 <body>
 
@@ -89,36 +89,17 @@
         <span id="theirFeeling"></span>
       </div>
       <div class="header-btns">
-        <button class="icon-btn" title="My Profile" onclick="BestieChat.openProfile()" style="color:var(--accent); background:rgba(255,111,174,0.12); border:1px solid rgba(255,111,174,0.3);">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        </button>
-        <button class="icon-btn" title="Quick Options (3-dots)" onclick="BestieChat.toggleQuickMenu()" style="font-weight:900; font-size:1.4rem; line-height:1; color:var(--accent); background:rgba(139,92,246,0.12); border:1px solid rgba(139,92,246,0.3);">
-          ⋮
-        </button>
         <button class="icon-btn call-audio-btn" title="Voice Call" onclick="BestieChat.startCall('audio')">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
         </button>
         <button class="icon-btn call-video-btn" title="Video Call" onclick="BestieChat.startCall('video')">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7a2 2 0 0 0-2-2H3a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V7Z"/><path d="m16 21 6-6-6-6"/></svg>
         </button>
-        <button id="searchToggleBtn" class="icon-btn" title="Search" onclick="BestieChat.toggleSearch()">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <button class="icon-btn" title="My Profile" onclick="BestieChat.openProfile()" style="color:var(--accent); background:rgba(255,111,174,0.12); border:1px solid rgba(255,111,174,0.3);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </button>
-        <button id="galleryBtn" class="icon-btn" title="Photo Gallery" onclick="BestieChat.openGallery()">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-        </button>
-        <button id="soundBtn" class="icon-btn active" title="Sound" onclick="BestieChat.toggleSound()">
-          <svg id="soundOnIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-        </button>
-        <button id="themeToggle" title="Toggle Light/Dark" onclick="BestieChat.toggleTheme()">🌙</button>
-        <button class="icon-btn" title="Feelings" onclick="BestieChat.toggleFeelings()">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-        </button>
-        <button class="icon-btn" title="Extras" onclick="BestieChat.toggleExtras()">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-        </button>
-        <button class="icon-btn leave-btn" title="Leave" onclick="BestieChat.leaveChat()">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+        <button class="icon-btn" title="Quick Options (3-dots)" onclick="BestieChat.toggleQuickMenu()" style="font-weight:900; font-size:1.4rem; line-height:1; color:var(--accent); background:rgba(139,92,246,0.12); border:1px solid rgba(139,92,246,0.3);">
+          ⋮
         </button>
       </div>
     </div>
@@ -364,6 +345,11 @@
 
   <!-- Messages -->
   <div id="messages"></div>
+
+  <!-- Scroll to bottom float button -->
+  <button id="scrollBottomBtn" onclick="BestieChat.scrollToBottom()" title="Scroll to bottom" style="display:none; position:absolute; bottom:92px; right:20px; z-index:10; background:rgba(20,20,40,0.9); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border:1px solid var(--glass-border); color:var(--accent); width:42px; height:42px; border-radius:50%; box-shadow:0 8px 24px rgba(0,0,0,0.5); cursor:pointer; align-items:center; justify-content:center; font-size:1.3rem; font-weight:800; transition:transform 0.15s, opacity 0.15s;">
+    ↓
+  </button>
 
   <!-- Typing state relocated to header status -->
 
@@ -721,20 +707,29 @@
 
 <!-- ═══════════════════ QUICK OPTIONS MENU DRAWER ═══════════════════ -->
 <div id="quickMenu" class="modal-overlay" style="display:none" onclick="if(event.target===this) BestieChat.toggleQuickMenu()">
-  <div class="modal-card" style="max-width:400px; width:100%;">
+  <div class="modal-card" style="max-width:420px; width:100%;">
     <div class="modal-header">
-      <h3>⚙️ Chat Options & Quick Tools</h3>
+      <h3>⚙️ Options & Quick Tools</h3>
       <button class="modal-close" onclick="BestieChat.toggleQuickMenu()">✕</button>
     </div>
     <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; padding:16px;">
       <button onclick="BestieChat.toggleQuickMenu(); BestieChat.openProfile();" style="display:flex; align-items:center; gap:8px; padding:12px; background:rgba(255,255,255,0.07); border:1px solid var(--glass-border); border-radius:14px; color:var(--text); font-weight:700; cursor:pointer;">
         <span style="font-size:1.3rem;">👤</span> My Profile
       </button>
-      <button onclick="BestieChat.toggleQuickMenu(); BestieChat.confirmClearHistory();" style="display:flex; align-items:center; gap:8px; padding:12px; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); border-radius:14px; color:#f87171; font-weight:700; cursor:pointer;">
-        <span style="font-size:1.3rem;">🧹</span> Clear History
+      <button onclick="BestieChat.toggleQuickMenu(); BestieChat.toggleSearch();" style="display:flex; align-items:center; gap:8px; padding:12px; background:rgba(255,255,255,0.07); border:1px solid var(--glass-border); border-radius:14px; color:var(--text); font-weight:700; cursor:pointer;">
+        <span style="font-size:1.3rem;">🔍</span> Search
       </button>
-      <button onclick="BestieChat.toggleQuickMenu(); BestieChat.exportChat();" style="display:flex; align-items:center; gap:8px; padding:12px; background:rgba(255,255,255,0.07); border:1px solid var(--glass-border); border-radius:14px; color:var(--text); font-weight:700; cursor:pointer;">
-        <span style="font-size:1.3rem;">📥</span> Export Chat
+      <button onclick="BestieChat.toggleQuickMenu(); BestieChat.openGallery();" style="display:flex; align-items:center; gap:8px; padding:12px; background:rgba(255,255,255,0.07); border:1px solid var(--glass-border); border-radius:14px; color:var(--text); font-weight:700; cursor:pointer;">
+        <span style="font-size:1.3rem;">🖼️</span> Gallery
+      </button>
+      <button onclick="BestieChat.toggleQuickMenu(); BestieChat.toggleFeelings();" style="display:flex; align-items:center; gap:8px; padding:12px; background:rgba(255,255,255,0.07); border:1px solid var(--glass-border); border-radius:14px; color:var(--text); font-weight:700; cursor:pointer;">
+        <span style="font-size:1.3rem;">💖</span> Feelings
+      </button>
+      <button onclick="BestieChat.toggleQuickMenu(); BestieChat.toggleExtras();" style="display:flex; align-items:center; gap:8px; padding:12px; background:rgba(255,255,255,0.07); border:1px solid var(--glass-border); border-radius:14px; color:var(--text); font-weight:700; cursor:pointer;">
+        <span style="font-size:1.3rem;">📝</span> Notebooks
+      </button>
+      <button onclick="BestieChat.toggleQuickMenu(); BestieChat.toggleTheme();" style="display:flex; align-items:center; gap:8px; padding:12px; background:rgba(255,255,255,0.07); border:1px solid var(--glass-border); border-radius:14px; color:var(--text); font-weight:700; cursor:pointer;">
+        <span style="font-size:1.3rem;">🌙</span> Theme
       </button>
       <button onclick="BestieChat.toggleQuickMenu(); BestieChat.openConnect4();" style="display:flex; align-items:center; gap:8px; padding:12px; background:rgba(255,255,255,0.07); border:1px solid var(--glass-border); border-radius:14px; color:var(--text); font-weight:700; cursor:pointer;">
         <span style="font-size:1.3rem;">🔴</span> Connect 4
@@ -745,23 +740,29 @@
       <button onclick="BestieChat.toggleQuickMenu(); BestieChat.toggleExtras(); BestieChat.switchExtrasTab('prefs');" style="display:flex; align-items:center; gap:8px; padding:12px; background:rgba(255,255,255,0.07); border:1px solid var(--glass-border); border-radius:14px; color:var(--text); font-weight:700; cursor:pointer;">
         <span style="font-size:1.3rem;">🔒</span> Security & Lock
       </button>
-      <button onclick="BestieChat.toggleQuickMenu(); BestieChat.toggleLofi();" style="display:flex; align-items:center; gap:8px; padding:12px; background:rgba(255,255,255,0.07); border:1px solid var(--glass-border); border-radius:14px; color:var(--text); font-weight:700; cursor:pointer;">
-        <span style="font-size:1.3rem;">🎶</span> Lo-Fi Music
+      <button id="soundBtn" onclick="BestieChat.toggleSound();" style="display:flex; align-items:center; gap:8px; padding:12px; background:rgba(255,255,255,0.07); border:1px solid var(--glass-border); border-radius:14px; color:var(--text); font-weight:700; cursor:pointer;">
+        <span style="font-size:1.3rem;">🔊</span> Sound
       </button>
-      <button onclick="BestieChat.toggleQuickMenu(); BestieChat.openGallery();" style="display:flex; align-items:center; gap:8px; padding:12px; background:rgba(255,255,255,0.07); border:1px solid var(--glass-border); border-radius:14px; color:var(--text); font-weight:700; cursor:pointer;">
-        <span style="font-size:1.3rem;">🖼️</span> Gallery
+      <button onclick="BestieChat.toggleQuickMenu(); BestieChat.exportChat();" style="display:flex; align-items:center; gap:8px; padding:12px; background:rgba(255,255,255,0.07); border:1px solid var(--glass-border); border-radius:14px; color:var(--text); font-weight:700; cursor:pointer;">
+        <span style="font-size:1.3rem;">📥</span> Export Chat
+      </button>
+      <button onclick="BestieChat.toggleQuickMenu(); BestieChat.confirmClearHistory();" style="display:flex; align-items:center; gap:8px; padding:12px; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); border-radius:14px; color:#f87171; font-weight:700; cursor:pointer;">
+        <span style="font-size:1.3rem;">🧹</span> Clear History
+      </button>
+      <button onclick="BestieChat.toggleQuickMenu(); BestieChat.leaveChat();" style="grid-column: span 2; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px; background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); border-radius:14px; color:#f87171; font-weight:800; cursor:pointer;">
+        <span style="font-size:1.3rem;">🚪</span> Leave Chat Room
       </button>
     </div>
   </div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="/app.js?v=400"></script>
+<script src="/app.js?v=500"></script>
 <script>
   // Force SW cache refresh
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js?v=400').then((reg) => {
+      navigator.serviceWorker.register('/sw.js?v=500').then((reg) => {
         reg.update();
       }).catch(console.error);
     });
