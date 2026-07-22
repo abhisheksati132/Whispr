@@ -65,6 +65,9 @@
   <div id="loginError"></div>
   <button id="joinBtn" onclick="BestieChat.joinChat()">Start Chatting ✨</button>
   <button id="installBtn" style="display:none">📲 Install App</button>
+  <div style="margin-top:10px;">
+    <button onclick="forceClearAppCache()" style="background:none; border:none; color:var(--muted); font-size:0.76rem; cursor:pointer; text-decoration:underline;" title="Force clear cached code and reload latest update">🔄 Force update app & clear cache</button>
+  </div>
 </div>
 
 <!-- ═══════════════════ CHAT ═══════════════════ -->
@@ -759,15 +762,33 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="/app.js?v=900"></script>
+<script src="/app.js?v=1000"></script>
 <script>
-  // Force SW cache refresh
+  // Automatic Service Worker cache flush & client auto-reload
   if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', (e) => {
+      if (e.data && e.data.type === 'SW_UPDATED') {
+        window.location.reload();
+      }
+    });
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js?v=900').then((reg) => {
+      navigator.serviceWorker.register('/sw.js?v=1000').then((reg) => {
         reg.update();
       }).catch(console.error);
     });
+  }
+  function forceClearAppCache() {
+    if ('caches' in window) {
+      caches.keys().then((names) => Promise.all(names.map((n) => caches.delete(n))));
+    }
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then((regs) => {
+        regs.forEach((r) => r.unregister());
+      });
+    }
+    localStorage.clear();
+    sessionStorage.clear();
+    window.location.reload(true);
   }
   let _deferredPrompt;
   const _installBtn = document.getElementById('installBtn');
