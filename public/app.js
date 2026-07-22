@@ -2071,6 +2071,10 @@
     document.body.className = document.body.className.replace(/\btheme-\S+/g, '');
     if (accent === 'light') {
       document.body.classList.add('theme-light');
+    } else if (accent === 'whatsapp') {
+      document.body.classList.add('theme-whatsapp');
+    } else if (accent === 'telegram') {
+      document.body.classList.add('theme-telegram');
     } else if (accent !== 'cyberpunk') {
       document.body.classList.add(`accent-${accent}`);
     }
@@ -2969,7 +2973,7 @@
         .catch(() => {});
 
       // Restore Accent Theme
-      const savedAccent = localStorage.getItem('bestieChatAccent') || 'cyberpunk';
+      const savedAccent = localStorage.getItem('bestieChatAccent') || 'whatsapp';
       const accentEl = document.getElementById('accentSelect');
       if (accentEl) accentEl.value = savedAccent;
       changeAccent(savedAccent);

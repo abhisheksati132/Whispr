@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
 <title>hmm 💭</title>
 <meta name="description" content="A private, real-time cozy chat just for you and your bestie. No accounts, no ads." />
-<link rel="manifest" href="/manifest.json?v=500" />
-<link rel="icon" type="image/x-icon" href="/favicon.ico?v=500" />
-<link rel="shortcut icon" type="image/png" href="/icon-192.png?v=500" />
-<link rel="apple-touch-icon" href="/icon-192.png?v=500" />
+<link rel="manifest" href="/manifest.json?v=600" />
+<link rel="icon" type="image/x-icon" href="/favicon.ico?v=600" />
+<link rel="shortcut icon" type="image/png" href="/icon-192.png?v=600" />
+<link rel="apple-touch-icon" href="/icon-192.png?v=600" />
 <meta name="theme-color" content="#0d0d1a" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="/styles.css?v=500" />
+<link rel="stylesheet" href="/styles.css?v=600" />
 </head>
 <body>
 
@@ -247,6 +247,8 @@
       <div class="extra-block">
         <label>Accent Theme 🎨</label>
         <select id="accentSelect" onchange="BestieChat.changeAccent(this.value)">
+          <option value="whatsapp">WhatsApp Dark Mode (Teal & Emerald)</option>
+          <option value="telegram">Telegram Dark Mode (Deep Blue)</option>
           <option value="cyberpunk">Cyberpunk Purple (Default)</option>
           <option value="emerald">Neon Emerald</option>
           <option value="sunset">Sunset Orange</option>
@@ -757,12 +759,12 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="/app.js?v=500"></script>
+<script src="/app.js?v=600"></script>
 <script>
   // Force SW cache refresh
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js?v=500').then((reg) => {
+      navigator.serviceWorker.register('/sw.js?v=600').then((reg) => {
         reg.update();
       }).catch(console.error);
     });

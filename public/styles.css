@@ -78,6 +78,52 @@ body.theme-cute {
   --glow: rgba(255,111,174,0.2); --particle: rgba(255,111,174,0.55);
 }
 
+/* ── Theme: WhatsApp Dark Mode ─────────────────────── */
+body.theme-whatsapp {
+  --bg: #0b141a; --bg2: #111b21; --panel: #111b21;
+  --bubble-me: #005c4b;
+  --bubble-them: #202c33;
+  --bubble-them-border: #00a884;
+  --accent: #00a884; --soft: #25d366; --purple: #008069;
+  --online: #00a884; --glow: rgba(0,168,132,0.2);
+  --text: #e9edef; --muted: #8696a0;
+}
+body.theme-whatsapp .msg.me {
+  background: #005c4b;
+  border-radius: 14px 14px 2px 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+body.theme-whatsapp .msg.them {
+  background: #202c33;
+  border-radius: 14px 14px 14px 2px;
+  border-left: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+body.theme-whatsapp .read-tick { color: #53bdeb; }
+
+/* ── Theme: Telegram Dark Mode ─────────────────────── */
+body.theme-telegram {
+  --bg: #0e1621; --bg2: #17212b; --panel: #17212b;
+  --bubble-me: #2b5278;
+  --bubble-them: #182533;
+  --bubble-them-border: #5288c1;
+  --accent: #5288c1; --soft: #64a1e8; --purple: #2b5278;
+  --online: #4ade80; --glow: rgba(82,136,193,0.2);
+  --text: #f5f5f5; --muted: #7f91a4;
+}
+body.theme-telegram .msg.me {
+  background: #2b5278;
+  border-radius: 16px 16px 4px 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+body.theme-telegram .msg.them {
+  background: #182533;
+  border-radius: 16px 16px 16px 4px;
+  border-left: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+body.theme-telegram .read-tick { color: #5288c1; }
+
 /* ── Night glow ──────────────────────────────────── */
 body.night-glow { filter: saturate(0.9) brightness(0.85); }
 body.night-glow header,
