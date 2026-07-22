@@ -306,7 +306,7 @@ header h2 { font-size: 1.15rem; font-weight: 800; margin: 0; }
 .bestie-status.online { color: var(--online); font-weight: 700; }
 .bestie-status.typing { color: var(--accent); font-style: italic; font-weight: 700; }
 
-.header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+.header-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .header-meta { font-size: 0.8rem; color: var(--muted); display: flex; gap: 8px; align-items: center; }
 #streakBadge {
   background: rgba(255,111,174,0.14);
