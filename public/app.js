@@ -748,6 +748,41 @@
     els.countdownDisplay.textContent = `${countdown.label || 'Countdown'}: ${days}d ${hrs}h ${mins}m`;
   }
 
+  function sendDesktopNotification(title, options = {}) {
+    try {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.ready.then((reg) => {
+            reg.showNotification(title, options);
+          }).catch(() => {
+            try { new Notification(title, options); } catch {}
+          });
+        } else {
+          try { new Notification(title, options); } catch {}
+        }
+      }
+    } catch (err) {
+      console.warn('Notification ignored:', err);
+    }
+  }
+
+  function checkDailyReminder() {
+    reminderInterval = setInterval(() => {
+      if (!joined) return;
+      const hour = new Date().getHours();
+      if (hour !== REMINDER_HOUR) return;
+      const key  = `reminder-${new Date().toISOString().slice(0, 10)}`;
+      if (localStorage.getItem(key)) return;
+      const lastMsg = localStorage.getItem('bestieLastMsgDate');
+      if (lastMsg === new Date().toISOString().slice(0, 10)) return;
+      sendDesktopNotification('Bestie check-in 👀', {
+        body: "You haven't chatted with your bestie today!",
+        icon: '/icon-192.png'
+      });
+      localStorage.setItem(key, '1');
+    }, 3600000);
+  }
+
   function updatePinnedBanner(msg) {
     pinnedMsg = msg;
     if (!msg) {
@@ -1545,15 +1580,13 @@
         if (document.hidden) {
           unreadCount++;
           updateUnreadBadge();
-          if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification(getDisplayName(msg.user), {
-              body: msg.type === 'hug'   ? 'sent you a hug 💌'   :
-                    msg.type === 'image' ? 'sent a photo 📸'      :
-                    msg.type === 'voice' ? 'sent a voice note 🎤' :
-                    (msg.text || 'New message'),
-              icon: '/icon-192.png'
-            });
-          }
+          sendDesktopNotification(getDisplayName(msg.user), {
+            body: msg.type === 'hug'   ? 'sent you a hug 💌'   :
+                  msg.type === 'image' ? 'sent a photo 📸'      :
+                  msg.type === 'voice' ? 'sent a voice note 🎤' :
+                  (msg.text || 'New message'),
+            icon: '/icon-192.png'
+          });
         }
       } else {
         localStorage.setItem('bestieLastMsgDate', new Date().toISOString().slice(0, 10));
@@ -1638,18 +1671,18 @@
     });
 
     socket.on('empathy-pulse', (data) => {
+      if (!data) return;
       if (data.from === getDisplayName(myName) || data.from === myName) return;
       playPulseAnimation(data.from);
-      if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
-        new Notification(`${data.from} 💓`, { body: 'sent you an empathy pulse', icon: '/icon-192.png' });
-      }
+      sendDesktopNotification(`${data.from} 💓`, { body: 'sent you an empathy pulse', icon: '/icon-192.png' });
     });
 
-    socket.on('mood-update',      (mood)  => { els.moodInput.value = mood; });
+    socket.on('mood-update',      (mood)  => { if (els.moodInput) els.moodInput.value = mood || ''; });
     socket.on('jokes-update',     (jokes) => { if (els.jokesInput) els.jokesInput.value = (jokes || []).join('\n'); });
     socket.on('countdown-update', (cd)    => {
-      els.countdownLabel.value = cd.label || '';
-      els.countdownDate.value  = cd.date ? cd.date.slice(0, 16) : '';
+      if (!cd) return;
+      if (els.countdownLabel) els.countdownLabel.value = cd.label || '';
+      if (els.countdownDate)  els.countdownDate.value  = cd.date ? cd.date.slice(0, 16) : '';
       updateCountdown(cd);
     });
 

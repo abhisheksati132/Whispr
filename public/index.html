@@ -756,11 +756,11 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="/app.js?v=1900"></script>
+<script src="/app.js?v=2000"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js?v=1900').catch(console.error);
+      navigator.serviceWorker.register('/sw.js?v=2000').catch(console.error);
     });
   }
   function forceClearAppCache() {
