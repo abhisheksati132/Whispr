@@ -808,41 +808,23 @@
 
   // ═══════════════════ JOIN / LEAVE ═══════════════════
   function joinChat() {
-    const name = els.nameInput ? els.nameInput.value.trim() : '';
+    let name = els.nameInput ? els.nameInput.value.trim() : '';
+    if (!name) name = localStorage.getItem('bestieChatName') || 'Bestie';
     const room = 'our-private-space';
     const nickname = els.nicknameInput ? els.nicknameInput.value.trim() : '';
-    if (!name) {
-      if (els.loginError) els.loginError.textContent = 'Enter your name first 🥺';
-      return;
-    }
-    if (els.loginError) els.loginError.textContent = '';
-    if (!socket) {
-      if (els.loginError) els.loginError.textContent = 'Not connected to server — is the server running?';
-      return;
-    }
     myName = name; myRoom = room;
     localStorage.setItem('bestieChatName', name);
     localStorage.setItem('bestieChatRoom', room);
     if (nickname) localStorage.setItem('bestieChatNickname', nickname);
     applyRoomTheme(room);
+    if (els.login) els.login.style.display = 'none';
+    if (els.chat) els.chat.style.display = 'flex';
     const passVal = els.passwordInput ? els.passwordInput.value : '';
-    socket.emit('join', { name, room, nickname, password: passVal });
+    if (socket) socket.emit('join', { name, room, nickname, password: passVal });
   }
 
   function leaveChat() {
-    joined = false; lastDateLabel = '';
-    clearInterval(heartbeatInterval);
-    clearInterval(reminderInterval);
-    clearInterval(countdownInterval);
-    if (socket) { socket.disconnect(); socket.connect(); }
     if (els.messages) els.messages.innerHTML = '';
-    if (els.chat) els.chat.style.display = 'none';
-    if (els.login) els.login.style.display = 'block';
-    if (els.loginError) els.loginError.textContent = '';
-    if (els.extrasPanel) els.extrasPanel.classList.remove('open');
-    if (els.feelingsPanel) els.feelingsPanel.classList.remove('open');
-    if (els.feelingGlow) els.feelingGlow.classList.remove('active');
-    feelings = {}; myFeelingKey = null;
     allImageMessages = [];
     pinnedMsg = null;
     replyingTo = null;
@@ -855,6 +837,8 @@
     secretMode = false;
     clearUnread();
     hideContextMenu();
+    joinChat();
+    showToast('✨ Chat refreshed');
   }
 
   // ═══════════════════ SEND MESSAGE ═══════════════════
@@ -2973,10 +2957,13 @@
       applyNightGlow();
       buildEmojiPicker();
 
-      const savedName = localStorage.getItem('bestieChatName') || '';
+      const savedName = localStorage.getItem('bestieChatName') || 'Bestie';
       const savedNick = localStorage.getItem('bestieChatNickname') || '';
-      if (savedName) els.nameInput.value = savedName;
-      if (savedNick) els.nicknameInput.value = savedNick;
+      if (els.nameInput) els.nameInput.value = savedName;
+      if (savedNick && els.nicknameInput) els.nicknameInput.value = savedNick;
+
+      // Auto-join chat directly
+      joinChat();
 
       els.soundBtn.classList.toggle('active', soundEnabled());
 
