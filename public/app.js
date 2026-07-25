@@ -1070,7 +1070,11 @@
           if (btn) btn.classList.remove('recording');
         }
       }, 60000);
-    } catch { renderSystem('Microphone access needed for voice notes'); }
+    } catch (err) {
+      console.warn('Microphone access failed:', err);
+      renderSystem('🔒 Microphone access needed for voice notes');
+      showToast('🔒 Mic blocked! Click lock icon 🔒 next to URL in address bar to allow mic.');
+    }
   }
 
   // ═══════════════════ REACTIONS ═══════════════════
@@ -1874,7 +1878,13 @@
       
     } catch (err) {
       console.error('Call failed to start:', err);
-      renderSystem('Could not access camera/microphone');
+      if (type === 'video') {
+        showToast('📹 Camera unavailable — starting voice call...');
+        endCall(true);
+        return startCall('audio');
+      }
+      renderSystem('🔒 Could not access microphone/camera');
+      showToast('🔒 Mic/Camera blocked. Tap lock icon 🔒 next to URL in address bar to allow access.');
       endCall(true);
     }
   }
