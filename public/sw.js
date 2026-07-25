@@ -1,5 +1,5 @@
 // Cache Version - force complete cache wipe
-const CACHE = 'hmm-v1700-flush';
+const CACHE = 'bestie-v1800-flush';
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();
@@ -34,7 +34,7 @@ self.addEventListener('fetch', (e) => {
 
 // Push Notification Handler
 self.addEventListener('push', (e) => {
-  let data = { title: 'hmm', body: 'New message from your bestie! 💌', icon: '/icon-192.png' };
+  let data = { title: 'bestie', body: 'New message from your bestie! 💌', icon: '/icon-192.png' };
   if (e.data) {
     try {
       data = e.data.json();

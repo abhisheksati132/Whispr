@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-<title>hmm 💭</title>
+<title>bestie 💭</title>
 <meta name="description" content="A private, real-time cozy chat just for you and your bestie. No accounts, no ads." />
 <link rel="manifest" href="/manifest.json?v=900" />
 <link rel="icon" type="image/x-icon" href="/favicon.ico?v=900" />
@@ -12,7 +12,7 @@
 <meta name="theme-color" content="#0d0d1a" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="hmm" />
+<meta name="apple-mobile-web-app-title" content="bestie" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
@@ -49,8 +49,8 @@
 
 <!-- ═══════════════════ LOGIN ═══════════════════ -->
 <div id="login" style="display:none !important;">
-  <img src="/icon-192.png" alt="hmm icon" style="width:72px; height:72px; border-radius:22px; box-shadow:0 8px 24px rgba(139,92,246,0.4); margin-bottom:10px;" />
-  <h1>hmm</h1>
+  <img src="/icon-192.png" alt="bestie icon" style="width:72px; height:72px; border-radius:22px; box-shadow:0 8px 24px rgba(139,92,246,0.4); margin-bottom:10px;" />
+  <h1>bestie</h1>
   <p class="login-hint">Just you two. Private, real-time, cozy space.</p>
 
   <div class="input-group">
@@ -756,7 +756,7 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="/app.js?v=1700"></script>
+<script src="/app.js?v=1800"></script>
 <script>
   // Automatic Service Worker cache flush & client auto-reload
   if ('serviceWorker' in navigator) {
@@ -766,7 +766,7 @@
       }
     });
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js?v=1700').then((reg) => {
+      navigator.serviceWorker.register('/sw.js?v=1800').then((reg) => {
         reg.update();
       }).catch(console.error);
     });

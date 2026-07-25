@@ -729,10 +729,10 @@
     if (unreadCount > 0 && document.hidden) {
       els.unreadBadge.style.display = 'inline';
       els.unreadBadge.textContent   = unreadCount > 99 ? '99+' : unreadCount;
-      document.title = `(${unreadCount}) hmm 💭`;
+      document.title = `(${unreadCount}) bestie 💭`;
     } else {
       els.unreadBadge.style.display = 'none';
-      document.title = 'hmm 💭';
+      document.title = 'bestie 💭';
     }
   }
 
@@ -1437,6 +1437,7 @@
 
   // ═══════════════════ SOCKET.IO ═══════════════════
   function initSocket() {
+    if (socket) return;
     if (typeof io === 'undefined') {
       console.error('Socket.io library not loaded. Is the server running?');
       setConnected(false);
@@ -3003,9 +3004,6 @@
       const savedNick = localStorage.getItem('bestieChatNickname') || '';
       if (els.nameInput) els.nameInput.value = savedName;
       if (savedNick && els.nicknameInput) els.nicknameInput.value = savedNick;
-
-      // Auto-join chat directly
-      joinChat();
 
       els.soundBtn.classList.toggle('active', soundEnabled());
 
