@@ -492,9 +492,8 @@
 </div><!-- end #chat -->
 
 <!-- ═══════════════════ GALLERY MODAL ═══════════════════ -->
-<div id="galleryModal" style="display:none">
-  <div class="modal-backdrop" onclick="BestieChat.closeGallery()"></div>
-  <div class="modal-content">
+<div id="galleryModal" class="modal-overlay" style="display:none" onclick="if(event.target===this) BestieChat.closeGallery()">
+  <div class="modal-card">
     <div class="modal-header">
       <h3>📸 Shared Photos</h3>
       <button class="modal-close" onclick="BestieChat.closeGallery()">✕</button>
@@ -512,9 +511,8 @@
 </div>
 
 <!-- ═══════════════════ DOODLE MODAL ═══════════════════ -->
-<div id="doodleModal" style="display:none">
-  <div class="modal-backdrop" onclick="BestieChat.closeDoodle()"></div>
-  <div class="modal-content doodle-modal-content">
+<div id="doodleModal" class="modal-overlay" style="display:none" onclick="if(event.target===this) BestieChat.closeDoodle()">
+  <div class="modal-card doodle-modal-content">
     <div class="modal-header">
       <h3>✏️ Draw Something</h3>
       <button class="modal-close" onclick="BestieChat.closeDoodle()">✕</button>
@@ -541,9 +539,8 @@
 </div>
 
 <!-- ═══════════════════ CO-DRAW LIVE CANVAS MODAL ═══════════════════ -->
-<div id="coDrawModal" style="display:none">
-  <div class="modal-backdrop" onclick="BestieChat.closeCoDraw()"></div>
-  <div class="modal-content co-draw-modal-content">
+<div id="coDrawModal" class="modal-overlay" style="display:none" onclick="if(event.target===this) BestieChat.closeCoDraw()">
+  <div class="modal-card co-draw-modal-content">
     <div class="modal-header">
       <h3>🎨 Live Co-Draw Canvas</h3>
       <button class="modal-close" onclick="BestieChat.closeCoDraw()">✕</button>
@@ -569,9 +566,8 @@
 </div>
 
 <!-- ═══════════════════ WATCH TOGETHER SYNCD PLAYER ═══════════════════ -->
-<div id="watchModal" style="display:none">
-  <div class="modal-backdrop" onclick="BestieChat.closeWatchTogether()"></div>
-  <div class="modal-content watch-modal-content">
+<div id="watchModal" class="modal-overlay" style="display:none" onclick="if(event.target===this) BestieChat.closeWatchTogether()">
+  <div class="modal-card watch-modal-content">
     <div class="modal-header">
       <h3>🍿 Watch Together</h3>
       <button class="modal-close" onclick="BestieChat.closeWatchTogether()">✕</button>
@@ -585,9 +581,8 @@
 </div>
 
 <!-- ═══════════════════ TIC-TAC-TOE BOARD GAME ═══════════════════ -->
-<div id="tttModal" style="display:none">
-  <div class="modal-backdrop" onclick="BestieChat.closeTTT()"></div>
-  <div class="modal-content ttt-modal-content">
+<div id="tttModal" class="modal-overlay" style="display:none" onclick="if(event.target===this) BestieChat.closeTTT()">
+  <div class="modal-card ttt-modal-content">
     <div class="modal-header">
       <h3>🎮 Sync Tic-Tac-Toe</h3>
       <button class="modal-close" onclick="BestieChat.closeTTT()">✕</button>
@@ -609,9 +604,8 @@
 </div>
 
 <!-- ═══════════════════ HAPTIC TOUCH SYNC MODAL ═══════════════════ -->
-<div id="hapticModal" style="display:none">
-  <div class="modal-backdrop" onclick="BestieChat.closeHapticSync()"></div>
-  <div class="modal-content haptic-modal-content">
+<div id="hapticModal" class="modal-overlay" style="display:none" onclick="if(event.target===this) BestieChat.closeHapticSync()">
+  <div class="modal-card haptic-modal-content">
     <div class="modal-header">
       <h3>💌 Touch Sync Haptics</h3>
       <button class="modal-close" onclick="BestieChat.closeHapticSync()">✕</button>
@@ -762,7 +756,7 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="/app.js?v=1400"></script>
+<script src="/app.js?v=1500"></script>
 <script>
   // Automatic Service Worker cache flush & client auto-reload
   if ('serviceWorker' in navigator) {
@@ -772,7 +766,7 @@
       }
     });
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js?v=1400').then((reg) => {
+      navigator.serviceWorker.register('/sw.js?v=1500').then((reg) => {
         reg.update();
       }).catch(console.error);
     });

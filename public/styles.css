@@ -1045,7 +1045,7 @@ header h2 { font-size: 1.15rem; font-weight: 800; margin: 0; }
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   z-index: 200;
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   padding: 20px;

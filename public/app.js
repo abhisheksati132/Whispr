@@ -1272,10 +1272,18 @@
         `<img src="${escapeHtml(m.url)}" loading="lazy" alt="shared photo" onclick="BestieChat.openLightbox('${escapeHtml(m.url)}')" />`
       ).join('');
     }
-    els.galleryModal.style.display = 'block';
+    if (els.galleryModal) {
+      els.galleryModal.classList.add('open');
+      els.galleryModal.style.display = 'flex';
+    }
   }
 
-  function closeGallery() { els.galleryModal.style.display = 'none'; }
+  function closeGallery() {
+    if (els.galleryModal) {
+      els.galleryModal.classList.remove('open');
+      els.galleryModal.style.display = 'none';
+    }
+  }
 
   function openLightbox(url) {
     els.lightboxImg.src = url;
@@ -1293,11 +1301,19 @@
 
   // ═══════════════════ DOODLE PAD ═══════════════════
   function openDoodle() {
-    els.doodleModal.style.display = 'block';
+    if (els.doodleModal) {
+      els.doodleModal.classList.add('open');
+      els.doodleModal.style.display = 'flex';
+    }
     if (!doodleCtx) initDoodleCanvas();
   }
 
-  function closeDoodle() { els.doodleModal.style.display = 'none'; }
+  function closeDoodle() {
+    if (els.doodleModal) {
+      els.doodleModal.classList.remove('open');
+      els.doodleModal.style.display = 'none';
+    }
+  }
 
   function initDoodleCanvas() {
     const canvas = els.doodleCanvas;
@@ -2551,6 +2567,7 @@
   function openCoDraw() {
     const modal = document.getElementById('coDrawModal');
     if (!modal) return;
+    modal.classList.add('open');
     modal.style.display = 'flex';
     if (els.attachMenu) els.attachMenu.style.display = 'none';
     
@@ -2577,7 +2594,10 @@
 
   function closeCoDraw() {
     const modal = document.getElementById('coDrawModal');
-    if (modal) modal.style.display = 'none';
+    if (modal) {
+      modal.classList.remove('open');
+      modal.style.display = 'none';
+    }
   }
 
   function startCoDrawStroke(e) {
@@ -2662,13 +2682,19 @@
 
   function openWatchTogether() {
     const modal = document.getElementById('watchModal');
-    if (modal) modal.style.display = 'flex';
+    if (modal) {
+      modal.classList.add('open');
+      modal.style.display = 'flex';
+    }
     if (els.attachMenu) els.attachMenu.style.display = 'none';
   }
 
   function closeWatchTogether() {
     const modal = document.getElementById('watchModal');
-    if (modal) modal.style.display = 'none';
+    if (modal) {
+      modal.classList.remove('open');
+      modal.style.display = 'none';
+    }
   }
 
   function loadWatchVideo(url) {
@@ -2706,7 +2732,10 @@
 
   function openTTT() {
     const modal = document.getElementById('tttModal');
-    if (modal) modal.style.display = 'flex';
+    if (modal) {
+      modal.classList.add('open');
+      modal.style.display = 'flex';
+    }
     if (els.attachMenu) els.attachMenu.style.display = 'none';
     
     // Determine Symbol: Name hash comparison resolves A as X, B as O
@@ -2721,7 +2750,10 @@
 
   function closeTTT() {
     const modal = document.getElementById('tttModal');
-    if (modal) modal.style.display = 'none';
+    if (modal) {
+      modal.classList.remove('open');
+      modal.style.display = 'none';
+    }
   }
 
   function resetTTT(isLocal) {
@@ -3589,11 +3621,8 @@
   function toggleQuickMenu() {
     const menu = document.getElementById('quickMenu');
     if (!menu) return;
-    if (menu.style.display === 'flex') {
-      menu.style.display = 'none';
-    } else {
-      menu.style.display = 'flex';
-    }
+    const isOpen = menu.classList.toggle('open');
+    menu.style.display = isOpen ? 'flex' : 'none';
   }
 
   // ═══════════════════ PUBLIC API ═══════════════════
