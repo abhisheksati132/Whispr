@@ -756,19 +756,11 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="/app.js?v=1800"></script>
+<script src="/app.js?v=1900"></script>
 <script>
-  // Automatic Service Worker cache flush & client auto-reload
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.addEventListener('message', (e) => {
-      if (e.data && e.data.type === 'SW_UPDATED') {
-        window.location.reload();
-      }
-    });
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js?v=1800').then((reg) => {
-        reg.update();
-      }).catch(console.error);
+      navigator.serviceWorker.register('/sw.js?v=1900').catch(console.error);
     });
   }
   function forceClearAppCache() {

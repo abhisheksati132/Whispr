@@ -1,5 +1,5 @@
 // Cache Version - force complete cache wipe
-const CACHE = 'bestie-v1800-flush';
+const CACHE = 'bestie-v1900-flush';
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();
@@ -7,12 +7,9 @@ self.addEventListener('install', (e) => {
 
 self.addEventListener('activate', (e) => {
   e.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
-      .then(() => self.clients.claim())
-      .then(() => self.clients.matchAll({ type: 'window' }))
-      .then((clients) => {
-        clients.forEach((client) => client.postMessage({ type: 'SW_UPDATED' }));
-      })
+    caches.keys().then((keys) =>
+      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
+    ).then(() => self.clients.claim())
   );
 });
 
