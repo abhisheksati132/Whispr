@@ -1299,6 +1299,31 @@
     if (btn) btn.classList.remove('active');
   }
 
+  // ═══════════════════ MODAL CONTROLLER HELPERS ═══════════════════
+  function showModal(id) {
+    const modal = document.getElementById(id);
+    if (!modal) return;
+    modal.classList.add('open');
+    modal.style.display = 'flex';
+  }
+
+  function hideModal(id) {
+    const modal = document.getElementById(id);
+    if (!modal) return;
+    modal.classList.remove('open');
+    modal.style.display = 'none';
+  }
+
+  function toggleModal(id) {
+    const modal = document.getElementById(id);
+    if (!modal) return;
+    if (modal.classList.contains('open') || modal.style.display === 'flex') {
+      hideModal(id);
+    } else {
+      showModal(id);
+    }
+  }
+
   // ═══════════════════ GALLERY ═══════════════════
   function openGallery() {
     const imgs = allImageMessages;
@@ -1311,17 +1336,11 @@
         `<img src="${escapeHtml(m.url)}" loading="lazy" alt="shared photo" onclick="BestieChat.openLightbox('${escapeHtml(m.url)}')" />`
       ).join('');
     }
-    if (els.galleryModal) {
-      els.galleryModal.classList.add('open');
-      els.galleryModal.style.display = 'flex';
-    }
+    showModal('galleryModal');
   }
 
   function closeGallery() {
-    if (els.galleryModal) {
-      els.galleryModal.classList.remove('open');
-      els.galleryModal.style.display = 'none';
-    }
+    hideModal('galleryModal');
   }
 
   function openLightbox(url) {
@@ -1340,18 +1359,12 @@
 
   // ═══════════════════ DOODLE PAD ═══════════════════
   function openDoodle() {
-    if (els.doodleModal) {
-      els.doodleModal.classList.add('open');
-      els.doodleModal.style.display = 'flex';
-    }
+    showModal('doodleModal');
     if (!doodleCtx) initDoodleCanvas();
   }
 
   function closeDoodle() {
-    if (els.doodleModal) {
-      els.doodleModal.classList.remove('open');
-      els.doodleModal.style.display = 'none';
-    }
+    hideModal('doodleModal');
   }
 
   function initDoodleCanvas() {
@@ -3465,8 +3478,7 @@
   }
 
   function openProfile() {
-    const modal = document.getElementById('profileModal');
-    if (modal) modal.style.display = 'flex';
+    showModal('profileModal');
     const profile = getProfile(myName);
     const avatarDisplay = document.getElementById('profileAvatarDisplay');
     const statusInput = document.getElementById('profileStatusInput');
@@ -3492,8 +3504,7 @@
   }
 
   function closeProfile() {
-    const modal = document.getElementById('profileModal');
-    if (modal) modal.style.display = 'none';
+    hideModal('profileModal');
   }
 
   function selectAvatar(emoji) {
@@ -3660,10 +3671,7 @@
   }
 
   function toggleQuickMenu() {
-    const menu = document.getElementById('quickMenu');
-    if (!menu) return;
-    const isOpen = menu.classList.toggle('open');
-    menu.style.display = isOpen ? 'flex' : 'none';
+    toggleModal('quickMenu');
   }
 
   // ═══════════════════ PUBLIC API ═══════════════════
