@@ -115,11 +115,23 @@
       milestone: () => { playTone(800, 0.02, 0.03); setTimeout(() => playTone(1000, 0.03, 0.03), 30); }
     }
   };
+  let _sharedAudioCtx = null;
+  function getAudioContext() {
+    if (!_sharedAudioCtx) {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (AudioContextClass) _sharedAudioCtx = new AudioContextClass();
+    }
+    if (_sharedAudioCtx && _sharedAudioCtx.state === 'suspended') {
+      _sharedAudioCtx.resume().catch(() => {});
+    }
+    return _sharedAudioCtx;
+  }
   function soundEnabled() { return localStorage.getItem('bestieSound') !== 'off' && currentSoundPack !== 'off'; }
   function playTone(freq, dur, vol) {
     if (!soundEnabled()) return;
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const ctx = getAudioContext();
+      if (!ctx) return;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain); gain.connect(ctx.destination);

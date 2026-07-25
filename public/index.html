@@ -762,7 +762,7 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="/app.js?v=1200"></script>
+<script src="/app.js?v=1300"></script>
 <script>
   // Automatic Service Worker cache flush & client auto-reload
   if ('serviceWorker' in navigator) {
@@ -772,7 +772,7 @@
       }
     });
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js?v=1200').then((reg) => {
+      navigator.serviceWorker.register('/sw.js?v=1300').then((reg) => {
         reg.update();
       }).catch(console.error);
     });
