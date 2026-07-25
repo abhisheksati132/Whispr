@@ -3018,7 +3018,7 @@
         .catch(() => {});
 
       // Restore Accent Theme
-      const savedAccent = localStorage.getItem('bestieChatAccent') || 'whatsapp';
+      const savedAccent = localStorage.getItem('bestieChatAccent') || 'telegram';
       const accentEl = document.getElementById('accentSelect');
       if (accentEl) accentEl.value = savedAccent;
       changeAccent(savedAccent);

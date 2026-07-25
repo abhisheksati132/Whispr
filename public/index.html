@@ -756,7 +756,7 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="/app.js?v=1600"></script>
+<script src="/app.js?v=1700"></script>
 <script>
   // Automatic Service Worker cache flush & client auto-reload
   if ('serviceWorker' in navigator) {
@@ -766,7 +766,7 @@
       }
     });
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js?v=1600').then((reg) => {
+      navigator.serviceWorker.register('/sw.js?v=1700').then((reg) => {
         reg.update();
       }).catch(console.error);
     });

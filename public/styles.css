@@ -34,25 +34,25 @@
   100% { transform: translate(-20px, 50px) scale(0.95); }
 }
 
-/* ═══════════════════ DESIGN TOKENS ═══════════════════ */
+/* ═══════════════════ DESIGN TOKENS (TELEGRAM DARK MODE DEFAULT) ═══════════════════ */
 :root {
-  --bg:               #0d0d1a;
-  --bg2:              #13132a;
-  --panel:            rgba(20,20,40,0.88);
+  --bg:               #0e1621;
+  --bg2:              #17212b;
+  --panel:            #17212b;
   --glass:            rgba(255,255,255,0.05);
-  --glass-border:     rgba(255,255,255,0.1);
-  --bubble-me:        linear-gradient(135deg,#8b5cf6,#a78bfa);
-  --bubble-them:      rgba(28,28,52,0.95);
-  --bubble-them-border: rgba(139,92,246,0.45);
-  --text:             #f0f0f5;
-  --muted:            #8a8aa3;
-  --accent:           #ff6fae;
-  --soft:             #f7b9d0;
-  --purple:           #8b5cf6;
+  --glass-border:     rgba(255,255,255,0.08);
+  --bubble-me:        #2b5278;
+  --bubble-them:      #182533;
+  --bubble-them-border: #5288c1;
+  --text:             #f5f5f5;
+  --muted:            #7f91a4;
+  --accent:           #5288c1;
+  --soft:             #64a1e8;
+  --purple:           #2b5278;
   --online:           #4ade80;
   --offline:          #f87171;
-  --glow:             rgba(139,92,246,0.18);
-  --particle:         rgba(255,111,174,0.4);
+  --glow:             rgba(82,136,193,0.2);
+  --particle:         rgba(82,136,193,0.4);
   --radius:           18px;
   --radius-sm:        10px;
   --transition:       0.2s ease;
@@ -132,6 +132,27 @@ body.night-glow #extrasPanel { box-shadow: 0 0 28px var(--glow); }
 
 /* ═══════════════════ RESET & BASE ═══════════════════ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* Custom Global Dark Slim Scrollbar (eliminates default white scrollbar bar) */
+::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+}
+::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16) !important;
+  border-radius: 10px !important;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(82, 136, 193, 0.5) !important;
+}
+
+* {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent !important;
+}
 
 body {
   font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
