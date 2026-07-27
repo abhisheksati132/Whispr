@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles.css?v=3000" />
+  <link rel="stylesheet" href="/styles.css?v=3100" />
 </head>
 <body>
 
@@ -607,37 +607,6 @@
       <div class="extra-block">
         <label>Inside Jokes 🤫</label>
         <textarea id="jokesInput" placeholder="Add inside jokes (one per line)..." rows="3"></textarea>
-      </div>
-      <!-- Bonsai -->
-      <div class="extra-block bonsai-container">
-        <label>Shared Bonsai Tree 🌱</label>
-        <div class="bonsai-visual">
-          <svg viewBox="0 0 100 100" class="bonsai-svg" width="80" height="80">
-            <path d="M20 80 Q50 75 80 80 L75 90 L25 90 Z" fill="#5c4033" />
-            <rect x="15" y="85" width="70" height="8" rx="3" fill="#a1a1aa" />
-            <path id="bonsaiTrunk" d="M50 80 Q48 60 52 42 Q55 35 48 24" fill="none" stroke="#78350f" stroke-width="6" stroke-linecap="round" />
-            <circle id="leaf1" cx="48" cy="22" r="11" fill="#22c55e" opacity="0.85" />
-            <circle id="leaf2" cx="58" cy="32" r="8" fill="#15803d" opacity="0.85" />
-            <circle id="leaf3" cx="38" cy="46" r="7" fill="#4ade80" opacity="0.75" />
-          </svg>
-          <div class="bonsai-info">
-            <span id="bonsaiLevel">Seedling (Level 0)</span>
-            <button id="waterBonsaiBtn" onclick="BestieChat.waterBonsai()">💧 Water Tree</button>
-          </div>
-        </div>
-      </div>
-      <!-- Lo-Fi -->
-      <div class="extra-block">
-        <label>Cozy Lo-Fi 🎵</label>
-        <div class="lofi-player">
-          <audio id="lofiAudio" loop src="https://stream.zeno.fm/f3wvbbq12v8uv"></audio>
-          <button id="lofiPlayBtn" onclick="BestieChat.toggleLofi()">
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            <span>Play Lo-Fi</span>
-          </button>
-          <input type="range" id="lofiVolume" min="0" max="1" step="0.05" value="0.3" oninput="BestieChat.setLofiVolume(this.value)" />
-        </div>
-      </div>
     </div>
 
     <!-- Tab 2: Scrapbook -->
@@ -867,7 +836,7 @@
 
 <!-- Scripts -->
 <script src="/socket.io/socket.io.js"></script>
-<script src="/app.js?v=3000"></script>
+<script src="/app.js?v=3100"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
