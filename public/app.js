@@ -934,6 +934,20 @@
     showToast('✨ Chat refreshed');
   }
 
+  function logout() {
+    localStorage.removeItem('bestieChatName');
+    localStorage.removeItem('bestieChatRoom');
+    localStorage.removeItem('bestieChatNickname');
+    if (socket) socket.disconnect();
+    myName = '';
+    myRoom = '';
+    joined = false;
+    if (els.chat) els.chat.setAttribute('style', 'display:none !important');
+    if (els.login) els.login.setAttribute('style', 'display:flex !important');
+    showToast('👋 Logged out cleanly');
+    setTimeout(() => location.reload(), 300);
+  }
+
   // ═══════════════════ SEND MESSAGE ═══════════════════
   function findUrl(text) {
     const match = text.match(/https?:\/\/[^\s]+/i);
