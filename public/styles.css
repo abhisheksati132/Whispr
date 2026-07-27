@@ -1211,24 +1211,12 @@ header {
   background: rgba(239,68,68,0.25) !important;
 }
 
-/* ═══════════════════ 15. EXTRAS PANEL ═══════════════════ */
-#extrasPanel {
-  position: absolute;
-  right: 0;
-  top: 0;
-  width: 320px;
-  height: 100vh;
-  background: var(--panel);
-  border-left: 1px solid var(--border);
-  display: none;
-  flex-direction: column;
-  z-index: 30;
-  transform: translateX(100%);
-  transition: transform 0.3s ease;
+/* ═══════════════════ 15. EXTRAS MODAL (OUR SPACE & SETTINGS) ═══════════════════ */
+#extrasPanel.modal-overlay {
+  z-index: 1000;
 }
-#extrasPanel.open {
-  display: flex;
-  transform: translateX(0);
+#extrasPanel .modal-card {
+  max-height: 85vh;
 }
 
 .extras-tabs {
@@ -1509,16 +1497,6 @@ header {
   .header-menu-btn { display: flex; }
   #chatMain { width: 100%; }
   .msg-wrap { max-width: 88%; }
-  
-  #extrasPanel {
-    position: fixed;
-    inset: 0;
-    width: 100%;
-    transform: translateY(100%);
-  }
-  #extrasPanel.open {
-    transform: translateY(0);
-  }
 }
 
 /* ═══════════════════ 23. FUNCTIONAL CLASSES (RESTYLED) ═══════════════════ */

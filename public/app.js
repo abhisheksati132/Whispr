@@ -873,19 +873,15 @@
     if (window.innerWidth < 768) closeSidebar();
 
     if (tab === 'chat') {
-      // Hide extras, show messages
-      if (els.extrasPanel) els.extrasPanel.classList.remove('open');
+      // Hide extras modal, show messages
+      hideModal('extrasPanel');
       if (els.feelingsPanel) els.feelingsPanel.classList.remove('open');
     } else if (tab === 'space') {
-      toggleExtras();
+      openExtras('vibe');
     } else if (tab === 'games') {
       if (els.gameMenu) els.gameMenu.classList.toggle('open');
     } else if (tab === 'settings') {
-      // Open extras panel on prefs tab
-      if (els.extrasPanel) {
-        els.extrasPanel.classList.add('open');
-        switchExtrasTab('prefs');
-      }
+      openExtras('prefs');
     }
   }
 
@@ -1243,7 +1239,11 @@
   }
 
   // ═══════════════════ EXTRAS ═══════════════════
-  function toggleExtras()   { els.extrasPanel.classList.toggle('open'); }
+  function toggleExtras()   { toggleModal('extrasPanel'); }
+  function openExtras(tab = 'vibe') {
+    showModal('extrasPanel');
+    if (tab) switchExtrasTab(tab);
+  }
   function toggleFeelings() { els.feelingsPanel.classList.toggle('open'); }
 
   function buildFeelingsGrid() {
