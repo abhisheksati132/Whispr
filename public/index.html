@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles.css?v=2600" />
+  <link rel="stylesheet" href="/styles.css?v=2700" />
 </head>
 <body>
 
@@ -87,29 +87,6 @@
     </div>
 
     <div class="sidebar-divider"></div>
-
-    <!-- My Profile -->
-    <div class="sidebar-section-label">ME</div>
-    <div class="sidebar-profile-card" onclick="BestieChat.openProfile()" title="Edit Profile">
-      <div id="sidebarMyAvatar" class="sidebar-avatar">✨</div>
-      <div class="sidebar-profile-info">
-        <div id="sidebarMyName" class="sidebar-profile-name">You</div>
-        <div id="sidebarMyBio" class="sidebar-profile-bio">tap to edit profile</div>
-      </div>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sidebar-chevron"><polyline points="9 18 15 12 9 6"/></svg>
-    </div>
-
-    <div class="sidebar-divider"></div>
-
-    <!-- Bestie Status -->
-    <div class="sidebar-section-label">BESTIE</div>
-    <div class="sidebar-bestie-card">
-      <div id="bestieAvatar" class="sidebar-avatar bestie-avatar-el">✨</div>
-      <div class="sidebar-profile-info">
-        <div id="bestieName" class="sidebar-profile-name">Bestie</div>
-        <div id="bestieStatus" class="bestie-status">Offline</div>
-      </div>
-    </div>
 
     <!-- Streak -->
     <div id="streakBadge" class="sidebar-streak">🔥 Start a streak!</div>
@@ -608,7 +585,7 @@
 
 <!-- Extras / Settings Modal (Centered in screen with Close return button) -->
 <div id="extrasPanel" class="modal-overlay" style="display:none" onclick="if(event.target===this) BestieChat.toggleExtras()">
-  <div class="modal-card" style="max-width:480px;">
+  <div class="modal-card" style="max-width:680px; width:92%;">
     <div class="modal-header">
       <h3>📝 Our Space & Settings</h3>
       <button class="modal-close" onclick="BestieChat.toggleExtras()">✕</button>
@@ -822,7 +799,7 @@
 
 <!-- Scripts -->
 <script src="/socket.io/socket.io.js"></script>
-<script src="/app.js?v=2600"></script>
+<script src="/app.js?v=2700"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {

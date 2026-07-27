@@ -33,20 +33,73 @@
 
 /* ═══════════════════ THEMES ═══════════════════ */
 body.theme-light {
-  --bg: #f8fafc;
-  --bg2: #f1f5f9;
+  --bg: #f1f5f9;
+  --bg2: #e2e8f0;
   --sidebar-bg: #ffffff;
   --panel: #ffffff;
-  --surface: #f1f5f9;
+  --surface: #f8fafc;
   --surface2: #e2e8f0;
   --text: #0f172a;
   --text2: #334155;
-  --muted: #94a3b8;
+  --muted: #64748b;
   --border: rgba(0,0,0,0.08);
-  --border-soft: rgba(0,0,0,0.12);
-  --bubble-me: #4338ca;
-  --bubble-me2: #818cf8;
+  --border-soft: rgba(0,0,0,0.15);
+  --bubble-me: #4f46e5;
+  --bubble-me2: #6366f1;
   --bubble-them: #ffffff;
+  --accent: #4f46e5;
+  --accent2: #ec4899;
+  --accent-glow: rgba(79,70,229,0.12);
+  --shadow: 0 10px 30px rgba(0,0,0,0.08);
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+body.theme-light .msg.them {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid rgba(0,0,0,0.08) !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04) !important;
+}
+
+body.theme-light header {
+  background: rgba(255,255,255,0.92) !important;
+  border-bottom: 1px solid rgba(0,0,0,0.08) !important;
+}
+
+body.theme-light #inputBarContainer {
+  background: rgba(255,255,255,0.92) !important;
+  border-top: 1px solid rgba(0,0,0,0.08) !important;
+}
+
+body.theme-light .modal-card {
+  background: #ffffff !important;
+  border: 1px solid rgba(0,0,0,0.1) !important;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.15) !important;
+}
+
+body.theme-light input[type="text"],
+body.theme-light input[type="password"],
+body.theme-light input[type="date"],
+body.theme-light input[type="datetime-local"],
+body.theme-light textarea,
+body.theme-light select {
+  background: #f8fafc !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+body.theme-light select option {
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+
+body.theme-light .quick-menu-grid button {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #0f172a !important;
+}
+body.theme-light .quick-menu-grid button:hover {
+  background: #e2e8f0 !important;
 }
 
 /* ═══════════════════ 1. BASE RESET ═══════════════════ */
