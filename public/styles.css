@@ -1491,13 +1491,17 @@ header {
   }
   #sidebar.open { transform: translateX(260px); }
   
-  .sidebar-overlay { 
+  #sidebarOverlay, .sidebar-overlay { 
     display: block; 
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 40;
     opacity: 0; 
     pointer-events: none; 
     transition: opacity 0.3s ease; 
   }
-  .sidebar-overlay.active { 
+  #sidebarOverlay.active, .sidebar-overlay.active { 
     opacity: 1; 
     pointer-events: all; 
   }
