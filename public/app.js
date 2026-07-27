@@ -1938,6 +1938,26 @@
   }
 
   // ═══════════════════ WEBRTC CALLING ═══════════════════
+  async function getUserMediaStream(type) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error('Camera/Microphone is not supported in this browser or origin (requires HTTPS).');
+    }
+    if (type === 'video') {
+      try {
+        return await navigator.mediaDevices.getUserMedia({ audio: true, video: { facingMode: 'user' } });
+      } catch (e1) {
+        try {
+          return await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        } catch (e2) {
+          showToast('📹 Camera permission denied or unavailable. Continuing with Voice Call.');
+          return await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        }
+      }
+    } else {
+      return await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    }
+  }
+
   async function startCall(type) {
     if (!joined) return;
     callType = type;
@@ -1963,18 +1983,13 @@
     if (camBtn) camBtn.style.display = type === 'video' ? 'flex' : 'none';
     
     try {
-      const constraints = {
-        audio: true,
-        video: type === 'video' ? { width: 640, height: 480 } : false
-      };
-      
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      const stream = await getUserMediaStream(type);
       localStreamStream = stream;
       
       const localVideo = document.getElementById('localVideo');
       if (localVideo) {
         localVideo.srcObject = stream;
-        localVideo.style.display = type === 'video' ? 'block' : 'none';
+        localVideo.style.display = type === 'video' && stream.getVideoTracks().length > 0 ? 'block' : 'none';
       }
       
       initPeerConnection(type);
@@ -1990,13 +2005,8 @@
       
     } catch (err) {
       console.error('Call failed to start:', err);
-      if (type === 'video') {
-        showToast('📹 Camera unavailable — starting voice call...');
-        endCall(true);
-        return startCall('audio');
-      }
       renderSystem('🔒 Could not access microphone/camera');
-      showToast('🔒 Mic/Camera blocked. Tap lock icon 🔒 next to URL in address bar to allow access.');
+      showToast('🔒 Mic/Camera permission blocked. Please allow mic & camera in browser settings.');
       endCall(true);
     }
   }
@@ -2029,18 +2039,13 @@
     if (acceptBtns) acceptBtns.style.display = 'none';
     
     try {
-      const constraints = {
-        audio: true,
-        video: callType === 'video' ? { width: 640, height: 480 } : false
-      };
-      
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      const stream = await getUserMediaStream(callType);
       localStreamStream = stream;
       
       const localVideo = document.getElementById('localVideo');
       if (localVideo) {
         localVideo.srcObject = stream;
-        localVideo.style.display = callType === 'video' ? 'block' : 'none';
+        localVideo.style.display = callType === 'video' && stream.getVideoTracks().length > 0 ? 'block' : 'none';
       }
       
       initPeerConnection(callType);
@@ -2205,17 +2210,11 @@
 
   // ── Accent Theme Switcher ──
   function changeAccent(accent) {
-    document.body.className = document.body.className.replace(/\baccent-\S+/g, '');
-    document.body.className = document.body.className.replace(/\btheme-\S+/g, '');
-    if (accent === 'light') {
-      document.body.classList.add('theme-light');
-    } else if (accent === 'whatsapp') {
-      document.body.classList.add('theme-whatsapp');
-    } else if (accent === 'telegram') {
-      document.body.classList.add('theme-telegram');
-    } else if (accent !== 'cyberpunk') {
-      document.body.classList.add(`accent-${accent}`);
+    const classes = document.body.className.split(' ').filter(c => !c.startsWith('theme-') && !c.startsWith('accent-'));
+    if (accent) {
+      classes.push(`theme-${accent}`);
     }
+    document.body.className = classes.join(' ').trim();
     localStorage.setItem('bestieChatAccent', accent);
   }
 

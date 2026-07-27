@@ -32,6 +32,125 @@
 }
 
 /* ═══════════════════ THEMES ═══════════════════ */
+body.theme-telegram, body.theme-default {
+  --bg: #0a0f1e;
+  --bg2: #101626;
+  --sidebar-bg: #07090f;
+  --panel: #131929;
+  --surface: #1a2235;
+  --surface2: #212d42;
+  --border: rgba(255,255,255,0.06);
+  --border-soft: rgba(255,255,255,0.1);
+  --bubble-me: #3730a3;
+  --bubble-me2: #4338ca;
+  --bubble-them: #1e2a3a;
+  --accent: #818cf8;
+  --accent2: #f472b6;
+  --text: #f1f5f9;
+  --text2: #cbd5e1;
+  --muted: #64748b;
+}
+
+body.theme-whatsapp {
+  --bg: #0b141a;
+  --bg2: #111b21;
+  --sidebar-bg: #111b21;
+  --panel: #111b21;
+  --surface: #202c33;
+  --surface2: #2a3942;
+  --border: rgba(255,255,255,0.08);
+  --border-soft: rgba(255,255,255,0.12);
+  --accent: #00a884;
+  --accent2: #25d366;
+  --accent-glow: rgba(0,168,132,0.15);
+  --bubble-me: #005c4b;
+  --bubble-me2: #026554;
+  --bubble-them: #202c33;
+  --text: #e9edef;
+  --text2: #d1d7db;
+  --muted: #8696a0;
+}
+
+body.theme-cyberpunk {
+  --bg: #0d0221;
+  --bg2: #150536;
+  --sidebar-bg: #050014;
+  --panel: #190a38;
+  --surface: #261052;
+  --surface2: #381673;
+  --border: rgba(0,240,255,0.15);
+  --border-soft: rgba(0,240,255,0.25);
+  --accent: #00f0ff;
+  --accent2: #ff007f;
+  --accent-glow: rgba(0,240,255,0.2);
+  --bubble-me: #7902d8;
+  --bubble-me2: #b800ff;
+  --bubble-them: #1f0b42;
+  --text: #00f0ff;
+  --text2: #e0f7fc;
+  --muted: #a076db;
+}
+
+body.theme-emerald {
+  --bg: #021a12;
+  --bg2: #04261c;
+  --sidebar-bg: #01110b;
+  --panel: #06261c;
+  --surface: #0c382b;
+  --surface2: #144d3c;
+  --border: rgba(16,185,129,0.15);
+  --border-soft: rgba(16,185,129,0.25);
+  --accent: #10b981;
+  --accent2: #34d399;
+  --accent-glow: rgba(16,185,129,0.15);
+  --bubble-me: #047857;
+  --bubble-me2: #059669;
+  --bubble-them: #0b3327;
+  --text: #ecfdf5;
+  --text2: #a7f3d0;
+  --muted: #5eead4;
+}
+
+body.theme-sunset {
+  --bg: #1a0c16;
+  --bg2: #281222;
+  --sidebar-bg: #12070e;
+  --panel: #271221;
+  --surface: #381b30;
+  --surface2: #4a2440;
+  --border: rgba(249,115,22,0.15);
+  --border-soft: rgba(249,115,22,0.25);
+  --accent: #f97316;
+  --accent2: #fb923c;
+  --accent-glow: rgba(249,115,22,0.15);
+  --bubble-me: #c2410c;
+  --bubble-me2: #ea580c;
+  --bubble-them: #33172c;
+  --text: #fff7ed;
+  --text2: #ffedd5;
+  --muted: #fdba74;
+}
+
+body.theme-rose {
+  --bg: #180914;
+  --bg2: #270e20;
+  --sidebar-bg: #10040d;
+  --panel: #250f20;
+  --surface: #36172f;
+  --surface2: #4a1f41;
+  --border: rgba(244,63,94,0.15);
+  --border-soft: rgba(244,63,94,0.25);
+  --accent: #f43f5e;
+  --accent2: #fb7185;
+  --accent-glow: rgba(244,63,94,0.15);
+  --bubble-me: #be123c;
+  --bubble-me2: #e11d48;
+  --bubble-them: #30132a;
+  --text: #fff1f2;
+  --text2: #ffe4e6;
+  --muted: #fda4af;
+}
+
 body.theme-light {
   --bg: #f1f5f9;
   --bg2: #e2e8f0;
@@ -1530,8 +1649,8 @@ header {
     left: -260px; 
     top: 0; 
     bottom: 0; 
-    z-index: 50;
-    transition: transform 0.3s ease;
+    z-index: 2000;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 4px 0 24px rgba(0,0,0,0.5);
   }
   #sidebar.open { transform: translateX(260px); }
@@ -1541,7 +1660,7 @@ header {
     position: fixed;
     inset: 0;
     background: rgba(0,0,0,0.6);
-    z-index: 40;
+    z-index: 1999;
     opacity: 0; 
     pointer-events: none; 
     transition: opacity 0.3s ease; 
@@ -1551,9 +1670,73 @@ header {
     pointer-events: all; 
   }
   
-  .header-menu-btn { display: flex; }
+  .header-menu-btn { display: flex !important; }
   #chatMain { width: 100%; }
+  
+  /* Mobile Header */
+  header {
+    padding: 0 10px;
+    gap: 8px;
+  }
+  .header-bestie-name { font-size: 13px; }
+  .header-bestie-status { font-size: 11px; }
+  .header-actions { gap: 2px; }
+  .icon-btn { width: 34px; height: 34px; font-size: 16px; }
+
+  /* Mobile Messages */
+  #messages {
+    padding: 12px 10px 8px;
+  }
   .msg-wrap { max-width: 88%; }
+  .msg { padding: 9px 12px; font-size: 13.5px; }
+
+  /* Mobile Input Bar */
+  #inputBarContainer {
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+  }
+  .input-pill {
+    padding: 4px 4px 4px 10px;
+    gap: 4px;
+  }
+  .pill-btn { width: 32px; height: 32px; font-size: 18px; }
+  #sendBtn { width: 36px; height: 36px; font-size: 16px; }
+
+  /* Mobile Modals */
+  .modal-overlay {
+    padding: 10px;
+  }
+  .modal-card {
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: 90vh !important;
+    border-radius: 20px !important;
+  }
+  .modal-header {
+    padding: 16px 18px 12px;
+  }
+  .modal-header h3 { font-size: 15px; }
+
+  /* Mobile Games Grid */
+  .games-grid {
+    grid-template-columns: 1fr;
+    padding: 12px;
+    gap: 8px;
+  }
+  .game-hub-card { padding: 10px 12px; }
+
+  /* Mobile Call Overlay */
+  .call-card { width: 92%; }
+  .call-avatar { width: 70px; height: 70px; font-size: 32px; }
+}
+
+@media (max-width: 480px) {
+  /* Extra small screens */
+  .attach-menu {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  #emojiPicker {
+    grid-template-columns: repeat(6, 1fr);
+  }
 }
 
 /* ═══════════════════ 23. FUNCTIONAL CLASSES (RESTYLED) ═══════════════════ */
