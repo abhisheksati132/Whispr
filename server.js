@@ -480,6 +480,26 @@ io.on('connection', (socket) => {
     io.to(currentRoom).emit('pinned-update', { messageId: null, msg: null });
   });
 
+  // ── Shared Notepad sync ─────────────────────────────────────────────
+  socket.on('update-pad', ({ text } = {}) => {
+    if (!currentRoom) return;
+    socket.to(currentRoom).emit('pad-updated', { text });
+  });
+
+  // ── View Once Media expire ───────────────────────────────────────────
+  socket.on('view-once-expire', ({ messageId } = {}) => {
+    if (!currentRoom || !messageId) return;
+    const roomState = store.getRoom(currentRoom);
+    const msg = roomState.messages.find(m => m.id === messageId);
+    if (msg) {
+      msg.expired = true;
+      msg.text = '👁️ Photo expired';
+      msg.url = '';
+      store.persist();
+      io.to(currentRoom).emit('view-once-expired', { messageId });
+    }
+  });
+
   // ── Read receipt ────────────────────────────────────────────────────
   socket.on('read-receipt', ({ messageId } = {}) => {
     if (!username || !currentRoom || !messageId) return;

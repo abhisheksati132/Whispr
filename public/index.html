@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles.css?v=3200" />
+  <link rel="stylesheet" href="/styles.css?v=3500" />
 </head>
 <body>
 
@@ -205,10 +205,9 @@
     <!-- Messages -->
     <div id="messages"></div>
 
-    <!-- Scroll to bottom -->
-    <button id="scrollBottomBtn" onclick="BestieChat.scrollToBottom()" title="Scroll to bottom" style="display:none">
-      ↓
-    </button>
+    <!-- Scroll to bottom & New Message Float -->
+    <button id="scrollBottomBtn" onclick="BestieChat.scrollToBottom()" title="Scroll to bottom" style="display:none">↓</button>
+    <button id="newMsgFloat" onclick="BestieChat.scrollToBottom()" style="display:none">↓ New Messages</button>
 
     <!-- Quick Replies -->
     <div id="smartReplies">
@@ -608,6 +607,10 @@
         <label>Inside Jokes 🤫</label>
         <textarea id="jokesInput" placeholder="Add inside jokes (one per line)..." rows="3"></textarea>
       </div>
+      <div class="extra-block">
+        <label>Shared Notepad 📝 (Live Sync)</label>
+        <textarea id="sharedPadInput" placeholder="Type shared notes together in real-time..." rows="4" oninput="BestieChat.updateSharedPad(this.value)"></textarea>
+      </div>
     </div>
 
     <!-- Tab 2: Scrapbook -->
@@ -702,9 +705,20 @@
           <option value="#0a0f1e">Solid Dark Navy</option>
           <option value="#1c1124">Solid Deep Orchid</option>
           <option value="#0c1d1a">Solid Teal Forest</option>
+          <option value="gradient-cyber">Cyber Purple</option>
+          <option value="gradient-emerald">Emerald Glow</option>
+          <option value="gradient-sunset">Sunset Dusk</option>
+          <option value="gradient-starry">Starry Night</option>
           <option value="custom">Custom Image URL</option>
         </select>
         <input id="wallpaperUrlInput" type="text" placeholder="Paste image link..." style="display:none; margin-top:6px;" onchange="BestieChat.changeWallpaper('custom', this.value)" />
+      </div>
+      <div class="extra-block">
+        <label>App Lock PIN 🔒</label>
+        <div class="e2e-row">
+          <input id="appPinInput" type="password" maxlength="4" placeholder="Set 4-digit PIN..." />
+          <button id="pinToggleBtn" onclick="BestieChat.toggleAppPin()">Enable</button>
+        </div>
       </div>
       <div class="extra-block">
         <label>Sound Pack 🔊</label>
@@ -835,9 +849,20 @@
   </div>
 </div>
 
+<!-- Passcode Lock Modal -->
+<div id="passcodeLockModal" class="modal-overlay" style="display:none; z-index:9999;">
+  <div class="modal-card" style="max-width:340px; text-align:center; padding:32px 24px;">
+    <div style="font-size:48px; margin-bottom:12px;">🔒</div>
+    <h3 style="margin-bottom:8px;">Enter App PIN</h3>
+    <p style="font-size:13px; color:var(--muted); margin-bottom:20px;">Protecting your private space</p>
+    <input id="pinLockInput" type="password" maxlength="4" placeholder="••••" style="font-size:24px; letter-spacing:12px; text-align:center; width:150px; margin:0 auto 16px; padding:8px 12px; border-radius:12px; border:1px solid var(--border-soft); background:var(--surface);" onkeyup="if(this.value.length===4) BestieChat.verifyPinLock(this.value)" />
+    <div id="pinLockError" style="color:#f87171; font-size:12px; display:none; font-weight:600;">Incorrect PIN</div>
+  </div>
+</div>
+
 <!-- Scripts -->
 <script src="/socket.io/socket.io.js"></script>
-<script src="/app.js?v=3200"></script>
+<script src="/app.js?v=3500"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {

@@ -820,13 +820,57 @@ header {
   color: white;
   border-radius: 18px 18px 4px 18px;
   box-shadow: 0 2px 8px rgba(67,56,202,0.3);
+  position: relative;
+}
+.msg.me::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: -5px;
+  width: 10px;
+  height: 10px;
+  background: var(--bubble-me2);
+  clip-path: polygon(0 0, 100% 100%, 0 100%);
 }
 .msg.them {
   background: var(--bubble-them);
   color: var(--text);
   border-radius: 18px 18px 18px 4px;
   border: 1px solid var(--border-soft);
+  position: relative;
 }
+.msg.them::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: -5px;
+  width: 10px;
+  height: 10px;
+  background: var(--bubble-them);
+  clip-path: polygon(100% 0, 0 100%, 100% 100%);
+}
+
+#newMsgFloat {
+  position: absolute;
+  bottom: 80px;
+  right: 20px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  cursor: pointer;
+  z-index: 20;
+  animation: slideUp 0.2s ease;
+}
+
+.wallpaper-gradient-cyber { background: linear-gradient(135deg, #0d0221, #261052, #150536) !important; }
+.wallpaper-gradient-emerald { background: linear-gradient(135deg, #021a12, #0c382b, #04261c) !important; }
+.wallpaper-gradient-sunset { background: linear-gradient(135deg, #1a0c16, #381b30, #281222) !important; }
+.wallpaper-gradient-starry { background: linear-gradient(135deg, #07090f, #1a2235, #0a0f1e) !important; }
 .msg.deleted {
   opacity: 0.5;
   font-style: italic;

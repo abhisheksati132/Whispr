@@ -1768,6 +1768,11 @@
       updatePinnedBanner(msg || null);
     });
 
+    socket.on('pad-updated', ({ text }) => {
+      const pad = document.getElementById('sharedPadInput');
+      if (pad && document.activeElement !== pad) pad.value = text || '';
+    });
+
     socket.on('receipt-update', (rb) => { applyReadReceipts(rb); });
 
     // WebRTC calling signaling listeners
@@ -2212,10 +2217,71 @@
   function changeAccent(accent) {
     const classes = document.body.className.split(' ').filter(c => !c.startsWith('theme-') && !c.startsWith('accent-'));
     if (accent) {
-      classes.push(`theme-${accent}`);
+      if (accent.startsWith('gradient-')) {
+        classes.push(`wallpaper-${accent}`);
+      } else {
+        classes.push(`theme-${accent}`);
+      }
     }
     document.body.className = classes.join(' ').trim();
     localStorage.setItem('bestieChatAccent', accent);
+  }
+
+  // ── Shared Notepad Sync ──
+  function updateSharedPad(text) {
+    if (socket) socket.emit('update-pad', { text });
+  }
+
+  // ── App PIN Lock ──
+  function toggleAppPin() {
+    const input = document.getElementById('appPinInput');
+    const btn = document.getElementById('pinToggleBtn');
+    const current = localStorage.getItem('bestieAppPin');
+    if (current) {
+      localStorage.removeItem('bestieAppPin');
+      if (btn) btn.textContent = 'Enable';
+      if (input) input.value = '';
+      showToast('🔓 App Lock PIN disabled');
+    } else if (input && input.value.length === 4) {
+      localStorage.setItem('bestieAppPin', input.value);
+      if (btn) btn.textContent = 'Disable';
+      showToast('🔒 App Lock PIN enabled!');
+    } else {
+      showToast('⚠️ Please enter a 4-digit PIN');
+    }
+  }
+
+  function verifyPinLock(val) {
+    const pin = localStorage.getItem('bestieAppPin');
+    const err = document.getElementById('pinLockError');
+    const modal = document.getElementById('passcodeLockModal');
+    if (val === pin) {
+      if (modal) modal.style.display = 'none';
+      if (err) err.style.display = 'none';
+      const input = document.getElementById('pinLockInput');
+      if (input) input.value = '';
+    } else {
+      if (err) err.style.display = 'block';
+    }
+  }
+
+  function checkPinLock() {
+    const pin = localStorage.getItem('bestieAppPin');
+    if (pin) {
+      const modal = document.getElementById('passcodeLockModal');
+      if (modal) modal.style.display = 'flex';
+      const input = document.getElementById('pinLockInput');
+      if (input) input.focus();
+    }
+  }
+
+  function toggleAudioSpeed(btn, audioId) {
+    const audio = document.getElementById(audioId);
+    if (!audio) return;
+    const cur = audio.playbackRate || 1.0;
+    const nxt = cur === 1.0 ? 1.5 : cur === 1.5 ? 2.0 : 1.0;
+    audio.playbackRate = nxt;
+    if (btn) btn.textContent = `${nxt}x`;
   }
 
   // ── Sound Packs ──
@@ -3275,6 +3341,7 @@
         if (els.login) els.login.setAttribute('style', 'display:flex !important');
       }
       updateSidebarMyProfile();
+      checkPinLock();
 
       // Load saved theme theme-light
       const savedTheme = localStorage.getItem('bestieChatTheme') || 'dark';
@@ -3756,6 +3823,7 @@
 
     // Ultimate Premium functions
     switchExtrasTab, changeAccent, changeSoundPack, updateE2EEKey, toggleE2EE,
+    updateSharedPad, toggleAppPin, verifyPinLock, checkPinLock, toggleAudioSpeed,
     playWaveform, seekWaveform, transcribeAudio,
     addDiaryEntry, deleteDiaryEntry, addBucketItem, toggleBucketItem, deleteBucketItem,
     addCalendarEvent, deleteCalendarEvent,
