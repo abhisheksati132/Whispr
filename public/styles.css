@@ -518,6 +518,49 @@ header {
   color: var(--text);
 }
 
+/* ── Banners ── */
+#motdBanner {
+  padding: 10px 16px;
+  background: linear-gradient(135deg, rgba(129, 140, 248, 0.12), rgba(244, 114, 182, 0.12));
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent);
+  text-align: center;
+}
+#motdBanner:empty {
+  display: none;
+}
+
+#dailyQuestion {
+  margin: 12px 16px 4px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-left: 3px solid var(--accent);
+  border-radius: 14px;
+  position: relative;
+  font-size: 13px;
+}
+.dq-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+.dq-dismiss {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 14px;
+  cursor: pointer;
+}
+
 /* ═══════════════════ 7. MESSAGES AREA ═══════════════════ */
 #messages {
   flex: 1;
@@ -788,33 +831,62 @@ header {
 }
 
 /* ═══════════════════ 10. PANELS ═══════════════════ */
-.feelingsPanel {
-  background: var(--panel);
-  border-top: 1px solid var(--border);
-  padding: 12px 16px;
+#feelingsPanel, .feelingsPanel {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 16px;
   display: none;
 }
-.feelingsPanel.open { display: block; }
-.feelingsGrid {
+#feelingsPanel.open, .feelingsPanel.open { display: block; }
+.feelings-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text2);
+  margin-bottom: 10px;
+}
+#feelingsGrid, .feelingsGrid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
   gap: 8px;
+  margin-bottom: 10px;
 }
 .feeling-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
   border-radius: 12px;
-  padding: 8px;
+  padding: 8px 6px;
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
   transition: var(--transition);
 }
 .feeling-btn:hover {
   border-color: var(--accent);
-  box-shadow: 0 0 10px var(--accent-glow);
+  background: var(--surface2);
 }
+.feeling-btn.mine {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+  color: var(--accent);
+  font-weight: 600;
+}
+#pulseBtn {
+  width: 100%;
+  padding: 10px;
+  background: linear-gradient(135deg, #be185d, #f472b6);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+#pulseBtn:hover { opacity: 0.95; }
 
 #emojiPicker {
   position: absolute;
