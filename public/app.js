@@ -676,42 +676,50 @@
     if (lastSeen) lastSeenData = lastSeen;
 
     const others = currentOnlineUsers.filter((u) => u !== myName);
-    const avatarEl = els.bestieAvatar;
-    const nameEl   = els.bestieName;
-    const statusEl = els.bestieStatus;
 
-    if (!avatarEl || !nameEl || !statusEl) return;
+    // Elements: sidebar bestie card (legacy IDs still used)
+    const avatarEl    = els.bestieAvatar;
+    const nameEl      = els.bestieName;
+    const statusEl    = els.bestieStatus;
+    // New header elements
+    const hAvatarEl   = document.getElementById('headerBestieAvatar');
+    const hNameEl     = document.getElementById('headerBestieName');
+    const hStatusEl   = document.getElementById('headerBestieStatus');
+
+    let bestieDisplay = 'Bestie';
+    let bestieAvatar  = '✨';
+    let bestieStatus  = 'Offline';
+    let isOnline      = false;
 
     if (others.length) {
-      // Bestie is online!
       const bestie = others[0];
       const p = getProfile(bestie);
-      avatarEl.textContent = p.avatar || '🐱';
-      avatarEl.classList.add('online');
-      nameEl.textContent = p.nickname || bestie;
-      statusEl.textContent = 'Online';
-      statusEl.className = 'bestie-status online';
+      bestieAvatar  = p.avatar || '🐱';
+      bestieDisplay = p.nickname || bestie;
+      bestieStatus  = 'Online';
+      isOnline      = true;
     } else {
-      // Bestie is offline
-      avatarEl.classList.remove('online');
       const allOthers = Object.keys(lastSeenData || {}).filter((u) => u !== myName);
       if (allOthers.length) {
         const sorted = allOthers.sort((a, b) => (lastSeenData[b] || 0) - (lastSeenData[a] || 0));
         const lastBestie = sorted[0];
         const p = getProfile(lastBestie);
-        avatarEl.textContent = p.avatar || '🐱';
-        nameEl.textContent = p.nickname || lastBestie;
+        bestieAvatar  = p.avatar || '🐱';
+        bestieDisplay = p.nickname || lastBestie;
         const ts = lastSeenData[lastBestie];
-        statusEl.textContent = ts ? formatLastSeen(ts) : 'Offline';
-        statusEl.className = 'bestie-status';
-      } else {
-        // No one else has joined yet
-        avatarEl.textContent = '✨';
-        nameEl.textContent = 'Bestie';
-        statusEl.textContent = 'Offline';
-        statusEl.className = 'bestie-status';
+        bestieStatus = ts ? formatLastSeen(ts) : 'Offline';
       }
     }
+
+    // Update sidebar bestie card
+    if (avatarEl) { avatarEl.textContent = bestieAvatar; avatarEl.classList.toggle('online', isOnline); }
+    if (nameEl)   nameEl.textContent = bestieDisplay;
+    if (statusEl) { statusEl.textContent = bestieStatus; statusEl.className = isOnline ? 'bestie-status online' : 'bestie-status'; }
+
+    // Update header bestie info
+    if (hAvatarEl) { hAvatarEl.textContent = bestieAvatar; hAvatarEl.classList.toggle('online', isOnline); }
+    if (hNameEl)   hNameEl.textContent = bestieDisplay;
+    if (hStatusEl) { hStatusEl.textContent = bestieStatus; hStatusEl.className = isOnline ? 'header-bestie-status online' : 'header-bestie-status'; }
   }
 
   function updateStreak(streak) {
@@ -839,6 +847,59 @@
     return res.json();
   }
 
+  // ═══════════════════ SIDEBAR ═══════════════════
+  function toggleSidebar() {
+    const sidebar  = document.getElementById('sidebar');
+    const overlay  = document.getElementById('sidebarOverlay');
+    if (!sidebar) return;
+    const isOpen = sidebar.classList.toggle('open');
+    if (overlay) overlay.classList.toggle('active', isOpen);
+  }
+
+  function closeSidebar() {
+    const sidebar  = document.getElementById('sidebar');
+    const overlay  = document.getElementById('sidebarOverlay');
+    if (sidebar) sidebar.classList.remove('open');
+    if (overlay) overlay.classList.remove('active');
+  }
+
+  function sidebarNavTo(tab) {
+    // Update active nav item
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    const navBtn = document.getElementById(`navItem${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
+    if (navBtn) navBtn.classList.add('active');
+
+    // Close sidebar on mobile after nav
+    if (window.innerWidth < 768) closeSidebar();
+
+    if (tab === 'chat') {
+      // Hide extras, show messages
+      if (els.extrasPanel) els.extrasPanel.classList.remove('open');
+      if (els.feelingsPanel) els.feelingsPanel.classList.remove('open');
+    } else if (tab === 'space') {
+      toggleExtras();
+    } else if (tab === 'games') {
+      if (els.gameMenu) els.gameMenu.classList.toggle('open');
+    } else if (tab === 'settings') {
+      // Open extras panel on prefs tab
+      if (els.extrasPanel) {
+        els.extrasPanel.classList.add('open');
+        switchExtrasTab('prefs');
+      }
+    }
+  }
+
+  function updateSidebarMyProfile() {
+    const profile = getProfile(myName);
+    const avatarEl = document.getElementById('sidebarMyAvatar');
+    const nameEl   = document.getElementById('sidebarMyName');
+    const bioEl    = document.getElementById('sidebarMyBio');
+    const displayName = getDisplayName(myName);
+    if (avatarEl) avatarEl.textContent = profile.avatar || '✨';
+    if (nameEl)   nameEl.textContent   = displayName || myName;
+    if (bioEl)    bioEl.textContent    = profile.statusBio || 'tap to edit profile';
+  }
+
   // ═══════════════════ JOIN / LEAVE ═══════════════════
   function joinChat() {
     let name = els.nameInput ? els.nameInput.value.trim() : '';
@@ -850,8 +911,11 @@
     localStorage.setItem('bestieChatRoom', room);
     if (nickname) localStorage.setItem('bestieChatNickname', nickname);
     applyRoomTheme(room);
-    if (els.login) els.login.style.display = 'none';
-    if (els.chat) els.chat.style.display = 'flex';
+    // Hide login, show chat (use setAttribute to override any !important)
+    if (els.login) els.login.setAttribute('style', 'display:none !important');
+    if (els.chat)  els.chat.setAttribute('style', 'display:flex !important');
+    // Update sidebar with my name immediately
+    updateSidebarMyProfile();
     const passVal = els.passwordInput ? els.passwordInput.value : '';
     if (socket) socket.emit('join', { name, room, nickname, password: passVal });
   }
@@ -3202,7 +3266,14 @@
 
       initSocket();
       toggleSendMicIcons();
-      if (savedName) joinChat();
+      if (savedName) {
+        joinChat();
+      } else {
+        // Show login page properly
+        if (els.chat) els.chat.setAttribute('style', 'display:none !important');
+        if (els.login) els.login.setAttribute('style', 'display:flex !important');
+      }
+      updateSidebarMyProfile();
 
       // Load saved theme theme-light
       const savedTheme = localStorage.getItem('bestieChatTheme') || 'dark';
@@ -3464,17 +3535,18 @@
   function openProfile() {
     showModal('profileModal');
     const profile = getProfile(myName);
-    const avatarDisplay = document.getElementById('profileAvatarDisplay');
-    const statusInput = document.getElementById('profileStatusInput');
-    const nicknameInput = document.getElementById('profileNicknameInput');
-    const statMsgs = document.getElementById('statMsgs');
-    const statStreak = document.getElementById('statStreak');
+    const avatarDisplay  = document.getElementById('profileAvatarDisplay');
+    const statusInput    = document.getElementById('profileStatusInput');
+    const nicknameInput  = document.getElementById('profileNicknameInput');
+    const statMsgs       = document.getElementById('statMsgs');
+    const statStreak     = document.getElementById('statStreak');
     if (avatarDisplay) avatarDisplay.textContent = profile.avatar || '✨';
-    if (statusInput) statusInput.value = profile.statusBio || '';
+    if (statusInput)   statusInput.value = profile.statusBio || '';
     if (nicknameInput) nicknameInput.value = localStorage.getItem('bestieChatNickname') || '';
-    if (statMsgs) statMsgs.textContent = allMessagesCached.filter(m => m.user === myName).length;
-    if (statStreak) statStreak.textContent = currentStreakDays || 1;
+    if (statMsgs)      statMsgs.textContent = allMessagesCached.filter(m => m.user === myName).length;
+    if (statStreak)    statStreak.textContent = currentStreakDays || 1;
     updatePrefsProfileDisplay();
+    updateSidebarMyProfile();
   }
 
   function saveNicknameFromProfile(nick) {
@@ -3497,12 +3569,14 @@
     socket.emit('update-profile-bio', { avatar: emoji });
     showToast(`Avatar updated: ${emoji}`);
     updatePrefsProfileDisplay();
+    updateSidebarMyProfile();
   }
 
   function saveProfileStatus(bio) {
     socket.emit('update-profile-bio', { statusBio: String(bio || '').trim() });
-    showToast('Status bio saved! 💭');
+    showToast('Status saved! 💭');
     updatePrefsProfileDisplay();
+    updateSidebarMyProfile();
   }
 
   function saveProfileColor(color) {
@@ -3676,7 +3750,10 @@
     startCall, acceptCall, endCall, toggleMuteAudio, toggleCamera,
     changeWallpaper,
     toggleAttachMenu, triggerPhotoUpload,
-    
+
+    // Sidebar
+    toggleSidebar, closeSidebar, sidebarNavTo,
+
     // Ultimate Premium functions
     switchExtrasTab, changeAccent, changeSoundPack, updateE2EEKey, toggleE2EE,
     playWaveform, seekWaveform, transcribeAudio,
