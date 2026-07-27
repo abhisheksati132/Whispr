@@ -1141,10 +1141,14 @@ header {
 
 /* ═══════════════════ 14. PROFILE MODAL ═══════════════════ */
 .profile-card {
+  padding: 0;
+}
+.profile-body {
   padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  overflow-y: auto;
 }
 .profile-header {
   display: flex;
@@ -1678,4 +1682,56 @@ body.night-glow header, body.night-glow #inputBarContainer { box-shadow: 0 0 30p
 /* Misc Utils */
 .search-highlight { background: rgba(244,114,182,0.3); color: var(--text); border-radius: 4px; padding: 0 2px;}
 .reconnecting #statusDot { animation: pulse 1s infinite; background: var(--offline); }
+
+/* Games Hub */
+.games-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding: 20px;
+}
+@media (max-width: 520px) {
+  .games-grid { grid-template-columns: 1fr; }
+}
+.game-hub-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 16px;
+  padding: 14px;
+  cursor: pointer;
+  transition: transform var(--transition), border-color var(--transition), background var(--transition);
+}
+.game-hub-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  background: var(--surface2);
+}
+.game-hub-icon {
+  font-size: 24px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--panel);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.game-hub-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.game-hub-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+.game-hub-desc {
+  font-size: 11px;
+  color: var(--muted);
+}
 

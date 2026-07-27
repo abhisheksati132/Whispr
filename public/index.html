@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>bestie 💭</title>
+  <title>hmmumm ✨</title>
   <meta name="description" content="Your private space to connect with your bestie. No accounts, no noise." />
   <link rel="manifest" href="/manifest.json?v=900" />
   <link rel="icon" type="image/x-icon" href="/favicon.ico?v=900" />
@@ -12,11 +12,11 @@
   <meta name="theme-color" content="#0a0f1e" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="bestie" />
+  <meta name="apple-mobile-web-app-title" content="hmmumm" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles.css?v=2700" />
+  <link rel="stylesheet" href="/styles.css?v=2900" />
 </head>
 <body>
 
@@ -40,10 +40,10 @@
       <!-- Brand -->
       <div class="login-brand">
         <div class="login-logo">
-          <img src="/icon-192.png" alt="bestie" width="56" height="56" style="border-radius:18px;" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" />
-          <span style="display:none; font-size:40px;">💭</span>
+          <img src="/icon-192.png" alt="hmmumm" width="56" height="56" style="border-radius:18px;" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" />
+          <span style="display:none; font-size:40px;">✨</span>
         </div>
-        <h1 class="login-title">bestie</h1>
+        <h1 class="login-title">hmmumm</h1>
         <p class="login-tagline">Your private space, just you two.</p>
       </div>
 
@@ -82,8 +82,8 @@
   <aside id="sidebar">
     <!-- Brand -->
     <div class="sidebar-brand">
-      <span class="brand-icon">💭</span>
-      <span class="brand-text">bestie</span>
+      <span class="brand-icon">✨</span>
+      <span class="brand-text">hmmumm</span>
     </div>
 
     <div class="sidebar-divider"></div>
@@ -500,7 +500,7 @@
 
 <!-- Profile Modal -->
 <div id="profileModal" class="modal-overlay" style="display:none" onclick="if(event.target===this) BestieChat.closeProfile()">
-  <div class="modal-card profile-card" style="max-width:380px;">
+  <div class="modal-card profile-card" style="max-width:540px; width:92%;">
     <div class="modal-header">
       <h3>My Profile 👤</h3>
       <button class="modal-close" onclick="BestieChat.closeProfile()">✕</button>
@@ -797,9 +797,77 @@
   </div>
 </div>
 
+<!-- Games Hub Modal (Centered interactive game launcher) -->
+<div id="gamesHubModal" class="modal-overlay" style="display:none" onclick="if(event.target===this) BestieChat.closeGamesHub()">
+  <div class="modal-card" style="max-width:580px; width:92%;">
+    <div class="modal-header">
+      <h3>🎮 Play Games & Activities</h3>
+      <button class="modal-close" onclick="BestieChat.closeGamesHub()">✕</button>
+    </div>
+    <div class="games-grid">
+      <div class="game-hub-card" onclick="BestieChat.closeGamesHub(); BestieChat.openTTT();">
+        <div class="game-hub-icon">❌⭕</div>
+        <div class="game-hub-info">
+          <div class="game-hub-title">Tic-Tac-Toe</div>
+          <div class="game-hub-desc">Classic 3x3 multiplayer grid</div>
+        </div>
+      </div>
+      <div class="game-hub-card" onclick="BestieChat.closeGamesHub(); BestieChat.openConnect4();">
+        <div class="game-hub-icon">🔴🟡</div>
+        <div class="game-hub-info">
+          <div class="game-hub-title">Connect 4</div>
+          <div class="game-hub-desc">Drop 4 tokens in a row to win</div>
+        </div>
+      </div>
+      <div class="game-hub-card" onclick="BestieChat.closeGamesHub(); BestieChat.openCoDraw();">
+        <div class="game-hub-icon">🎨</div>
+        <div class="game-hub-info">
+          <div class="game-hub-title">Co-Draw Pad</div>
+          <div class="game-hub-desc">Draw together live in real-time</div>
+        </div>
+      </div>
+      <div class="game-hub-card" onclick="BestieChat.closeGamesHub(); BestieChat.openWatchTogether();">
+        <div class="game-hub-icon">📺</div>
+        <div class="game-hub-info">
+          <div class="game-hub-title">Watch Together</div>
+          <div class="game-hub-desc">Sync YouTube videos together</div>
+        </div>
+      </div>
+      <div class="game-hub-card" onclick="BestieChat.closeGamesHub(); BestieChat.startGame('would_you_rather');">
+        <div class="game-hub-icon">❓</div>
+        <div class="game-hub-info">
+          <div class="game-hub-title">Would You Rather</div>
+          <div class="game-hub-desc">Fun choice prompts in chat</div>
+        </div>
+      </div>
+      <div class="game-hub-card" onclick="BestieChat.closeGamesHub(); BestieChat.startGame('truth_or_dare');">
+        <div class="game-hub-icon">💬</div>
+        <div class="game-hub-info">
+          <div class="game-hub-title">Truth or Dare</div>
+          <div class="game-hub-desc">Spicy questions & dares</div>
+        </div>
+      </div>
+      <div class="game-hub-card" onclick="BestieChat.closeGamesHub(); BestieChat.startGame('20_questions');">
+        <div class="game-hub-icon">🧠</div>
+        <div class="game-hub-info">
+          <div class="game-hub-title">20 Questions</div>
+          <div class="game-hub-desc">Guess what your bestie thinks</div>
+        </div>
+      </div>
+      <div class="game-hub-card" onclick="BestieChat.closeGamesHub(); BestieChat.openHapticSync();">
+        <div class="game-hub-icon">💌</div>
+        <div class="game-hub-info">
+          <div class="game-hub-title">Touch Sync</div>
+          <div class="game-hub-desc">Real-time haptic touch sync</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Scripts -->
 <script src="/socket.io/socket.io.js"></script>
-<script src="/app.js?v=2700"></script>
+<script src="/app.js?v=2900"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {

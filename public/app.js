@@ -737,10 +737,10 @@
     if (unreadCount > 0 && document.hidden) {
       els.unreadBadge.style.display = 'inline';
       els.unreadBadge.textContent   = unreadCount > 99 ? '99+' : unreadCount;
-      document.title = `(${unreadCount}) bestie 💭`;
+      document.title = `(${unreadCount}) hmmumm ✨`;
     } else {
       els.unreadBadge.style.display = 'none';
-      document.title = 'bestie 💭';
+      document.title = 'hmmumm ✨';
     }
   }
 
@@ -879,7 +879,7 @@
     } else if (tab === 'space') {
       openExtras('vibe');
     } else if (tab === 'games') {
-      if (els.gameMenu) els.gameMenu.classList.toggle('open');
+      openGamesHub();
     } else if (tab === 'settings') {
       openExtras('prefs');
     }
@@ -1238,12 +1238,14 @@
     els.gifPanel.classList.remove('open');
   }
 
-  // ═══════════════════ EXTRAS ═══════════════════
+  // ═══════════════════ EXTRAS & GAMES ═══════════════════
   function toggleExtras()   { toggleModal('extrasPanel'); }
   function openExtras(tab = 'vibe') {
     showModal('extrasPanel');
     if (tab) switchExtrasTab(tab);
   }
+  function openGamesHub()  { showModal('gamesHubModal'); }
+  function closeGamesHub() { hideModal('gamesHubModal'); }
   function toggleFeelings() { els.feelingsPanel.classList.toggle('open'); }
 
   function buildFeelingsGrid() {
@@ -3751,8 +3753,7 @@
     changeWallpaper,
     toggleAttachMenu, triggerPhotoUpload,
 
-    // Sidebar
-    toggleSidebar, closeSidebar, sidebarNavTo,
+    toggleSidebar, closeSidebar, sidebarNavTo, openGamesHub, closeGamesHub,
 
     // Ultimate Premium functions
     switchExtrasTab, changeAccent, changeSoundPack, updateE2EEKey, toggleE2EE,
