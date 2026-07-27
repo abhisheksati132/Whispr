@@ -1247,32 +1247,64 @@ header {
   color: var(--text);
 }
 
+/* ═══════════════════ AMBIENT PARTICLES ═══════════════════ */
+#ambience {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+}
+.particle {
+  position: absolute;
+  top: -30px;
+  font-size: 18px;
+  opacity: 0.25;
+  user-select: none;
+  animation: floatParticle 16s linear infinite;
+}
+@keyframes floatParticle {
+  0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+  10% { opacity: 0.35; }
+  90% { opacity: 0.35; }
+  100% { transform: translateY(105vh) rotate(360deg); opacity: 0; }
+}
+
 /* ═══════════════════ 13. MODALS ═══════════════════ */
 .modal-overlay {
   position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.7);
-  backdrop-filter: blur(8px);
-  z-index: 100;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 4000;
   display: none;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 16px;
 }
-.modal-overlay.open { display: flex; }
+.modal-overlay.open { display: flex !important; }
 
 .modal-card {
   background: var(--panel);
   border: 1px solid var(--border-soft);
   border-radius: 24px;
   width: 100%;
-  max-width: 480px;
+  max-width: 520px;
   max-height: 85vh;
   max-height: 85dvh;
   box-shadow: 0 24px 64px rgba(0,0,0,0.6);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  margin: auto;
+  position: relative;
 }
 
 .modal-header {
