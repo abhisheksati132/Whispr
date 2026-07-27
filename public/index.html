@@ -643,6 +643,8 @@
       <button class="call-btn decline-call" onclick="BestieChat.endCall()" title="Decline Call">✕ Decline</button>
     </div>
   </div>
+</div><!-- end #callOverlay -->
+
 <!-- ═══════════════════ MY PROFILE MODAL ═══════════════════ -->
 <div id="profileModal" class="modal-overlay" style="display:none" onclick="if(event.target===this) BestieChat.closeProfile()">
   <div class="modal-card profile-card" style="max-width:380px;">
@@ -756,7 +758,7 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="/app.js?v=2100"></script>
+<script src="/app.js?v=2200"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {

@@ -814,18 +814,16 @@
       if (localStorage.getItem(key)) return;
       const lastMsg = localStorage.getItem('bestieLastMsgDate');
       if (lastMsg === new Date().toISOString().slice(0, 10)) return;
-      if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification('Bestie check-in 👀', {
-          body: "You haven't chatted with your bestie today!",
-          icon: '/icon-192.png'
-        });
-        localStorage.setItem(key, '1');
-      }
+      sendDesktopNotification('Bestie check-in 👀', {
+        body: "You haven't chatted with your bestie today!",
+        icon: '/icon-192.png'
+      });
+      localStorage.setItem(key, '1');
     }, 3600000);
 
     countdownInterval = setInterval(() => {
-      const label = els.countdownLabel.value;
-      const date  = els.countdownDate.value;
+      const label = els.countdownLabel ? els.countdownLabel.value : '';
+      const date  = els.countdownDate  ? els.countdownDate.value  : '';
       if (date) updateCountdown({ label, date });
     }, 60000);
   }
@@ -1514,10 +1512,11 @@
     socket.on('disconnect', () => setConnected(false));
 
     socket.on('join-error', (msg) => {
-      els.loginError.textContent = msg;
+      if (els.loginError) els.loginError.textContent = msg;
       joined = false;
-      els.chat.style.display  = 'none';
-      els.login.style.display = 'block';
+      // Override !important inline styles via setAttribute
+      if (els.chat) els.chat.setAttribute('style', 'display:none !important');
+      if (els.login) els.login.setAttribute('style', 'display:flex !important; flex-direction:column; align-items:center;');
     });
 
     socket.on('joined', (payload) => {
@@ -2194,7 +2193,8 @@
     if (!text || !text.startsWith('🔒:')) return text;
     if (!e2eKey) return '🔒 [Encrypted — Enter Secret Key to View]';
     try {
-      const base64 = text.substring(2);
+      // '🔒' is a surrogate pair = 2 JS chars, plus ':' = 3 chars total
+      const base64 = text.substring(3);
       const raw = decodeURIComponent(escape(atob(base64)));
       let res = '';
       for (let i = 0; i < raw.length; i++) {
@@ -2622,10 +2622,7 @@
   let coDrawLastY = 0;
 
   function openCoDraw() {
-    const modal = document.getElementById('coDrawModal');
-    if (!modal) return;
-    modal.classList.add('open');
-    modal.style.display = 'flex';
+    showModal('coDrawModal');
     if (els.attachMenu) els.attachMenu.style.display = 'none';
     
     const canvas = document.getElementById('coDrawCanvas');
@@ -2637,6 +2634,15 @@
     coDrawCtx = canvas.getContext('2d');
     coDrawCtx.lineCap = 'round';
     coDrawCtx.lineJoin = 'round';
+    
+    // Remove old listeners first to prevent duplicates on reopen
+    canvas.removeEventListener('mousedown', startCoDrawStroke);
+    canvas.removeEventListener('mousemove', drawCoDrawStroke);
+    canvas.removeEventListener('mouseup', stopCoDrawStroke);
+    canvas.removeEventListener('mouseleave', stopCoDrawStroke);
+    canvas.removeEventListener('touchstart', startCoDrawStroke);
+    canvas.removeEventListener('touchmove', drawCoDrawStroke);
+    canvas.removeEventListener('touchend', stopCoDrawStroke);
     
     // Canvas events
     canvas.addEventListener('mousedown', startCoDrawStroke);
@@ -2650,11 +2656,7 @@
   }
 
   function closeCoDraw() {
-    const modal = document.getElementById('coDrawModal');
-    if (modal) {
-      modal.classList.remove('open');
-      modal.style.display = 'none';
-    }
+    hideModal('coDrawModal');
   }
 
   function startCoDrawStroke(e) {
@@ -2738,20 +2740,12 @@
   let watchPlayerFrame = null;
 
   function openWatchTogether() {
-    const modal = document.getElementById('watchModal');
-    if (modal) {
-      modal.classList.add('open');
-      modal.style.display = 'flex';
-    }
+    showModal('watchModal');
     if (els.attachMenu) els.attachMenu.style.display = 'none';
   }
 
   function closeWatchTogether() {
-    const modal = document.getElementById('watchModal');
-    if (modal) {
-      modal.classList.remove('open');
-      modal.style.display = 'none';
-    }
+    hideModal('watchModal');
   }
 
   function loadWatchVideo(url) {
@@ -2788,11 +2782,7 @@
   let tttTurnSymbol = 'X';
 
   function openTTT() {
-    const modal = document.getElementById('tttModal');
-    if (modal) {
-      modal.classList.add('open');
-      modal.style.display = 'flex';
-    }
+    showModal('tttModal');
     if (els.attachMenu) els.attachMenu.style.display = 'none';
     
     // Determine Symbol: Name hash comparison resolves A as X, B as O
@@ -2806,11 +2796,7 @@
   }
 
   function closeTTT() {
-    const modal = document.getElementById('tttModal');
-    if (modal) {
-      modal.classList.remove('open');
-      modal.style.display = 'none';
-    }
+    hideModal('tttModal');
   }
 
   function resetTTT(isLocal) {
@@ -2910,14 +2896,12 @@
   let hapticPulseInterval = null;
 
   function openHapticSync() {
-    const modal = document.getElementById('hapticModal');
-    if (modal) modal.style.display = 'flex';
+    showModal('hapticModal');
     if (els.attachMenu) els.attachMenu.style.display = 'none';
   }
 
   function closeHapticSync() {
-    const modal = document.getElementById('hapticModal');
-    if (modal) modal.style.display = 'none';
+    hideModal('hapticModal');
     stopHapticPulse();
   }
 
@@ -3051,7 +3035,7 @@
       if (els.nameInput) els.nameInput.value = savedName;
       if (savedNick && els.nicknameInput) els.nicknameInput.value = savedNick;
 
-      els.soundBtn.classList.toggle('active', soundEnabled());
+      if (els.soundBtn) els.soundBtn.classList.toggle('active', soundEnabled());
 
       fetch('/api/config')
         .then((r) => r.json())
@@ -3175,10 +3159,10 @@
 
       // Global click → close menus / context menu
       document.addEventListener('click', (e) => {
-        if (!e.target.closest('#emojiPicker')  && !e.target.closest('[data-emoji-toggle]')) els.emojiPicker.classList.remove('open');
-        if (!e.target.closest('#gameMenu')     && !e.target.closest('[data-game-toggle]'))  els.gameMenu.classList.remove('open');
-        if (!e.target.closest('#gifPanel')     && !e.target.closest('.attach-item') && !e.target.closest('#gifPanel')) els.gifPanel.classList.remove('open');
-        if (!e.target.closest('#feelingsPanel')&& !e.target.closest('[title="Feelings"]'))  els.feelingsPanel.classList.remove('open');
+        if (!e.target.closest('#emojiPicker')  && !e.target.closest('[data-emoji-toggle]')) { if (els.emojiPicker) els.emojiPicker.classList.remove('open'); }
+        if (!e.target.closest('#gameMenu')     && !e.target.closest('[data-game-toggle]'))  { if (els.gameMenu) els.gameMenu.classList.remove('open'); }
+        if (!e.target.closest('#gifPanel')     && !e.target.closest('.attach-item'))        { if (els.gifPanel) els.gifPanel.classList.remove('open'); }
+        if (!e.target.closest('#feelingsPanel')&& !e.target.closest('[title="Feelings"]'))  { if (els.feelingsPanel) els.feelingsPanel.classList.remove('open'); }
         if (!e.target.closest('#contextMenu')  && !e.target.closest('.msg-wrap'))           hideContextMenu();
         if (!e.target.closest('#attachMenu')   && !e.target.closest('#attachBtn'))          { if (els.attachMenu) els.attachMenu.style.display = 'none'; }
         if (!e.target.closest('.msg-wrap'))    document.querySelectorAll('.msg-wrap.touched').forEach((el) => el.classList.remove('touched'));
@@ -3544,16 +3528,14 @@
   let c4Turn = 'red';
 
   function openConnect4() {
-    const modal = document.getElementById('connect4Modal');
-    if (modal) modal.style.display = 'flex';
+    showModal('connect4Modal');
     c4BoardState = Array(6).fill(null).map(() => Array(7).fill(null));
     c4Turn = 'red';
     renderConnect4Board();
   }
 
   function closeConnect4() {
-    const modal = document.getElementById('connect4Modal');
-    if (modal) modal.style.display = 'none';
+    hideModal('connect4Modal');
   }
 
   function renderConnect4Board() {
