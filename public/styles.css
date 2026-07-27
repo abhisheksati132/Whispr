@@ -1690,21 +1690,22 @@ header {
 @media (max-width: 768px) {
   #sidebar { 
     position: fixed; 
-    left: -260px; 
+    left: -280px; 
+    width: 280px;
     top: 0; 
     bottom: 0; 
-    z-index: 2000;
+    z-index: 2500;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 4px 0 24px rgba(0,0,0,0.5);
   }
-  #sidebar.open { transform: translateX(260px); }
+  #sidebar.open { transform: translateX(280px); }
   
   #sidebarOverlay, .sidebar-overlay { 
     display: block; 
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.6);
-    z-index: 1999;
+    background: rgba(0,0,0,0.65);
+    z-index: 2499;
     opacity: 0; 
     pointer-events: none; 
     transition: opacity 0.3s ease; 
@@ -1719,67 +1720,81 @@ header {
   
   /* Mobile Header */
   header {
-    padding: 0 10px;
-    gap: 8px;
+    padding: 0 8px;
+    gap: 4px;
   }
-  .header-bestie-name { font-size: 13px; }
-  .header-bestie-status { font-size: 11px; }
-  .header-actions { gap: 2px; }
-  .icon-btn { width: 34px; height: 34px; font-size: 16px; }
+  .header-bestie { min-width: 0; }
+  .header-bestie-name { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .header-bestie-status { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .header-actions { gap: 2px; flex-shrink: 0; }
+  .icon-btn { width: 32px; height: 32px; font-size: 15px; flex-shrink: 0; }
 
   /* Mobile Messages */
   #messages {
-    padding: 12px 10px 8px;
+    padding: 10px 8px 8px;
+    -webkit-overflow-scrolling: touch;
   }
-  .msg-wrap { max-width: 88%; }
+  .msg-wrap { max-width: 90%; }
   .msg { padding: 9px 12px; font-size: 13.5px; }
 
   /* Mobile Input Bar */
   #inputBarContainer {
-    padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
   }
   .input-pill {
-    padding: 4px 4px 4px 10px;
+    padding: 3px 3px 3px 8px;
     gap: 4px;
   }
-  .pill-btn { width: 32px; height: 32px; font-size: 18px; }
-  #sendBtn { width: 36px; height: 36px; font-size: 16px; }
+  .pill-btn { width: 30px; height: 30px; font-size: 17px; flex-shrink: 0; }
+  #sendBtn { width: 34px; height: 34px; font-size: 15px; flex-shrink: 0; }
 
   /* Mobile Modals */
   .modal-overlay {
-    padding: 10px;
+    padding: 8px;
   }
   .modal-card {
     max-width: 100% !important;
     width: 100% !important;
-    max-height: 90vh !important;
+    max-height: 92vh !important;
     border-radius: 20px !important;
+    -webkit-overflow-scrolling: touch;
   }
   .modal-header {
-    padding: 16px 18px 12px;
+    padding: 14px 16px 10px;
   }
-  .modal-header h3 { font-size: 15px; }
+  .modal-header h3 { font-size: 14px; }
 
   /* Mobile Games Grid */
   .games-grid {
     grid-template-columns: 1fr;
-    padding: 12px;
+    padding: 10px;
     gap: 8px;
   }
-  .game-hub-card { padding: 10px 12px; }
+  .game-hub-card { padding: 10px; }
 
   /* Mobile Call Overlay */
   .call-card { width: 92%; }
-  .call-avatar { width: 70px; height: 70px; font-size: 32px; }
+  .call-avatar { width: 64px; height: 64px; font-size: 28px; }
 }
 
 @media (max-width: 480px) {
-  /* Extra small screens */
+  /* Extra small screens (<480px) */
+  .header-actions .icon-btn:nth-child(2) { display: none; }
   .attach-menu {
     grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
   }
   #emojiPicker {
     grid-template-columns: repeat(6, 1fr);
+  }
+  .extras-tabs {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .tab-btn {
+    min-width: 45%;
+    font-size: 12px;
+    padding: 6px;
   }
 }
 

@@ -2130,20 +2130,23 @@
 
   // ═══════════════════ CHAT WALLPAPER ═══════════════════
   function changeWallpaper(type, customUrl) {
-    const messagesEl = els.messages;
+    const messagesEl = document.getElementById('messages') || els.messages;
+    const chatMainEl = document.getElementById('chatMain');
     if (!messagesEl) return;
     
-    const selectEl = els.wallpaperSelect;
-    const customInputEl = els.wallpaperUrlInput;
-    if (selectEl) {
-      if (selectEl.value === 'custom') {
-        if (customInputEl) customInputEl.style.display = 'block';
-      } else {
-        if (customInputEl) customInputEl.style.display = 'none';
-      }
-    }
-    
-    if (type === 'custom') {
+    const selectEl = document.getElementById('wallpaperSelect') || els.wallpaperSelect;
+    const customInputEl = document.getElementById('wallpaperUrlInput') || els.wallpaperUrlInput;
+    const selected = type !== undefined ? type : (selectEl ? selectEl.value : '');
+
+    if (selectEl && selected !== undefined) selectEl.value = selected;
+    if (customInputEl) customInputEl.style.display = selected === 'custom' ? 'block' : 'none';
+
+    // Clear all inline wallpaper styles
+    messagesEl.style.backgroundImage = '';
+    messagesEl.style.backgroundColor = '';
+    messagesEl.style.background = '';
+
+    if (selected === 'custom') {
       const url = customUrl || (customInputEl ? customInputEl.value : '') || '';
       if (url) {
         messagesEl.style.backgroundImage = `url('${url}')`;
@@ -2152,14 +2155,22 @@
         localStorage.setItem('bestieChatWallpaper', 'custom');
         localStorage.setItem('bestieChatWallpaperUrl', url);
       }
-    } else if (type) {
-      messagesEl.style.backgroundImage = 'none';
-      messagesEl.style.backgroundColor = type;
-      localStorage.setItem('bestieChatWallpaper', type);
-      localStorage.removeItem('bestieChatWallpaperUrl');
+    } else if (selected === 'gradient-cyber') {
+      messagesEl.style.background = 'linear-gradient(135deg, #0d0221 0%, #261052 50%, #150536 100%)';
+      localStorage.setItem('bestieChatWallpaper', selected);
+    } else if (selected === 'gradient-emerald') {
+      messagesEl.style.background = 'linear-gradient(135deg, #021a12 0%, #0c382b 50%, #04261c 100%)';
+      localStorage.setItem('bestieChatWallpaper', selected);
+    } else if (selected === 'gradient-sunset') {
+      messagesEl.style.background = 'linear-gradient(135deg, #1a0c16 0%, #381b30 50%, #281222 100%)';
+      localStorage.setItem('bestieChatWallpaper', selected);
+    } else if (selected === 'gradient-starry') {
+      messagesEl.style.background = 'linear-gradient(135deg, #07090f 0%, #1a2235 50%, #0a0f1e 100%)';
+      localStorage.setItem('bestieChatWallpaper', selected);
+    } else if (selected && selected.startsWith('#')) {
+      messagesEl.style.backgroundColor = selected;
+      localStorage.setItem('bestieChatWallpaper', selected);
     } else {
-      messagesEl.style.backgroundImage = '';
-      messagesEl.style.backgroundColor = '';
       localStorage.removeItem('bestieChatWallpaper');
       localStorage.removeItem('bestieChatWallpaperUrl');
     }
