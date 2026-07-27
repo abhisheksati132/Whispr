@@ -1267,11 +1267,12 @@ header {
   border-radius: 24px;
   width: 100%;
   max-width: 480px;
-  max-height: 90vh;
-  overflow-y: auto;
+  max-height: 85vh;
+  max-height: 85dvh;
   box-shadow: 0 24px 64px rgba(0,0,0,0.6);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .modal-header {
@@ -1280,6 +1281,7 @@ header {
   justify-content: space-between;
   padding: 20px 24px 16px;
   border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 .modal-header h3 {
   font-size: 16px;
@@ -1307,11 +1309,13 @@ header {
   padding: 0;
 }
 .profile-body {
-  padding: 24px;
+  padding: 20px 24px 36px;
   display: flex;
   flex-direction: column;
   gap: 16px;
   overflow-y: auto;
+  flex: 1;
+  -webkit-overflow-scrolling: touch;
 }
 .profile-header {
   display: flex;
