@@ -75,6 +75,38 @@ input, textarea, select {
   outline: none;
 }
 
+/* Universal styled inputs, textareas, and selects */
+input[type="text"],
+input[type="password"],
+input[type="date"],
+input[type="datetime-local"],
+textarea,
+select {
+  background: var(--surface) !important;
+  border: 1px solid var(--border-soft) !important;
+  border-radius: var(--radius-sm) !important;
+  color: var(--text) !important;
+  padding: 10px 14px !important;
+  font-size: 14px !important;
+  font-family: var(--font) !important;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="date"]:focus,
+input[type="datetime-local"]:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px var(--accent-glow) !important;
+}
+
+select option {
+  background: var(--panel) !important;
+  color: var(--text) !important;
+}
+
 /* Scrollbar Styling */
 ::-webkit-scrollbar {
   width: 6px;
@@ -719,14 +751,16 @@ header {
   backdrop-filter: blur(20px);
   border-top: 1px solid var(--border);
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
 }
 
 .input-row {
   display: flex;
   gap: 12px;
-  align-items: flex-end;
+  align-items: center;
+  flex: 1;
 }
 
 .input-pill {
@@ -1057,7 +1091,7 @@ header {
   padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 .profile-header {
   display: flex;
@@ -1066,14 +1100,16 @@ header {
   gap: 12px;
 }
 .profile-big-avatar {
-  width: 80px;
-  height: 80px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
   background: var(--surface2);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32px;
+  font-size: 36px;
+  border: 2px solid var(--accent);
+  margin: 0 auto 12px;
 }
 .avatar-palette {
   display: flex;
@@ -1082,15 +1118,97 @@ header {
   justify-content: center;
 }
 .avatar-opt {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: none;
-  border: 1px solid var(--border);
-  font-size: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform var(--transition), border-color var(--transition);
 }
 .avatar-opt:hover {
+  transform: scale(1.15);
   border-color: var(--accent);
+}
+
+.color-btns {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 8px;
+}
+.color-btns button {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--border-soft);
+  cursor: pointer;
+  transition: transform var(--transition), border-color var(--transition);
+}
+.color-btns button:hover {
+  transform: scale(1.15);
+  border-color: white;
+}
+
+.profile-stats {
+  display: flex;
+  gap: 12px;
+  justify-content: space-around;
+  margin-top: 16px;
+}
+.stat-pill {
+  flex: 1;
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text2);
+}
+.stat-pill span {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* Quick Options Grid */
+.quick-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  padding: 20px;
+}
+.quick-menu-grid button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--surface) !important;
+  border: 1px solid var(--border-soft) !important;
+  border-radius: 14px !important;
+  color: var(--text) !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.quick-menu-grid button:hover {
+  background: var(--surface2) !important;
+  border-color: var(--accent) !important;
+}
+.quick-menu-grid button.danger {
+  background: rgba(239,68,68,0.15) !important;
+  border-color: rgba(239,68,68,0.3) !important;
+  color: #f87171 !important;
+}
+.quick-menu-grid button.danger:hover {
+  background: rgba(239,68,68,0.25) !important;
 }
 
 /* ═══════════════════ 15. EXTRAS PANEL ═══════════════════ */
@@ -1155,6 +1273,49 @@ header {
   letter-spacing: 0.05em;
   text-transform: uppercase;
   margin-bottom: 8px;
+}
+
+.e2e-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 6px;
+}
+.e2e-row input {
+  flex: 1;
+}
+.e2e-row button {
+  padding: 10px 14px;
+  background: var(--accent);
+  border: none;
+  border-radius: 10px;
+  color: white;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.e2e-hint {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+.data-btn {
+  flex: 1;
+  padding: 10px 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+.data-btn.danger {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #f87171;
 }
 
 /* ═══════════════════ 16. CALL OVERLAY ═══════════════════ */
