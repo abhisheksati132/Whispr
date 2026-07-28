@@ -212,6 +212,7 @@ io.on('connection', (socket) => {
       const streak = mStore.recordActivity(username);
       mStore.setLastSeen(username);
 
+      const roomMeta = await mStore.getRoomMeta(currentRoom);
       const history = await mStore.getMessages(currentRoom, 100);
       const pinnedMsg = roomMeta.pinnedMessageId
         ? history.find(m => m.id === roomMeta.pinnedMessageId) || null : null;
