@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles.css?v=5400" />
+  <link rel="stylesheet" href="/styles.css?v=5500" />
 </head>
 <body>
 
@@ -40,32 +40,26 @@
       <!-- Brand -->
       <div class="login-brand">
         <div class="login-logo">
-          <img src="/icon-192.png" alt="hmmumm" width="56" height="56" style="border-radius:18px;" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" />
-          <span style="display:none; font-size:40px;">✨</span>
+          <img src="/icon-192.png" alt="hmmumm" width="44" height="44" style="border-radius:14px;" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" />
+          <span style="display:none; font-size:32px;">✨</span>
         </div>
         <h1 class="login-title">hmmumm ✨</h1>
         <p class="login-tagline">Your private space, just you two.</p>
       </div>
 
       <!-- Quick 1-Tap Re-entry (if returning user with valid JWT) -->
-      <div id="quickReentryContainer" style="display:none; margin-bottom:16px;">
-        <button id="quickReentryBtn" class="login-btn" onclick="BestieChat.quickReentry()" style="background:linear-gradient(135deg, #4338ca, #6366f1); margin-bottom:8px; width:100%;">
+      <div id="quickReentryContainer" style="display:none; margin-bottom:12px;">
+        <button id="quickReentryBtn" type="button" class="login-btn" onclick="BestieChat.quickReentry()" style="background:linear-gradient(135deg, #4338ca, #6366f1); width:100%;">
           <span id="quickReentryText">✨ Continue as Bestie</span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </button>
-        <div style="font-size:12px; color:var(--muted); text-align:center; cursor:pointer;" onclick="BestieChat.showFullLoginForm()">or log in with a different account →</div>
-      </div>
-
-      <!-- Auth Mode Toggle -->
-      <div id="authModeToggle" style="display:flex; gap:0; border-radius:12px; overflow:hidden; border:1px solid var(--border); margin-bottom:14px;">
-        <button id="authTabLogin" onclick="BestieChat.setAuthMode('login')" style="flex:1; padding:9px; font-size:0.82rem; font-weight:600; background:var(--accent); color:#fff; border:none; cursor:pointer; transition:background 0.2s;">🔑 Login</button>
-        <button id="authTabRegister" onclick="BestieChat.setAuthMode('register')" style="flex:1; padding:9px; font-size:0.82rem; font-weight:600; background:transparent; color:var(--muted); border:none; cursor:pointer; transition:background 0.2s;">✨ Register</button>
+        <div style="font-size:12px; color:var(--muted); text-align:center; cursor:pointer; margin-top:6px;" onclick="BestieChat.showFullLoginForm()">or log in with another name →</div>
       </div>
 
       <!-- Form -->
       <div class="login-form" id="loginForm">
-        <!-- Choose Avatar (register only) -->
-        <div class="login-field" id="avatarPickerField" style="display:none;">
+        <!-- Choose Avatar -->
+        <div class="login-field" id="avatarPickerField">
           <label class="login-label">Pick Avatar</label>
           <div class="login-avatar-picker">
             <button type="button" class="login-avatar-btn active" onclick="BestieChat.selectLoginAvatar('✨', this)">✨</button>
@@ -81,13 +75,13 @@
 
         <!-- Username -->
         <div class="login-field">
-          <label class="login-label" for="nameInput">@username</label>
-          <input id="nameInput" type="text" class="login-input" placeholder="e.g. priya, alex_2024…" maxlength="20" autocomplete="username" autocapitalize="none" autocorrect="off" />
+          <label class="login-label" for="nameInput">Your Name / @username</label>
+          <input id="nameInput" type="text" class="login-input" placeholder="e.g. Priya, Alex, Luna…" maxlength="20" autocomplete="username" autocapitalize="none" autocorrect="off" />
         </div>
 
         <!-- PIN -->
         <div class="login-field">
-          <label class="login-label" for="pinInput">4-Digit PIN</label>
+          <label class="login-label" for="pinInput">4-Digit PIN <span style="opacity:0.55; font-size:11px;">(Optional)</span></label>
           <input id="pinInput" type="password" inputmode="numeric" class="login-input" placeholder="••••" maxlength="4" autocomplete="current-password" />
         </div>
 
@@ -108,8 +102,8 @@
         <input id="nicknameInput" type="hidden" />
         <div id="loginError" class="login-error"></div>
 
-        <button id="joinBtn" class="login-btn" onclick="BestieChat.joinChat()">
-          <span id="joinBtnText">🔑 Login</span>
+        <button id="joinBtn" type="button" class="login-btn" onclick="BestieChat.joinChat()">
+          <span id="joinBtnText">Enter Space 🚀</span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </button>
 
@@ -961,11 +955,11 @@
 
 <!-- Scripts -->
 <script src="/socket.io/socket.io.js"></script>
-<script src="/app.js?v=5400"></script>
+<script src="/app.js?v=5500"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js?v=2400').catch(console.error);
+      navigator.serviceWorker.register('/sw.js?v=2500').catch(console.error);
     });
   }
   function forceClearAppCache() {

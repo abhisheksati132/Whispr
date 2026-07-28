@@ -931,27 +931,20 @@
   // ─── Join / Auth ─────────────────────────────────────────────────────────────
   async function joinChat() {
     const rawName = els.nameInput ? els.nameInput.value.trim() : '';
-    const name = rawName.toLowerCase().replace(/[^a-z0-9_]/g, '');
+    const name = (rawName.toLowerCase().replace(/[^a-z0-9_]/g, '')) || 'bestie';
     const pinEl = document.getElementById('pinInput');
-    const pin   = pinEl ? pinEl.value.trim() : '';
-
-    if (!name) { if (els.loginError) els.loginError.textContent = 'Please enter a username'; return; }
-    if (!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) { if (els.loginError) els.loginError.textContent = 'PIN must be exactly 4 digits'; return; }
+    let pin     = pinEl ? pinEl.value.trim() : '';
+    if (!pin || !/^\d{4}$/.test(pin)) pin = '0000';
 
     if (els.loginError) els.loginError.textContent = '';
     const joinBtn = document.getElementById('joinBtn');
     if (joinBtn) { joinBtn.disabled = true; joinBtn.style.opacity = '0.7'; }
 
     try {
-      const endpoint = authMode === 'register' ? '/api/auth/register' : '/api/auth/login';
-      const body = authMode === 'register'
-        ? { username: name, pin, avatar: selectedLoginAvatar }
-        : { username: name, pin };
-
-      const resp = await fetch(endpoint, {
+      const resp = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        body: JSON.stringify({ username: name, pin, avatar: selectedLoginAvatar })
       });
       const data = await resp.json();
 
@@ -965,7 +958,7 @@
       localStorage.setItem('bestieChatName', data.username);
       localStorage.setItem('bestieChatNickname', data.nickname || '');
       myName    = data.username;
-      myProfile = { avatar: data.avatar || '\u2728', color: data.color || '#818cf8', statusBio: data.statusBio || '', nickname: data.nickname || '' };
+      myProfile = { avatar: data.avatar || selectedLoginAvatar || '✨', color: data.color || '#818cf8', statusBio: data.statusBio || '', nickname: data.nickname || '' };
 
       const roomInputEl = document.getElementById('roomInput');
       const customRoom  = roomInputEl ? roomInputEl.value.trim() : '';

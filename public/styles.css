@@ -311,7 +311,7 @@ select option {
 
 .login-container {
   width: 100%;
-  max-width: 410px;
+  max-width: 340px;
   margin: auto;
   display: flex;
   flex-direction: column;
@@ -321,37 +321,50 @@ select option {
 
 .login-card {
   width: 100%;
-  background: rgba(19, 25, 41, 0.88);
+  background: rgba(19, 25, 41, 0.92);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 28px;
-  padding: 32px 28px;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6), 0 0 50px rgba(129, 140, 248, 0.22);
+  border-radius: 22px;
+  padding: 22px 18px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(129, 140, 248, 0.2);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 .login-card:hover {
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6), 0 0 45px rgba(129, 140, 248, 0.28);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.65), 0 0 45px rgba(129, 140, 248, 0.25);
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.login-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
 }
 
 .login-avatar-picker {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   justify-content: space-between;
-  margin-top: 6px;
+  margin-top: 2px;
   overflow-x: auto;
-  padding: 4px 2px;
+  padding: 2px 0;
 }
 .login-avatar-btn {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: var(--surface);
   border: 1px solid var(--border-soft);
-  font-size: 18px;
+  font-size: 15px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -367,15 +380,15 @@ select option {
 
 .login-invite-btn {
   width: 100%;
-  padding: 11px;
-  border-radius: 12px;
+  padding: 8px 10px;
+  border-radius: 10px;
   background: var(--surface);
   border: 1px solid var(--border-soft);
   color: var(--text2);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  margin-top: 10px;
+  margin-top: 6px;
   transition: background 0.2s, border-color 0.2s, color 0.2s;
 }
 .login-invite-btn:hover {
@@ -389,54 +402,44 @@ select option {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 6px;
+  margin-bottom: 2px;
 }
 .login-logo {
-  width: 64px;
-  height: 64px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   background: var(--surface);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32px;
+  font-size: 26px;
 }
 #login h1 {
-  font-size: 32px;
+  font-size: 22px;
   font-weight: 700;
   color: var(--text);
+  margin: 0;
 }
-.login-hint {
+.login-tagline {
   color: var(--muted);
-  font-size: 14px;
-}
-
-.input-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.input-group label {
   font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--muted);
-  font-weight: 600;
+  margin: 0;
 }
 
 #login input, #login select {
   width: 100%;
   background: var(--surface);
   border: 1px solid var(--border-soft);
-  border-radius: 12px;
-  padding: 14px 16px;
+  border-radius: 10px;
+  padding: 9px 12px;
   color: var(--text);
-  font-size: 15px;
+  font-size: 13.5px;
   transition: var(--transition);
 }
 #login input:focus, #login select:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-glow);
+  box-shadow: 0 0 0 2px var(--accent-glow);
 }
 
 #loginError {
