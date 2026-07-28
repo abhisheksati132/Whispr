@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles.css?v=4500" />
+  <link rel="stylesheet" href="/styles.css?v=5000" />
 </head>
 <body>
 
@@ -43,26 +43,65 @@
           <img src="/icon-192.png" alt="hmmumm" width="56" height="56" style="border-radius:18px;" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" />
           <span style="display:none; font-size:40px;">✨</span>
         </div>
-        <h1 class="login-title">hmmumm</h1>
+        <h1 class="login-title">hmmumm ✨</h1>
         <p class="login-tagline">Your private space, just you two.</p>
       </div>
 
+      <!-- Quick 1-Tap Re-entry (if returning user) -->
+      <div id="quickReentryContainer" style="display:none; margin-bottom:16px;">
+        <button id="quickReentryBtn" class="login-btn" onclick="BestieChat.quickReentry()" style="background:linear-gradient(135deg, #059669, #10b981); margin-bottom:8px; width:100%;">
+          <span id="quickReentryText">✨ Continue as Bestie</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+        <div style="font-size:12px; color:var(--muted); text-align:center; cursor:pointer;" onclick="BestieChat.showFullLoginForm()">or log in with another name</div>
+      </div>
+
       <!-- Form -->
-      <div class="login-form">
+      <div class="login-form" id="loginForm">
+        <!-- Choose Avatar -->
+        <div class="login-field">
+          <label class="login-label">Pick Avatar</label>
+          <div class="login-avatar-picker">
+            <button type="button" class="login-avatar-btn active" onclick="BestieChat.selectLoginAvatar('✨', this)">✨</button>
+            <button type="button" class="login-avatar-btn" onclick="BestieChat.selectLoginAvatar('🐱', this)">🐱</button>
+            <button type="button" class="login-avatar-btn" onclick="BestieChat.selectLoginAvatar('🌸', this)">🌸</button>
+            <button type="button" class="login-avatar-btn" onclick="BestieChat.selectLoginAvatar('⚡', this)">⚡</button>
+            <button type="button" class="login-avatar-btn" onclick="BestieChat.selectLoginAvatar('💎', this)">💎</button>
+            <button type="button" class="login-avatar-btn" onclick="BestieChat.selectLoginAvatar('🦊', this)">🦊</button>
+            <button type="button" class="login-avatar-btn" onclick="BestieChat.selectLoginAvatar('🍓', this)">🍓</button>
+            <button type="button" class="login-avatar-btn" onclick="BestieChat.selectLoginAvatar('🚀', this)">🚀</button>
+          </div>
+        </div>
+
         <div class="login-field">
           <label class="login-label" for="nameInput">Your name</label>
           <input id="nameInput" type="text" class="login-input" placeholder="e.g. Priya, Alex, Luna…" maxlength="20" autocomplete="off" autocapitalize="words" />
         </div>
+
+        <div class="login-field">
+          <label class="login-label" for="roomInput">Room Code <span style="opacity:0.55; font-size:11px;">(Optional)</span></label>
+          <input id="roomInput" type="text" class="login-input" placeholder="our-private-space" maxlength="30" autocomplete="off" />
+        </div>
+
         <div id="passwordField" class="login-field" style="display:none">
           <label class="login-label" for="passwordInput">Room password</label>
-          <input id="passwordInput" type="password" class="login-input" placeholder="Enter room password…" autocomplete="off" />
+          <div style="position:relative;">
+            <input id="passwordInput" type="password" class="login-input" placeholder="Enter room password…" autocomplete="off" />
+            <button type="button" onclick="BestieChat.togglePasswordVisibility()" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--muted); cursor:pointer; font-size:14px;">👁️</button>
+          </div>
         </div>
+
         <!-- nickname hidden -->
         <input id="nicknameInput" type="hidden" />
         <div id="loginError" class="login-error"></div>
+
         <button id="joinBtn" class="login-btn" onclick="BestieChat.joinChat()">
           Enter your space
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+
+        <button type="button" onclick="BestieChat.copyInviteLink()" class="login-invite-btn">
+          🔗 Copy 1-Click Invite Link
         </button>
       </div>
 
@@ -869,7 +908,7 @@
 
 <!-- Scripts -->
 <script src="/socket.io/socket.io.js"></script>
-<script src="/app.js?v=4500"></script>
+<script src="/app.js?v=5000"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {

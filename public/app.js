@@ -897,15 +897,25 @@
   }
 
   // ═══════════════════ JOIN / LEAVE ═══════════════════
+  let selectedLoginAvatar = '✨';
+  function selectLoginAvatar(emoji, btn) {
+    selectedLoginAvatar = emoji;
+    document.querySelectorAll('.login-avatar-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+  }
+
   function joinChat() {
     let name = els.nameInput ? els.nameInput.value.trim() : '';
     if (!name) name = localStorage.getItem('bestieChatName') || 'Bestie';
-    const room = 'our-private-space';
+    const roomInputEl = document.getElementById('roomInput');
+    const customRoom = roomInputEl ? roomInputEl.value.trim() : '';
+    const room = customRoom || localStorage.getItem('bestieChatRoom') || 'our-private-space';
     const nickname = els.nicknameInput ? els.nicknameInput.value.trim() : '';
     myName = name; myRoom = room;
     localStorage.setItem('bestieChatName', name);
     localStorage.setItem('bestieChatRoom', room);
     if (nickname) localStorage.setItem('bestieChatNickname', nickname);
+    if (selectedLoginAvatar) localStorage.setItem('bestieChatAvatar', selectedLoginAvatar);
     applyRoomTheme(room);
     // Hide login, show chat (use setAttribute to override any !important)
     if (els.login) els.login.setAttribute('style', 'display:none !important');
@@ -914,6 +924,39 @@
     updateSidebarMyProfile();
     const passVal = els.passwordInput ? els.passwordInput.value : '';
     if (socket) socket.emit('join', { name, room, nickname, password: passVal });
+  }
+
+  function quickReentry() {
+    joinChat();
+  }
+
+  function showFullLoginForm() {
+    const reentry = document.getElementById('quickReentryContainer');
+    const form = document.getElementById('loginForm');
+    if (reentry) reentry.style.display = 'none';
+    if (form) form.style.display = 'block';
+  }
+
+  function copyInviteLink() {
+    const roomInputEl = document.getElementById('roomInput');
+    const room = (roomInputEl && roomInputEl.value.trim()) || 'our-private-space';
+    const url = `${window.location.origin}?room=${encodeURIComponent(room)}`;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(() => {
+        showToast('✨ 1-Click Invite Link copied!');
+      }).catch(() => {
+        showToast(`Invite Link: ${url}`);
+      });
+    } else {
+      showToast(`Invite Link: ${url}`);
+    }
+  }
+
+  function togglePasswordVisibility() {
+    const input = document.getElementById('passwordInput');
+    if (input) {
+      input.type = input.type === 'password' ? 'text' : 'password';
+    }
   }
 
   function leaveChat() {
@@ -3359,7 +3402,14 @@
       initSocket();
       toggleSendMicIcons();
       if (savedName) {
-        joinChat();
+        const reentryContainer = document.getElementById('quickReentryContainer');
+        const reentryText = document.getElementById('quickReentryText');
+        const loginForm = document.getElementById('loginForm');
+        if (reentryContainer && reentryText) {
+          reentryText.textContent = `✨ Continue as ${savedName}`;
+          reentryContainer.style.display = 'block';
+          if (loginForm) loginForm.style.display = 'none';
+        }
       } else {
         // Show login page properly
         if (els.chat) els.chat.setAttribute('style', 'display:none !important');
@@ -3865,6 +3915,7 @@
     openProfile, closeProfile, selectAvatar, saveProfileStatus, saveProfileColor, saveNicknameFromProfile,
     toggleVoiceSpeed, openConnect4, closeConnect4, dropConnect4Token,
     sendQuickReply, captureDualCamera, uploadCameraFile, toggleQuickMenu,
+    selectLoginAvatar, quickReentry, showFullLoginForm, copyInviteLink, togglePasswordVisibility,
     scrollToBottom: scrollBottom
   };
 
