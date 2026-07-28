@@ -271,7 +271,8 @@ input[type="datetime-local"]:focus,
 textarea:focus,
 select:focus {
   border-color: var(--accent) !important;
-  box-shadow: 0 0 0 3px var(--accent-glow) !important;
+  box-shadow: none !important;
+  outline: none !important;
 }
 
 select option {
@@ -1042,8 +1043,8 @@ header {
   transition: border-color var(--transition), box-shadow var(--transition);
 }
 .input-pill:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-glow);
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow: none !important;
 }
 
 .pill-btn {
@@ -1399,6 +1400,14 @@ header {
   overflow-y: auto;
   flex: 1;
   -webkit-overflow-scrolling: touch;
+}
+.profile-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.profile-fields .extra-block {
+  margin-bottom: 0;
 }
 .profile-header {
   display: flex;

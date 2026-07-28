@@ -981,14 +981,33 @@
     localStorage.removeItem('bestieChatName');
     localStorage.removeItem('bestieChatRoom');
     localStorage.removeItem('bestieChatNickname');
-    if (socket) socket.disconnect();
+    localStorage.removeItem('bestieChatAvatar');
+    if (socket) {
+      try { socket.disconnect(); } catch (_) {}
+    }
     myName = '';
     myRoom = '';
     joined = false;
+    
+    // Reset inputs
+    if (els.nameInput) els.nameInput.value = '';
+    const roomInput = document.getElementById('roomInput');
+    if (roomInput) roomInput.value = '';
+
+    // Close any open modals
+    document.querySelectorAll('.modal-overlay').forEach(m => {
+      m.classList.remove('open');
+      m.style.display = 'none';
+    });
+
+    // Show full login form (hide quick reentry)
+    showFullLoginForm();
+
+    // Toggle main views
     if (els.chat) els.chat.setAttribute('style', 'display:none !important');
     if (els.login) els.login.setAttribute('style', 'display:flex !important');
+
     showToast('👋 Logged out cleanly');
-    setTimeout(() => location.reload(), 300);
   }
 
   // ═══════════════════ SEND MESSAGE ═══════════════════
