@@ -3945,7 +3945,7 @@
     const list = document.getElementById('dmList');
     if (!list) return;
     if (!rooms || !rooms.length) {
-      list.innerHTML = '<div class="dm-list-empty">No chats yet \u00b7 tap \uff0b to start one!</div>';
+      list.innerHTML = '<div class="dm-list-empty">No chats yet</div>';
       return;
     }
     list.innerHTML = rooms.map(room => {
