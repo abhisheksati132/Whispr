@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles.css?v=5600" />
+  <link rel="stylesheet" href="/styles.css?v=9000" />
 </head>
 <body>
 
@@ -66,24 +66,10 @@
           <input id="nameInput" type="text" class="login-input" placeholder="e.g. Priya, Alex, Luna…" maxlength="20" autocomplete="username" autocapitalize="none" autocorrect="off" />
         </div>
 
-        <!-- PIN -->
+        <!-- Username -->
         <div class="login-field">
-          <label class="login-label" for="pinInput">4-Digit PIN <span style="opacity:0.55; font-size:11px;">(Optional)</span></label>
-          <input id="pinInput" type="password" inputmode="numeric" class="login-input" placeholder="••••" maxlength="4" autocomplete="current-password" />
-        </div>
-
-        <!-- Room Code -->
-        <div class="login-field" id="roomField">
-          <label class="login-label" for="roomInput">Room Code <span style="opacity:0.55; font-size:11px;">(Optional)</span></label>
-          <input id="roomInput" type="text" class="login-input" placeholder="our-private-space" maxlength="30" autocomplete="off" />
-        </div>
-
-        <div id="passwordField" class="login-field" style="display:none">
-          <label class="login-label" for="passwordInput">Room password</label>
-          <div style="position:relative;">
-            <input id="passwordInput" type="password" class="login-input" placeholder="Enter room password…" autocomplete="off" />
-            <button type="button" onclick="BestieChat.togglePasswordVisibility()" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--muted); cursor:pointer; font-size:14px;">👁️</button>
-          </div>
+          <label class="login-label" for="nameInput">Your Name</label>
+          <input id="nameInput" type="text" class="login-input" placeholder="e.g. Priya, Alex, Luna…" maxlength="20" autocomplete="username" autocapitalize="words" />
         </div>
 
         <input id="nicknameInput" type="hidden" />
@@ -942,11 +928,11 @@
 
 <!-- Scripts -->
 <script src="/socket.io/socket.io.js"></script>
-<script src="/app.js?v=5600"></script>
+<script src="/app.js?v=9000"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js?v=2600').catch(console.error);
+      navigator.serviceWorker.register('/sw.js?v=9000').catch(console.error);
     });
   }
   function forceClearAppCache() {

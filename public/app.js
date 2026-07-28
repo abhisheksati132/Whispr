@@ -933,10 +933,7 @@
     const nameEl = document.getElementById('nameInput');
     const rawName = (nameEl ? nameEl.value.trim() : '') || localStorage.getItem('bestieChatName') || 'Bestie';
     const cleanName = (rawName.toLowerCase().replace(/[^a-z0-9_]/g, '')) || 'bestie';
-
-    const roomEl = document.getElementById('roomInput');
-    const customRoom = roomEl ? roomEl.value.trim() : '';
-    const room = customRoom || localStorage.getItem('bestieChatRoom') || 'our-private-space';
+    const room = 'our-private-space';
 
     myName = cleanName;
     myRoom = room;
@@ -953,13 +950,10 @@
     applyRoomTheme(room);
     updateSidebarMyProfile();
 
-    const pinEl = document.getElementById('pinInput');
-    const pinVal = (pinEl ? pinEl.value.trim() : '') || '0000';
-
     fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: cleanName, pin: pinVal })
+      body: JSON.stringify({ username: cleanName, pin: '0000' })
     })
     .then(r => r.json())
     .then(data => {

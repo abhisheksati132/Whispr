@@ -197,18 +197,10 @@ io.on('connection', (socket) => {
   // ── Join ──────────────────────────────────────────────────────────────────
   socket.on('join', async ({ name, room, nickname, password } = {}) => {
     try {
-      // Use JWT-authenticated username if available, fall back to provided name
-      username = socket.data.authenticatedUser || normalizeName(name);
-      if (!username) { socket.emit('join-error', 'Name required'); return; }
-
+      username = normalizeName(name) || socket.data.authenticatedUser || 'Bestie';
       currentRoom = normalizeRoom(room || 'our-private-space');
+
       const displayNick = normalizeNickname(nickname, username);
-
-      const roomMeta = await mStore.getRoomMeta(currentRoom);
-
-      if (CHAT_PASSWORD && password !== CHAT_PASSWORD) { socket.emit('join-error', 'Wrong password'); return; }
-      if (roomMeta.roomPassword && password !== roomMeta.roomPassword) { socket.emit('join-error', 'Incorrect room password'); return; }
-
       let profile = await mStore.getProfile(username);
       if (displayNick && displayNick !== username) {
         profile = await mStore.updateProfile(username, { nickname: displayNick });

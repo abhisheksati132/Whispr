@@ -1,5 +1,5 @@
 // Cache Version - force complete cache wipe
-const CACHE = 'bestie-v5600-flush';
+const CACHE = 'bestie-v9000-flush';
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();
