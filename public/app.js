@@ -971,6 +971,10 @@
     setTimeout(loadChatList, 800);
   }
 
+  function leaveChat() {
+    window.location.reload();
+  }
+
   function doSocketJoin() {
     if (!socket) return;
     socket.emit('join', {
