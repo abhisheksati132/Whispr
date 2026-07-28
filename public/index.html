@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles.css?v=10600" />
+  <link rel="stylesheet" href="/styles.css?v=10700" />
 </head>
 <body>
 
@@ -48,7 +48,7 @@
       </div>
 
       <!-- Quick 1-Tap Re-entry (if returning user with valid JWT) -->
-      <div id="quickReentryContainer" style="display:none; margin-bottom:12px; display:flex; flex-direction:column; gap:12px; align-items:center;">
+      <div id="quickReentryContainer" style="display:none; margin-bottom:12px; flex-direction:column; gap:12px; align-items:center;">
         <div id="quickReentryBtn" onclick="BestieChat.quickReentry()" style="font-size:16px; font-weight:600; color:var(--text); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:color 0.2s;" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color='var(--text)'">
           <span id="quickReentryText">✨ Continue as Bestie</span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
@@ -107,18 +107,7 @@
 
     <div class="sidebar-divider"></div>
 
-    <!-- DM Chat List -->
-    <div class="sidebar-chats">
-      <div class="sidebar-chats-header">
-        <span>Chats</span>
-        <button class="new-chat-btn" onclick="BestieChat.openNewChatModal()" title="New Chat">＋</button>
-      </div>
-      <div id="dmList" class="dm-list">
-        <div class="dm-list-empty">No chats yet · start a DM below</div>
-      </div>
-    </div>
 
-    <div class="sidebar-divider"></div>
 
     <!-- Streak -->
     <div id="streakBadge" class="sidebar-streak">🔥 Start a streak!</div>
@@ -130,10 +119,22 @@
 
     <!-- Navigation -->
     <nav class="sidebar-nav">
-      <button class="nav-item active" id="navItemChat" onclick="BestieChat.sidebarNavTo('chat')">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        <span>Chat</span>
-      </button>
+      <div class="nav-group">
+        <button class="nav-item active" id="navItemChat" onclick="BestieChat.sidebarNavTo('chat')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span>Chat</span>
+        </button>
+        <!-- DM Chat List (Nested under Chat) -->
+        <div class="sidebar-chats nested-chats">
+          <div class="sidebar-chats-header">
+            <span>Direct Messages</span>
+            <button class="new-chat-btn" onclick="BestieChat.openNewChatModal()" title="New Chat">＋</button>
+          </div>
+          <div id="dmList" class="dm-list">
+            <div class="dm-list-empty" style="font-size:11px; margin-top:4px;">No chats yet</div>
+          </div>
+        </div>
+      </div>
       <button class="nav-item" id="navItemSpace" onclick="BestieChat.sidebarNavTo('space')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
         <span>Our Space</span>
@@ -922,11 +923,11 @@
 
 <!-- Scripts -->
 <script src="/socket.io/socket.io.js"></script>
-<script src="/app.js?v=10600"></script>
+<script src="/app.js?v=10700"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js?v=10600').catch(console.error);
+      navigator.serviceWorker.register('/sw.js?v=10700').catch(console.error);
     });
   }
   function forceClearAppCache() {

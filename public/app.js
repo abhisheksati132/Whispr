@@ -3471,7 +3471,7 @@
         const loginForm = document.getElementById('loginForm');
         if (reentryContainer && reentryText) {
           reentryText.textContent = `✨ Continue as ${savedName}`;
-          reentryContainer.style.display = 'block';
+          reentryContainer.style.display = 'flex';
           if (loginForm) loginForm.style.display = 'none';
         }
       }
