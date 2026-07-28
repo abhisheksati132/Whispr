@@ -27,6 +27,9 @@
   // ═══════════════════ STATE ═══════════════════
   let socket, myName = '', myRoom = '', joined = false, lastDateLabel = '';
   let myProfile = {}, profiles = {}, unreadCount = 0;
+  let authToken = localStorage.getItem('bestieChatToken') || '';
+  let authMode = 'login'; // 'login' | 'register'
+  let offlineDB = null; // IndexedDB for offline message queue
   let mediaRecorder = null, recordChunks = [], recordStartTime = 0;
   let typingTimeout, heartbeatInterval, reminderInterval, countdownInterval;
   let lastTapTime = 0;
@@ -904,30 +907,120 @@
     if (btn) btn.classList.add('active');
   }
 
-  function joinChat() {
-    let name = els.nameInput ? els.nameInput.value.trim() : '';
-    if (!name) name = localStorage.getItem('bestieChatName') || 'Bestie';
-    const roomInputEl = document.getElementById('roomInput');
-    const customRoom = roomInputEl ? roomInputEl.value.trim() : '';
-    const room = customRoom || localStorage.getItem('bestieChatRoom') || 'our-private-space';
-    const nickname = els.nicknameInput ? els.nicknameInput.value.trim() : '';
-    myName = name; myRoom = room;
-    localStorage.setItem('bestieChatName', name);
-    localStorage.setItem('bestieChatRoom', room);
-    if (nickname) localStorage.setItem('bestieChatNickname', nickname);
-    if (selectedLoginAvatar) localStorage.setItem('bestieChatAvatar', selectedLoginAvatar);
-    applyRoomTheme(room);
-    // Hide login, show chat (use setAttribute to override any !important)
-    if (els.login) els.login.setAttribute('style', 'display:none !important');
-    if (els.chat)  els.chat.setAttribute('style', 'display:flex !important');
-    // Update sidebar with my name immediately
-    updateSidebarMyProfile();
-    const passVal = els.passwordInput ? els.passwordInput.value : '';
-    if (socket) socket.emit('join', { name, room, nickname, password: passVal });
+  // ─── Auth Mode Toggle ───────────────────────────────────────────────────────
+  function setAuthMode(mode) {
+    authMode = mode;
+    const loginBtn    = document.getElementById('authTabLogin');
+    const registerBtn = document.getElementById('authTabRegister');
+    const joinBtnText = document.getElementById('joinBtnText');
+    const avatarField = document.getElementById('avatarPickerField');
+    if (mode === 'register') {
+      if (loginBtn)    { loginBtn.style.background = 'transparent'; loginBtn.style.color = 'var(--muted)'; }
+      if (registerBtn) { registerBtn.style.background = 'var(--accent)'; registerBtn.style.color = '#fff'; }
+      if (joinBtnText) joinBtnText.textContent = '\u2728 Create Account';
+      if (avatarField) avatarField.style.display = 'block';
+    } else {
+      if (loginBtn)    { loginBtn.style.background = 'var(--accent)'; loginBtn.style.color = '#fff'; }
+      if (registerBtn) { registerBtn.style.background = 'transparent'; registerBtn.style.color = 'var(--muted)'; }
+      if (joinBtnText) joinBtnText.textContent = '\uD83D\uDD11 Login';
+      if (avatarField) avatarField.style.display = 'none';
+    }
   }
 
-  function quickReentry() {
-    joinChat();
+  // ─── Join / Auth ─────────────────────────────────────────────────────────────
+  async function joinChat() {
+    const rawName = els.nameInput ? els.nameInput.value.trim() : '';
+    const name = rawName.toLowerCase().replace(/[^a-z0-9_]/g, '');
+    const pinEl = document.getElementById('pinInput');
+    const pin   = pinEl ? pinEl.value.trim() : '';
+
+    if (!name) { if (els.loginError) els.loginError.textContent = 'Please enter a username'; return; }
+    if (!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) { if (els.loginError) els.loginError.textContent = 'PIN must be exactly 4 digits'; return; }
+
+    if (els.loginError) els.loginError.textContent = '';
+    const joinBtn = document.getElementById('joinBtn');
+    if (joinBtn) { joinBtn.disabled = true; joinBtn.style.opacity = '0.7'; }
+
+    try {
+      const endpoint = authMode === 'register' ? '/api/auth/register' : '/api/auth/login';
+      const body = authMode === 'register'
+        ? { username: name, pin, avatar: selectedLoginAvatar }
+        : { username: name, pin };
+
+      const resp = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await resp.json();
+
+      if (!resp.ok) {
+        if (els.loginError) els.loginError.textContent = data.error || 'Login failed';
+        return;
+      }
+
+      authToken = data.token;
+      localStorage.setItem('bestieChatToken', authToken);
+      localStorage.setItem('bestieChatName', data.username);
+      localStorage.setItem('bestieChatNickname', data.nickname || '');
+      myName    = data.username;
+      myProfile = { avatar: data.avatar || '\u2728', color: data.color || '#818cf8', statusBio: data.statusBio || '', nickname: data.nickname || '' };
+
+      const roomInputEl = document.getElementById('roomInput');
+      const customRoom  = roomInputEl ? roomInputEl.value.trim() : '';
+      myRoom = customRoom || localStorage.getItem('bestieChatRoom') || 'our-private-space';
+      localStorage.setItem('bestieChatRoom', myRoom);
+
+      applyRoomTheme(myRoom);
+      if (els.login) els.login.setAttribute('style', 'display:none !important');
+      if (els.chat)  els.chat.setAttribute('style', 'display:flex !important');
+      updateSidebarMyProfile();
+
+      if (!socket || !socket.connected) initSocket();
+      else doSocketJoin();
+
+      initOfflineDB();
+      setTimeout(loadChatList, 800);
+    } catch (err) {
+      if (els.loginError) els.loginError.textContent = 'Connection error. Please try again.';
+      console.error('joinChat error:', err);
+    } finally {
+      if (joinBtn) { joinBtn.disabled = false; joinBtn.style.opacity = ''; }
+    }
+  }
+
+  function doSocketJoin() {
+    if (!socket) return;
+    socket.emit('join', {
+      name: myName, room: myRoom,
+      nickname: els.nicknameInput ? els.nicknameInput.value.trim() : '',
+      password: els.passwordInput ? els.passwordInput.value : ''
+    });
+  }
+
+  async function quickReentry() {
+    const token = localStorage.getItem('bestieChatToken');
+    if (!token) { showFullLoginForm(); return; }
+    try {
+      const resp = await fetch('/api/auth/me', { headers: { 'Authorization': `Bearer ${token}` } });
+      if (!resp.ok) throw new Error('invalid');
+      const user = await resp.json();
+      authToken = token;
+      myName    = user.username;
+      myProfile = { avatar: user.avatar || '\u2728', color: user.color || '#818cf8', statusBio: user.statusBio || '', nickname: user.nickname || '' };
+      myRoom = localStorage.getItem('bestieChatRoom') || 'our-private-space';
+      if (els.login) els.login.setAttribute('style', 'display:none !important');
+      if (els.chat)  els.chat.setAttribute('style', 'display:flex !important');
+      updateSidebarMyProfile();
+      applyRoomTheme(myRoom);
+      if (!socket || !socket.connected) initSocket();
+      else doSocketJoin();
+      initOfflineDB();
+      setTimeout(loadChatList, 800);
+    } catch (_) {
+      localStorage.removeItem('bestieChatToken');
+      showFullLoginForm();
+    }
   }
 
   function showFullLoginForm() {
@@ -959,55 +1052,22 @@
     }
   }
 
-  function leaveChat() {
-    if (els.messages) els.messages.innerHTML = '';
-    allImageMessages = [];
-    pinnedMsg = null;
-    replyingTo = null;
-    editingMessageId = null;
-    if (els.replyBar) {
-      els.replyBar.classList.remove('open');
-      els.replyBar.style.display = 'none';
-    }
-    if (els.secretIndicator) els.secretIndicator.style.display = 'none';
-    secretMode = false;
-    clearUnread();
-    hideContextMenu();
-    joinChat();
-    showToast('✨ Chat refreshed');
-  }
-
   function logout() {
+    localStorage.removeItem('bestieChatToken');
     localStorage.removeItem('bestieChatName');
     localStorage.removeItem('bestieChatRoom');
     localStorage.removeItem('bestieChatNickname');
-    localStorage.removeItem('bestieChatAvatar');
-    if (socket) {
-      try { socket.disconnect(); } catch (_) {}
-    }
-    myName = '';
-    myRoom = '';
-    joined = false;
-    
-    // Reset inputs
+    authToken = '';
+    if (socket) { try { socket.disconnect(); } catch (_) {} socket = null; }
+    myName = ''; myRoom = ''; joined = false;
     if (els.nameInput) els.nameInput.value = '';
-    const roomInput = document.getElementById('roomInput');
-    if (roomInput) roomInput.value = '';
-
-    // Close any open modals
-    document.querySelectorAll('.modal-overlay').forEach(m => {
-      m.classList.remove('open');
-      m.style.display = 'none';
-    });
-
-    // Show full login form (hide quick reentry)
+    const pinInput = document.getElementById('pinInput');
+    if (pinInput) pinInput.value = '';
+    document.querySelectorAll('.modal-overlay').forEach(m => { m.classList.remove('open'); m.style.display = 'none'; });
     showFullLoginForm();
-
-    // Toggle main views
-    if (els.chat) els.chat.setAttribute('style', 'display:none !important');
+    if (els.chat)  els.chat.setAttribute('style', 'display:none !important');
     if (els.login) els.login.setAttribute('style', 'display:flex !important');
-
-    showToast('👋 Logged out cleanly');
+    showToast('\uD83D\uDC4B Logged out');
   }
 
   // ═══════════════════ SEND MESSAGE ═══════════════════
@@ -1632,7 +1692,10 @@
       els.loginError.textContent = 'Cannot connect to server. Is the server running?';
       return;
     }
-    socket = io({ reconnection: true, reconnectionAttempts: Infinity });
+    socket = io({ 
+      reconnection: true, reconnectionAttempts: Infinity,
+      auth: { token: authToken }
+    });
     let _reconnectDelay = 1000;
     socket.io.on('reconnect_attempt', () => {
       _reconnectDelay = Math.min(_reconnectDelay * 2, 16000);
@@ -1642,16 +1705,17 @@
 
     socket.on('connect', () => {
       setConnected(true);
-      if (joined) {
-        socket.emit('join', {
-          name: myName, room: myRoom,
-          nickname: els.nicknameInput.value.trim(),
-          password: els.passwordInput.value
-        });
-      }
+      const banner = document.getElementById('offlineBanner');
+      if (banner) banner.style.display = 'none';
+      flushOfflineQueue();
+      if (joined || (myName && myRoom)) doSocketJoin();
     });
 
-    socket.on('disconnect', () => setConnected(false));
+    socket.on('disconnect', () => {
+      setConnected(false);
+      const banner = document.getElementById('offlineBanner');
+      if (banner) banner.style.display = 'flex';
+    });
 
     socket.on('join-error', (msg) => {
       if (els.loginError) els.loginError.textContent = msg;
@@ -3248,13 +3312,6 @@
       applyNightGlow();
       buildEmojiPicker();
 
-      const savedName = localStorage.getItem('bestieChatName') || 'Bestie';
-      const savedNick = localStorage.getItem('bestieChatNickname') || '';
-      if (els.nameInput) els.nameInput.value = savedName;
-      if (savedNick && els.nicknameInput) els.nicknameInput.value = savedNick;
-
-      if (els.soundBtn) els.soundBtn.classList.toggle('active', soundEnabled());
-
       fetch('/api/config')
         .then((r) => r.json())
         .then((cfg) => {
@@ -3316,7 +3373,9 @@
       }
 
       // Input events
-      if (els.nameInput)     els.nameInput.addEventListener('keydown',     (e) => { if (e.key === 'Enter') joinChat(); });
+      if (els.nameInput) els.nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { const pinEl = document.getElementById('pinInput'); if (pinEl) pinEl.focus(); else joinChat(); } });
+      const pinInputEl = document.getElementById('pinInput');
+      if (pinInputEl) pinInputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') joinChat(); });
       if (els.passwordInput) els.passwordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') joinChat(); });
       if (els.msgInput) {
         els.msgInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) sendMessage(); });
@@ -3348,7 +3407,6 @@
       if (els.countdownDate)    els.countdownDate.addEventListener('change',  saveCountdown);
       if (els.nicknameInputChat) els.nicknameInputChat.addEventListener('input', saveNickname);
 
-      // Photo input
       if (els.photoInput) els.photoInput.addEventListener('change', (e) => {
         if (e.target.files[0]) sendPhoto(e.target.files[0]);
         e.target.value = '';
@@ -3428,12 +3486,7 @@
           reentryText.textContent = `✨ Continue as ${savedName}`;
           reentryContainer.style.display = 'block';
           if (loginForm) loginForm.style.display = 'none';
-        }
-      } else {
-        // Show login page properly
-        if (els.chat) els.chat.setAttribute('style', 'display:none !important');
-        if (els.login) els.login.setAttribute('style', 'display:flex !important');
-      }
+
       updateSidebarMyProfile();
       checkPinLock();
 
@@ -3888,6 +3941,193 @@
     }
   }
 
+  // ═══════════════════ DM CHAT LIST ═══════════════════
+  async function loadChatList() {
+    if (!authToken) return;
+    try {
+      const resp = await fetch('/api/rooms/list', { headers: { 'Authorization': `Bearer ${authToken}` } });
+      if (!resp.ok) return;
+      const rooms = await resp.json();
+      renderChatList(rooms);
+    } catch (err) { console.error('loadChatList:', err); }
+  }
+
+  function renderChatList(rooms) {
+    const list = document.getElementById('dmList');
+    if (!list) return;
+    if (!rooms || !rooms.length) {
+      list.innerHTML = '<div class="dm-list-empty">No chats yet \u00b7 tap \uff0b to start one!</div>';
+      return;
+    }
+    list.innerHTML = rooms.map(room => {
+      const name    = room.otherParticipant || room.name.replace('dm_', '').replace(/_/g, ', ');
+      const preview = room.lastMessage
+        ? `${room.lastMessage.user === myName ? 'You: ' : ''}${room.lastMessage.text || (room.lastMessage.type === 'image' ? '\uD83D\uDCF7 Photo' : room.lastMessage.type === 'voice' ? '\uD83C\uDFA4 Voice' : '\uD83D\uDCAC')}`.slice(0, 38)
+        : 'No messages yet';
+      const timeStr = room.lastActivity ? formatTimestamp(room.lastActivity) : '';
+      const badge   = room.unread > 0 ? `<div class="dm-row-badge">${room.unread}</div>` : '';
+      const active  = room.name === myRoom ? 'active' : '';
+      return `<div class="dm-row ${active}" onclick="BestieChat.switchRoom('${escapeHtml(room.name)}')">
+        <div class="dm-row-avatar">\u2728</div>
+        <div class="dm-row-info"><div class="dm-row-name">@${escapeHtml(name)}</div><div class="dm-row-preview">${escapeHtml(preview)}</div></div>
+        ${badge}
+        <div style="font-size:0.67rem;color:var(--muted);flex-shrink:0;">${timeStr}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function formatTimestamp(ts) {
+    if (!ts) return '';
+    const d = new Date(ts);
+    const now = new Date();
+    if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  }
+
+  async function switchRoom(roomName) {
+    if (!roomName || roomName === myRoom) return;
+    myRoom = roomName;
+    localStorage.setItem('bestieChatRoom', roomName);
+    if (els.messages) els.messages.innerHTML = '';
+    allMessagesCached = []; lastDateLabel = '';
+    replyingTo = null; editingMessageId = null;
+    doSocketJoin();
+    closeSidebar();
+    document.querySelectorAll('.dm-row').forEach(r => r.classList.remove('active'));
+    document.querySelectorAll('.dm-row').forEach(r => { if (r.onclick && r.getAttribute('onclick') && r.getAttribute('onclick').includes(roomName)) r.classList.add('active'); });
+  }
+
+  function openNewChatModal() {
+    const modal = document.getElementById('newChatModal');
+    if (modal) { modal.style.display = 'flex'; modal.classList.add('open'); }
+    const search = document.getElementById('newChatSearch');
+    if (search) { search.value = ''; setTimeout(() => search.focus(), 100); }
+    const results = document.getElementById('newChatResults');
+    if (results) results.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:0.82rem;padding:20px 0;">Type a username to search</div>';
+  }
+
+  function closeNewChatModal() {
+    const modal = document.getElementById('newChatModal');
+    if (modal) { modal.style.display = 'none'; modal.classList.remove('open'); }
+  }
+
+  let _dmSearchTimeout;
+  async function searchUsersForDM(query) {
+    clearTimeout(_dmSearchTimeout);
+    const results = document.getElementById('newChatResults');
+    if (!results) return;
+    if (!query || query.length < 2) {
+      results.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:0.82rem;padding:16px 0;">Type at least 2 characters</div>';
+      return;
+    }
+    _dmSearchTimeout = setTimeout(async () => {
+      try {
+        const resp = await fetch(`/api/rooms/users/search?q=${encodeURIComponent(query)}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+        if (!resp.ok) return;
+        const users = await resp.json();
+        if (!users.length) { results.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:0.82rem;padding:16px 0;">No users found</div>'; return; }
+        results.innerHTML = users.map(u =>
+          `<div class="user-result-row">
+            <div class="user-result-avatar">${u.avatar || '\u2728'}</div>
+            <div class="user-result-name">@${escapeHtml(u.username)}</div>
+            <button class="user-result-btn" onclick="BestieChat.startDMWith('${escapeHtml(u.username)}')">Message</button>
+          </div>`
+        ).join('');
+      } catch (err) { console.error('search error:', err); }
+    }, 300);
+  }
+
+  async function startDMWith(username) {
+    try {
+      const resp = await fetch('/api/rooms/dm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+        body: JSON.stringify({ targetUsername: username })
+      });
+      if (!resp.ok) { showToast('\u274C Could not start DM'); return; }
+      const { roomName } = await resp.json();
+      closeNewChatModal();
+      await switchRoom(roomName);
+      setTimeout(loadChatList, 500);
+      showToast(`\uD83D� DM started with @${username}`);
+    } catch (_) { showToast('\u274C Error starting DM'); }
+  }
+
+  // ═══════════════════ OFFLINE QUEUE ═══════════════════
+  async function initOfflineDB() {
+    if (!window.indexedDB) return;
+    return new Promise(resolve => {
+      const req = indexedDB.open('bestie-offline-v1', 1);
+      req.onupgradeneeded = e => { try { e.target.result.createObjectStore('queue', { autoIncrement: true }); } catch(_) {} };
+      req.onsuccess = e => { offlineDB = e.target.result; resolve(); };
+      req.onerror  = () => resolve();
+    });
+  }
+
+  async function queueOfflineMessage(msg) {
+    if (!offlineDB) return;
+    return new Promise(resolve => {
+      try {
+        const tx = offlineDB.transaction('queue', 'readwrite');
+        tx.objectStore('queue').add(msg);
+        tx.oncomplete = resolve; tx.onerror = resolve;
+      } catch(_) { resolve(); }
+    });
+  }
+
+  async function flushOfflineQueue() {
+    if (!offlineDB || !socket || !socket.connected) return;
+    return new Promise(resolve => {
+      try {
+        const tx   = offlineDB.transaction('queue', 'readwrite');
+        const store = tx.objectStore('queue');
+        const req   = store.openCursor();
+        req.onsuccess = e => {
+          const cursor = e.target.result;
+          if (!cursor) { resolve(); return; }
+          socket.emit('message', cursor.value);
+          cursor.delete();
+          cursor.continue();
+        };
+        req.onerror = () => resolve();
+      } catch(_) { resolve(); }
+    });
+  }
+
+  // ═══════════════════ PUSH NOTIFICATIONS ═══════════════════
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64  = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    return new Uint8Array([...rawData].map(c => c.charCodeAt(0)));
+  }
+
+  async function togglePushNotifications() {
+    const statusText = document.getElementById('pushStatusText');
+    const toggleBtn  = document.getElementById('pushToggleBtn');
+    if (!('Notification' in window)) { showToast('Push notifications not supported'); return; }
+    if (Notification.permission === 'denied') { showToast('\u26D4 Notifications blocked. Enable in browser settings.'); return; }
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') { showToast('Notifications permission denied'); return; }
+      const reg = await navigator.serviceWorker.ready;
+      const vapidResp = await fetch('/api/push-vapid-key');
+      const { publicKey } = await vapidResp.json();
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) });
+      await fetch('/api/push-subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: myName, subscription: sub.toJSON() })
+      });
+      if (statusText) statusText.textContent = '\u2705 Enabled';
+      if (toggleBtn)  toggleBtn.textContent = 'Disable';
+      localStorage.setItem('bestiePushEnabled', 'true');
+      showToast('\uD83D\uDD14 Push notifications enabled!');
+    } catch (err) {
+      showToast('Could not enable: ' + err.message);
+    }
+  }
+
   function toggleQuickMenu() {
     toggleModal('quickMenu');
   }
@@ -3912,10 +4152,7 @@
     startCall, acceptCall, endCall, toggleMuteAudio, toggleCamera,
     changeWallpaper,
     toggleAttachMenu, triggerPhotoUpload,
-
     toggleSidebar, closeSidebar, sidebarNavTo, openGamesHub, closeGamesHub,
-
-    // Ultimate Premium functions
     switchExtrasTab, changeAccent, changeSoundPack, updateE2EEKey, toggleE2EE,
     updateSharedPad, toggleAppPin, verifyPinLock, checkPinLock, toggleAudioSpeed,
     playWaveform, seekWaveform, transcribeAudio,
@@ -3934,7 +4171,10 @@
     openProfile, closeProfile, selectAvatar, saveProfileStatus, saveProfileColor, saveNicknameFromProfile,
     toggleVoiceSpeed, openConnect4, closeConnect4, dropConnect4Token,
     sendQuickReply, captureDualCamera, uploadCameraFile, toggleQuickMenu,
-    selectLoginAvatar, quickReentry, showFullLoginForm, copyInviteLink, togglePasswordVisibility,
+    // Auth
+    setAuthMode, selectLoginAvatar, quickReentry, showFullLoginForm, copyInviteLink, togglePasswordVisibility, logout,
+    // Multi-chat DMs
+    loadChatList, switchRoom, openNewChatModal, closeNewChatModal, searchUsersForDM, startDMWith,
     scrollToBottom: scrollBottom
   };
 

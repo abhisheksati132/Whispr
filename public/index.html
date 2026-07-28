@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>hmmumm ✨</title>
-  <meta name="description" content="Your private space to connect with your bestie. No accounts, no noise." />
+  <meta name="description" content="Your private space to connect with your bestie. Real accounts, real persistence." />
   <link rel="manifest" href="/manifest.json?v=900" />
   <link rel="icon" type="image/x-icon" href="/favicon.ico?v=900" />
   <link rel="shortcut icon" type="image/png" href="/icon-192.png?v=900" />
@@ -47,19 +47,25 @@
         <p class="login-tagline">Your private space, just you two.</p>
       </div>
 
-      <!-- Quick 1-Tap Re-entry (if returning user) -->
+      <!-- Quick 1-Tap Re-entry (if returning user with valid JWT) -->
       <div id="quickReentryContainer" style="display:none; margin-bottom:16px;">
         <button id="quickReentryBtn" class="login-btn" onclick="BestieChat.quickReentry()" style="background:linear-gradient(135deg, #4338ca, #6366f1); margin-bottom:8px; width:100%;">
           <span id="quickReentryText">✨ Continue as Bestie</span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </button>
-        <div style="font-size:12px; color:var(--muted); text-align:center; cursor:pointer;" onclick="BestieChat.showFullLoginForm()">or log in with another name</div>
+        <div style="font-size:12px; color:var(--muted); text-align:center; cursor:pointer;" onclick="BestieChat.showFullLoginForm()">or log in with a different account →</div>
+      </div>
+
+      <!-- Auth Mode Toggle -->
+      <div id="authModeToggle" style="display:flex; gap:0; border-radius:12px; overflow:hidden; border:1px solid var(--border); margin-bottom:14px;">
+        <button id="authTabLogin" onclick="BestieChat.setAuthMode('login')" style="flex:1; padding:9px; font-size:0.82rem; font-weight:600; background:var(--accent); color:#fff; border:none; cursor:pointer; transition:background 0.2s;">🔑 Login</button>
+        <button id="authTabRegister" onclick="BestieChat.setAuthMode('register')" style="flex:1; padding:9px; font-size:0.82rem; font-weight:600; background:transparent; color:var(--muted); border:none; cursor:pointer; transition:background 0.2s;">✨ Register</button>
       </div>
 
       <!-- Form -->
       <div class="login-form" id="loginForm">
-        <!-- Choose Avatar -->
-        <div class="login-field">
+        <!-- Choose Avatar (register only) -->
+        <div class="login-field" id="avatarPickerField">
           <label class="login-label">Pick Avatar</label>
           <div class="login-avatar-picker">
             <button type="button" class="login-avatar-btn active" onclick="BestieChat.selectLoginAvatar('✨', this)">✨</button>
@@ -73,12 +79,20 @@
           </div>
         </div>
 
+        <!-- Username -->
         <div class="login-field">
-          <label class="login-label" for="nameInput">Your name</label>
-          <input id="nameInput" type="text" class="login-input" placeholder="e.g. Priya, Alex, Luna…" maxlength="20" autocomplete="off" autocapitalize="words" />
+          <label class="login-label" for="nameInput">@username</label>
+          <input id="nameInput" type="text" class="login-input" placeholder="e.g. priya, alex_2024…" maxlength="20" autocomplete="username" autocapitalize="none" autocorrect="off" />
         </div>
 
+        <!-- PIN -->
         <div class="login-field">
+          <label class="login-label" for="pinInput">4-Digit PIN</label>
+          <input id="pinInput" type="password" inputmode="numeric" class="login-input" placeholder="••••" maxlength="4" autocomplete="current-password" />
+        </div>
+
+        <!-- Room Code -->
+        <div class="login-field" id="roomField">
           <label class="login-label" for="roomInput">Room Code <span style="opacity:0.55; font-size:11px;">(Optional)</span></label>
           <input id="roomInput" type="text" class="login-input" placeholder="our-private-space" maxlength="30" autocomplete="off" />
         </div>
@@ -91,12 +105,11 @@
           </div>
         </div>
 
-        <!-- nickname hidden -->
         <input id="nicknameInput" type="hidden" />
         <div id="loginError" class="login-error"></div>
 
         <button id="joinBtn" class="login-btn" onclick="BestieChat.joinChat()">
-          Enter your space
+          <span id="joinBtnText">🔑 Login</span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </button>
 
@@ -106,7 +119,7 @@
       </div>
 
       <!-- Footer -->
-      <p class="login-footer-text">No account needed · Private · Just you two 💜</p>
+      <p class="login-footer-text">Real accounts · Private · Chats never disappear 💜</p>
     </div>
   </div>
 </div>
@@ -123,6 +136,28 @@
     <div class="sidebar-brand">
       <span class="brand-icon">✨</span>
       <span class="brand-text">hmmumm</span>
+    </div>
+
+    <!-- My Profile Card -->
+    <div class="sidebar-profile-card" onclick="BestieChat.openProfile()" title="Edit Profile">
+      <div id="sidebarMyAvatar" class="sidebar-avatar">✨</div>
+      <div class="sidebar-info">
+        <div id="sidebarMyName" class="sidebar-profile-name">@username</div>
+        <div id="sidebarMyBio" class="sidebar-profile-bio">tap to edit profile</div>
+      </div>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <!-- DM Chat List -->
+    <div class="sidebar-chats">
+      <div class="sidebar-chats-header">
+        <span>Chats</span>
+        <button class="new-chat-btn" onclick="BestieChat.openNewChatModal()" title="New Chat">＋</button>
+      </div>
+      <div id="dmList" class="dm-list">
+        <div class="dm-list-empty">No chats yet · start a DM below</div>
+      </div>
     </div>
 
     <div class="sidebar-divider"></div>
@@ -905,6 +940,27 @@
     <div id="pinLockError" style="color:#f87171; font-size:12px; display:none; font-weight:600;">Incorrect PIN</div>
   </div>
 </div>
+
+<!-- New Chat / DM Modal -->
+<div id="newChatModal" class="modal-overlay" style="display:none" onclick="if(event.target===this) BestieChat.closeNewChatModal()">
+  <div class="modal-card" style="max-width:400px;">
+    <div class="modal-header">
+      <h3>💬 New Chat</h3>
+      <button class="modal-close" onclick="BestieChat.closeNewChatModal()">✕</button>
+    </div>
+    <div style="padding:0 20px 20px;">
+      <div style="display:flex; gap:8px; margin-bottom:14px;">
+        <input id="newChatSearch" type="text" placeholder="Search @username…" style="flex:1; padding:10px 14px; border-radius:12px; border:1px solid var(--border-soft); background:var(--surface); color:var(--text); font-size:0.88rem;" oninput="BestieChat.searchUsersForDM(this.value)" />
+      </div>
+      <div id="newChatResults" style="max-height:260px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">
+        <div style="text-align:center; color:var(--muted); font-size:0.82rem; padding:20px 0;">Type a username to search</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Offline indicator -->
+<div id="offlineBanner" style="display:none; position:fixed; bottom:80px; left:50%; transform:translateX(-50%); background:rgba(239,68,68,0.95); color:#fff; padding:8px 18px; border-radius:20px; font-size:0.82rem; font-weight:600; z-index:9999; backdrop-filter:blur(12px); box-shadow:0 4px 16px rgba(0,0,0,0.3);">📶 Offline — messages will send when reconnected</div>
 
 <!-- Scripts -->
 <script src="/socket.io/socket.io.js"></script>

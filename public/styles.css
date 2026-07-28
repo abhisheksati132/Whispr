@@ -635,6 +635,52 @@ select option {
   gap: 8px;
 }
 
+/* ── Sidebar DM Chat List ─────────────────────────────────────────── */
+.sidebar-chats { padding: 4px 0; }
+.sidebar-chats-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 16px 4px; font-size: 11px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+}
+.new-chat-btn {
+  background: var(--accent); color: #fff; border: none; border-radius: 8px;
+  width: 22px; height: 22px; font-size: 16px; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  line-height: 1; transition: background var(--transition), transform var(--transition);
+}
+.new-chat-btn:hover { background: var(--accent-hover); transform: scale(1.1); }
+.dm-list { display: flex; flex-direction: column; gap: 2px; padding: 0 6px 4px; max-height: 220px; overflow-y: auto; }
+.dm-list-empty { font-size: 0.77rem; color: var(--muted); text-align: center; padding: 10px 0; }
+.dm-row {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+  border-radius: 12px; cursor: pointer; transition: background var(--transition);
+  position: relative;
+}
+.dm-row:hover { background: var(--surface); }
+.dm-row.active { background: var(--surface2); }
+.dm-row-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.dm-row-info { flex: 1; overflow: hidden; }
+.dm-row-name { font-size: 0.82rem; font-weight: 600; color: var(--text); }
+.dm-row-preview { font-size: 0.73rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dm-row-badge {
+  background: var(--accent); color: #fff; font-size: 10px; font-weight: 700;
+  min-width: 17px; height: 17px; border-radius: 9px; display: flex; align-items: center; justify-content: center; padding: 0 4px;
+}
+
+/* ── Auth mode toggle ─────────────────────────────────────────────── */
+#authModeToggle button.active-auth-tab { background: var(--accent) !important; color: #fff !important; }
+
+/* ── New chat user result row ─────────────────────────────────────── */
+.user-result-row {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  border-radius: 12px; cursor: pointer; background: var(--surface);
+  transition: background var(--transition);
+}
+.user-result-row:hover { background: var(--surface2); }
+.user-result-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.user-result-name { font-size: 0.88rem; font-weight: 600; color: var(--text); }
+.user-result-btn { margin-left: auto; background: var(--accent); color: #fff; border: none; padding: 5px 12px; border-radius: 8px; font-size: 0.78rem; font-weight: 600; cursor: pointer; }
+
 .sidebar-footer {
   margin-top: auto;
   padding: 12px;
