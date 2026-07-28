@@ -3460,6 +3460,7 @@
 
       initSocket();
       toggleSendMicIcons();
+      const savedName = localStorage.getItem('bestieChatName') || '';
       if (savedName) {
         const reentryContainer = document.getElementById('quickReentryContainer');
         const reentryText = document.getElementById('quickReentryText');
@@ -3468,6 +3469,8 @@
           reentryText.textContent = `✨ Continue as ${savedName}`;
           reentryContainer.style.display = 'block';
           if (loginForm) loginForm.style.display = 'none';
+        }
+      }
 
       updateSidebarMyProfile();
       checkPinLock();
