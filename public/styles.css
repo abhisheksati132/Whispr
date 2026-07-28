@@ -1842,11 +1842,18 @@ header {
   font-size: 14px;
   animation: slideUp 0.3s ease;
 }
+.toast.hiding {
+  animation: slideDown 0.3s ease forwards;
+}
 
 /* ═══════════════════ 20. ANIMATIONS ═══════════════════ */
 @keyframes slideUp { 
   from { opacity: 0; transform: translateY(10px); } 
   to { opacity: 1; transform: translateY(0); } 
+}
+@keyframes slideDown { 
+  from { opacity: 1; transform: translateY(0); } 
+  to { opacity: 0; transform: translateY(10px); } 
 }
 @keyframes fadeIn { 
   from { opacity: 0; } 
