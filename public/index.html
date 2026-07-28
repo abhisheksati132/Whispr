@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles.css?v=9000" />
+  <link rel="stylesheet" href="/styles.css?v=9999" />
 </head>
 <body>
 
@@ -59,12 +59,6 @@
       <!-- Form -->
       <div class="login-form" id="loginForm">
 
-
-        <!-- Username -->
-        <div class="login-field">
-          <label class="login-label" for="nameInput">Your Name / @username</label>
-          <input id="nameInput" type="text" class="login-input" placeholder="e.g. Priya, Alex, Luna…" maxlength="20" autocomplete="username" autocapitalize="none" autocorrect="off" />
-        </div>
 
         <!-- Username -->
         <div class="login-field">
@@ -928,11 +922,11 @@
 
 <!-- Scripts -->
 <script src="/socket.io/socket.io.js"></script>
-<script src="/app.js?v=9000"></script>
+<script src="/app.js?v=9999"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js?v=9000').catch(console.error);
+      navigator.serviceWorker.register('/sw.js?v=9999').catch(console.error);
     });
   }
   function forceClearAppCache() {
