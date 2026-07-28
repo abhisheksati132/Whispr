@@ -23,13 +23,27 @@ const JWT_SECRET    = process.env.JWT_SECRET || 'fallback-secret-change-me';
   const uri = process.env.MONGODB_URI;
   if (uri) {
     try {
-      await mongoose.connect(uri, { serverSelectionTimeoutMS: 8000 });
-      console.log('✅ MongoDB connected');
+      console.log('\n=============================================');
+      console.log('🔄 Attempting to connect to MongoDB...');
+      console.log('🔗 URI provided: ', uri.substring(0, 20) + '... (hidden for security)');
+      await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
+      console.log('✅ MongoDB connected successfully!');
+      console.log('=============================================\n');
     } catch (err) {
-      console.error('❌ MongoDB connection failed:', err.message);
+      console.error('\n=============================================');
+      console.error('❌ MONGODB CONNECTION FATAL ERROR:');
+      console.error(err.message);
+      console.error('---------------------------------------------');
+      console.error('👉 If this says "bad auth" -> Your database password in the URL is wrong or has special characters (like @ or #) that need to be URL encoded.');
+      console.error('👉 If this says "querySrv ENOTFOUND" -> The cluster name in your URL is wrong.');
+      console.error('👉 If this says "timeout" -> Your MongoDB Atlas Network Access (IP Whitelist) is NOT set to 0.0.0.0/0. Railway IPs change, so you MUST allow access from anywhere!');
+      console.error('=============================================\n');
     }
   } else {
-    console.warn('⚠️  MONGODB_URI not set — data will not persist across restarts');
+    console.warn('\n=============================================');
+    console.warn('⚠️  NO MONGODB_URI FOUND in environment variables!');
+    console.warn('⚠️  Data will NOT persist across server restarts.');
+    console.warn('=============================================\n');
   }
 })();
 
