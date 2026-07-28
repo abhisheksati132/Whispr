@@ -11,11 +11,13 @@ const Message = require('./models/Message');
 const Room    = require('./models/Room');
 const PushSub = require('./models/PushSub');
 
-// ── In-memory caches ────────────────────────────────────────────────────────
+// ── In-memory caches (Fallback when no MongoDB) ──────────────────────────────
 const profileCache  = new Map(); // username → profile obj
 const lastSeenCache = new Map(); // username → timestamp
 const feelingsCache = new Map(); // username → feeling obj
 const activityCache = new Map(); // username → { date, streak }
+const memRooms      = new Map(); // roomName → room obj
+const memMessages   = new Map(); // roomName → array of messages
 
 // ── MongoDB connection guard ─────────────────────────────────────────────────
 function isConnected() {
@@ -35,8 +37,9 @@ const FEELINGS = {
 };
 
 // ── Default room meta ────────────────────────────────────────────────────────
-function defaultRoomMeta() {
+function defaultRoomMeta(roomName = '') {
   return {
+    name: roomName,
     mood: '', jokes: [], countdown: {}, pinnedMessageId: null,
     disappearingTimer: 0, roomPassword: '', messageCount: 0,
     milestonesHit: [], readBy: {}, diary: [], bucketList: [],
@@ -48,7 +51,10 @@ function defaultRoomMeta() {
 // ── Room operations ──────────────────────────────────────────────────────────
 async function getRoomMeta(roomName) {
   if (!roomName) return defaultRoomMeta();
-  if (!isConnected()) return defaultRoomMeta();
+  if (!isConnected()) {
+    if (!memRooms.has(roomName)) memRooms.set(roomName, defaultRoomMeta(roomName));
+    return memRooms.get(roomName);
+  }
   let room = await Room.findOne({ name: roomName }).lean();
   if (!room) {
     const created = await Room.create({ name: roomName });
@@ -58,7 +64,12 @@ async function getRoomMeta(roomName) {
 }
 
 async function updateRoomMeta(roomName, updates) {
-  if (!roomName || !isConnected()) return;
+  if (!roomName) return;
+  if (!isConnected()) {
+    if (!memRooms.has(roomName)) memRooms.set(roomName, defaultRoomMeta(roomName));
+    Object.assign(memRooms.get(roomName), updates, { lastActivity: Date.now() });
+    return;
+  }
   await Room.findOneAndUpdate(
     { name: roomName },
     { $set: { ...updates, lastActivity: Date.now() } },
@@ -68,7 +79,9 @@ async function updateRoomMeta(roomName, updates) {
 
 // ── Message operations ───────────────────────────────────────────────────────
 async function getMessages(roomName, limit = 100) {
-  if (!isConnected()) return [];
+  if (!isConnected()) {
+    return (memMessages.get(roomName) || []).slice(-limit);
+  }
   return Message.find({ room: roomName })
     .sort({ time: -1 }).limit(limit).lean().then(r => r.reverse());
 }
@@ -81,9 +94,26 @@ async function addMessage(roomName, msgData) {
     ...msgData,
     time: Date.now(),
     reactions: {},
+    room: roomName
   };
 
-  if (!isConnected()) return { message, milestone: null };
+  if (!isConnected()) {
+    if (!memMessages.has(roomName)) memMessages.set(roomName, []);
+    memMessages.get(roomName).push(message);
+    const count = memMessages.get(roomName).length;
+    if (!memRooms.has(roomName)) memRooms.set(roomName, defaultRoomMeta(roomName));
+    const room = memRooms.get(roomName);
+    room.messageCount = count;
+    room.lastActivity = Date.now();
+    
+    const milestone = MILESTONES.find(m => m === count && !(room.milestonesHit || []).includes(m));
+    if (milestone) {
+      if (!room.milestonesHit) room.milestonesHit = [];
+      room.milestonesHit.push(milestone);
+      return { message, milestone };
+    }
+    return { message, milestone: null };
+  }
 
   await Message.create({ ...message, room: roomName });
   const count = await Message.countDocuments({ room: roomName });
@@ -104,8 +134,13 @@ async function addMessage(roomName, msgData) {
 }
 
 async function editMessage(roomName, messageId, text) {
-  if (!isConnected()) return null;
   const editedAt = Date.now();
+  if (!isConnected()) {
+    const msgs = memMessages.get(roomName) || [];
+    const msg = msgs.find(m => m.id === messageId);
+    if (msg) { msg.text = text; msg.editedAt = editedAt; return msg; }
+    return null;
+  }
   return Message.findOneAndUpdate(
     { id: messageId, room: roomName },
     { $set: { text, editedAt } },
@@ -114,7 +149,12 @@ async function editMessage(roomName, messageId, text) {
 }
 
 async function deleteMessage(roomName, messageId) {
-  if (!isConnected()) return;
+  if (!isConnected()) {
+    const msgs = memMessages.get(roomName) || [];
+    const msg = msgs.find(m => m.id === messageId);
+    if (msg) { msg.deleted = true; msg.text = '🗑️ Message deleted'; msg.url = ''; }
+    return;
+  }
   await Message.findOneAndUpdate(
     { id: messageId, room: roomName },
     { $set: { deleted: true, text: '🗑️ Message deleted', url: '' } }
@@ -122,7 +162,16 @@ async function deleteMessage(roomName, messageId) {
 }
 
 async function clearHistory(roomName) {
-  if (!isConnected()) return;
+  if (!isConnected()) {
+    memMessages.set(roomName, []);
+    if (memRooms.has(roomName)) {
+      const room = memRooms.get(roomName);
+      room.messageCount = 0;
+      room.milestonesHit = [];
+      room.pinnedMessageId = null;
+    }
+    return;
+  }
   await Message.deleteMany({ room: roomName });
   await Room.findOneAndUpdate({ name: roomName }, {
     $set: { messageCount: 0, milestonesHit: [], pinnedMessageId: null }
@@ -130,7 +179,11 @@ async function clearHistory(roomName) {
 }
 
 async function pinMessage(roomName, messageId) {
-  if (!isConnected()) return;
+  if (!isConnected()) {
+    if (!memRooms.has(roomName)) memRooms.set(roomName, defaultRoomMeta(roomName));
+    memRooms.get(roomName).pinnedMessageId = messageId;
+    return;
+  }
   await Room.findOneAndUpdate(
     { name: roomName },
     { $set: { pinnedMessageId: messageId } },
@@ -139,12 +192,24 @@ async function pinMessage(roomName, messageId) {
 }
 
 async function findMessage(roomName, messageId) {
-  if (!isConnected()) return null;
+  if (!isConnected()) {
+    const msgs = memMessages.get(roomName) || [];
+    return msgs.find(m => m.id === messageId) || null;
+  }
   return Message.findOne({ id: messageId, room: roomName }).lean();
 }
 
 async function updateReadReceipt(roomName, username, messageId) {
-  if (!isConnected()) return {};
+  if (!isConnected()) {
+    const msgs = memMessages.get(roomName) || [];
+    const msg = msgs.find(m => m.id === messageId);
+    if (!msg) return {};
+    if (!memRooms.has(roomName)) memRooms.set(roomName, defaultRoomMeta(roomName));
+    const room = memRooms.get(roomName);
+    if (!room.readBy) room.readBy = {};
+    room.readBy[username] = msg.time;
+    return room.readBy;
+  }
   const msg = await Message.findOne({ id: messageId, room: roomName }).lean();
   if (!msg) return {};
   const update = {};
@@ -155,7 +220,22 @@ async function updateReadReceipt(roomName, username, messageId) {
 }
 
 async function updateMessageReaction(roomName, messageId, emoji, username, add) {
-  if (!isConnected()) return null;
+  if (!isConnected()) {
+    const msgs = memMessages.get(roomName) || [];
+    const msg = msgs.find(m => m.id === messageId);
+    if (!msg) return null;
+    if (!msg.reactions) msg.reactions = {};
+    if (!msg.reactions[emoji]) msg.reactions[emoji] = [];
+    
+    const idx = msg.reactions[emoji].indexOf(username);
+    if (add === false || idx !== -1) {
+      msg.reactions[emoji] = msg.reactions[emoji].filter(u => u !== username);
+      if (msg.reactions[emoji].length === 0) delete msg.reactions[emoji];
+    } else {
+      msg.reactions[emoji].push(username);
+    }
+    return msg;
+  }
   const msg = await Message.findOne({ id: messageId, room: roomName });
   if (!msg) return null;
   if (!msg.reactions) msg.reactions = {};
