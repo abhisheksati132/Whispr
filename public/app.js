@@ -929,58 +929,52 @@
   }
 
   // ─── Join / Auth ─────────────────────────────────────────────────────────────
-  async function joinChat() {
-    const rawName = els.nameInput ? els.nameInput.value.trim() : '';
-    const name = (rawName.toLowerCase().replace(/[^a-z0-9_]/g, '')) || 'bestie';
+  function joinChat() {
+    const nameEl = document.getElementById('nameInput');
+    const rawName = (nameEl ? nameEl.value.trim() : '') || localStorage.getItem('bestieChatName') || 'Bestie';
+    const cleanName = (rawName.toLowerCase().replace(/[^a-z0-9_]/g, '')) || 'bestie';
+
+    const roomEl = document.getElementById('roomInput');
+    const customRoom = roomEl ? roomEl.value.trim() : '';
+    const room = customRoom || localStorage.getItem('bestieChatRoom') || 'our-private-space';
+
+    myName = cleanName;
+    myRoom = room;
+
+    localStorage.setItem('bestieChatName', cleanName);
+    localStorage.setItem('bestieChatRoom', room);
+
+    // Instantly hide login and show chat space
+    const loginDiv = document.getElementById('login');
+    const chatDiv  = document.getElementById('chat');
+    if (loginDiv) loginDiv.setAttribute('style', 'display:none !important');
+    if (chatDiv)  chatDiv.setAttribute('style', 'display:flex !important');
+
+    applyRoomTheme(room);
+    updateSidebarMyProfile();
+
     const pinEl = document.getElementById('pinInput');
-    let pin     = pinEl ? pinEl.value.trim() : '';
-    if (!pin || !/^\d{4}$/.test(pin)) pin = '0000';
+    const pinVal = (pinEl ? pinEl.value.trim() : '') || '0000';
 
-    if (els.loginError) els.loginError.textContent = '';
-    const joinBtn = document.getElementById('joinBtn');
-    if (joinBtn) { joinBtn.disabled = true; joinBtn.style.opacity = '0.7'; }
-
-    try {
-      const resp = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: name, pin, avatar: selectedLoginAvatar })
-      });
-      const data = await resp.json();
-
-      if (!resp.ok) {
-        if (els.loginError) els.loginError.textContent = data.error || 'Login failed';
-        return;
+    fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: cleanName, pin: pinVal })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data && data.token) {
+        authToken = data.token;
+        localStorage.setItem('bestieChatToken', authToken);
       }
+    })
+    .catch(() => {});
 
-      authToken = data.token;
-      localStorage.setItem('bestieChatToken', authToken);
-      localStorage.setItem('bestieChatName', data.username);
-      localStorage.setItem('bestieChatNickname', data.nickname || '');
-      myName    = data.username;
-      myProfile = { avatar: data.avatar || selectedLoginAvatar || '✨', color: data.color || '#818cf8', statusBio: data.statusBio || '', nickname: data.nickname || '' };
+    if (!socket || !socket.connected) initSocket();
+    else doSocketJoin();
 
-      const roomInputEl = document.getElementById('roomInput');
-      const customRoom  = roomInputEl ? roomInputEl.value.trim() : '';
-      myRoom = customRoom || localStorage.getItem('bestieChatRoom') || 'our-private-space';
-      localStorage.setItem('bestieChatRoom', myRoom);
-
-      applyRoomTheme(myRoom);
-      if (els.login) els.login.setAttribute('style', 'display:none !important');
-      if (els.chat)  els.chat.setAttribute('style', 'display:flex !important');
-      updateSidebarMyProfile();
-
-      if (!socket || !socket.connected) initSocket();
-      else doSocketJoin();
-
-      initOfflineDB();
-      setTimeout(loadChatList, 800);
-    } catch (err) {
-      if (els.loginError) els.loginError.textContent = 'Connection error. Please try again.';
-      console.error('joinChat error:', err);
-    } finally {
-      if (joinBtn) { joinBtn.disabled = false; joinBtn.style.opacity = ''; }
-    }
+    initOfflineDB();
+    setTimeout(loadChatList, 800);
   }
 
   function doSocketJoin() {
