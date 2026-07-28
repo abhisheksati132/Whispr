@@ -901,10 +901,11 @@
 
   // ═══════════════════ JOIN / LEAVE ═══════════════════
   let selectedLoginAvatar = '✨';
-  function selectLoginAvatar(emoji, btn) {
+  function selectLoginAvatar(emoji, btnEl) {
     selectedLoginAvatar = emoji;
     document.querySelectorAll('.login-avatar-btn').forEach(b => b.classList.remove('active'));
-    if (btn) btn.classList.add('active');
+    const target = btnEl || (window.event && (window.event.currentTarget || window.event.target));
+    if (target && target.classList) target.classList.add('active');
   }
 
   // ─── Auth Mode Toggle ───────────────────────────────────────────────────────
@@ -917,12 +918,12 @@
     if (mode === 'register') {
       if (loginBtn)    { loginBtn.style.background = 'transparent'; loginBtn.style.color = 'var(--muted)'; }
       if (registerBtn) { registerBtn.style.background = 'var(--accent)'; registerBtn.style.color = '#fff'; }
-      if (joinBtnText) joinBtnText.textContent = '\u2728 Create Account';
+      if (joinBtnText) joinBtnText.textContent = '✨ Create Account';
       if (avatarField) avatarField.style.display = 'block';
     } else {
       if (loginBtn)    { loginBtn.style.background = 'var(--accent)'; loginBtn.style.color = '#fff'; }
       if (registerBtn) { registerBtn.style.background = 'transparent'; registerBtn.style.color = 'var(--muted)'; }
-      if (joinBtnText) joinBtnText.textContent = '\uD83D\uDD11 Login';
+      if (joinBtnText) joinBtnText.textContent = '🔑 Login';
       if (avatarField) avatarField.style.display = 'none';
     }
   }

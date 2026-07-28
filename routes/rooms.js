@@ -1,12 +1,17 @@
 'use strict';
-const express = require('express');
-const router  = express.Router();
-const jwt     = require('jsonwebtoken');
-const Room    = require('../models/Room');
-const Message = require('../models/Message');
-const User    = require('../models/User');
+const express  = require('express');
+const router   = express.Router();
+const jwt      = require('jsonwebtoken');
+const mongoose = require('mongoose');
+const Room     = require('../models/Room');
+const Message  = require('../models/Message');
+const User     = require('../models/User');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-me';
+
+function isMongoReady() {
+  return mongoose.connection.readyState === 1;
+}
 
 function authMw(req, res, next) {
   try {
@@ -22,6 +27,7 @@ function authMw(req, res, next) {
 // GET /api/rooms/list — all rooms the user participates in
 router.get('/list', authMw, async (req, res) => {
   try {
+    if (!isMongoReady()) return res.json([]);
     const rooms = await Room.find({
       $or: [{ participants: req.username }, { type: 'public' }]
     }).sort({ lastActivity: -1 }).limit(30).lean();
@@ -64,16 +70,17 @@ router.post('/dm', authMw, async (req, res) => {
   try {
     const { targetUsername } = req.body;
     if (!targetUsername) return res.status(400).json({ error: 'targetUsername required' });
-    const target = await User.findOne({ username: targetUsername.toLowerCase() }).lean();
-    if (!target) return res.status(404).json({ error: 'User not found' });
+    const targetClean = targetUsername.toLowerCase();
 
-    const sorted = [req.username, targetUsername.toLowerCase()].sort();
+    const sorted = [req.username, targetClean].sort();
     const dmName = `dm_${sorted.join('_')}`;
 
-    let room = await Room.findOne({ name: dmName }).lean();
-    if (!room) {
-      room = await Room.create({ name: dmName, type: 'dm', participants: sorted, lastActivity: Date.now() });
-      room = room.toObject ? room.toObject() : room;
+    if (isMongoReady()) {
+      let room = await Room.findOne({ name: dmName }).lean();
+      if (!room) {
+        room = await Room.create({ name: dmName, type: 'dm', participants: sorted, lastActivity: Date.now() });
+        room = room.toObject ? room.toObject() : room;
+      }
     }
     res.json({ roomName: dmName, participants: sorted });
   } catch (err) {
@@ -86,6 +93,7 @@ router.get('/users/search', authMw, async (req, res) => {
   try {
     const { q } = req.query;
     if (!q || q.length < 2) return res.json([]);
+    if (!isMongoReady()) return res.json([]);
     const users = await User.find({
       username: { $regex: q.toLowerCase(), $options: 'i' }
     }).limit(8).select('username avatar color').lean();
@@ -99,6 +107,7 @@ router.get('/users/search', authMw, async (req, res) => {
 router.get('/:roomName/messages', authMw, async (req, res) => {
   try {
     const { roomName } = req.params;
+    if (!isMongoReady()) return res.json([]);
     const query = { room: roomName };
     if (req.query.before) query.time = { $lt: parseInt(req.query.before) };
     const messages = await Message.find(query).sort({ time: -1 }).limit(50).lean();

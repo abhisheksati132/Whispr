@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles.css?v=5200" />
+  <link rel="stylesheet" href="/styles.css?v=5300" />
 </head>
 <body>
 
@@ -65,7 +65,7 @@
       <!-- Form -->
       <div class="login-form" id="loginForm">
         <!-- Choose Avatar (register only) -->
-        <div class="login-field" id="avatarPickerField">
+        <div class="login-field" id="avatarPickerField" style="display:none;">
           <label class="login-label">Pick Avatar</label>
           <div class="login-avatar-picker">
             <button type="button" class="login-avatar-btn active" onclick="BestieChat.selectLoginAvatar('✨', this)">✨</button>
@@ -964,11 +964,11 @@
 
 <!-- Scripts -->
 <script src="/socket.io/socket.io.js"></script>
-<script src="/app.js?v=5200"></script>
+<script src="/app.js?v=5300"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js?v=2200').catch(console.error);
+      navigator.serviceWorker.register('/sw.js?v=2300').catch(console.error);
     });
   }
   function forceClearAppCache() {
