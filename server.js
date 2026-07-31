@@ -103,16 +103,21 @@ app.post('/api/push-unsubscribe', async (req, res) => {
 app.get('/api/link-preview', async (req, res) => {
   const targetUrl = req.query.url;
   if (!targetUrl) return res.status(400).json({ error: 'Missing url' });
+  let timer;
   try {
     const parsedUrl = new URL(targetUrl);
     if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') return res.status(400).json({ error: 'Invalid protocol' });
     const host = parsedUrl.hostname.toLowerCase();
-    if (host === 'localhost' || host === '127.0.0.1' || host.endsWith('.local')) return res.status(400).json({ error: 'Disallowed' });
+    if (
+      host === 'localhost' || host === '127.0.0.1' || host === '::1' || host.endsWith('.local') ||
+      /^10\./.test(host) || /^172\.(1[6-9]|2[0-9]|3[01])\./.test(host) || /^192\.168\./.test(host) || /^169\.254\./.test(host)
+    ) {
+      return res.status(400).json({ error: 'Disallowed host' });
+    }
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 3000);
-    const response = await fetch(targetUrl, { signal: ctrl.signal, headers: { 'User-Agent': 'BestieChatBot/1.0' } });
-    clearTimeout(timer);
-    if (!response.ok) return res.status(response.status).json({ error: 'Failed' });
+    timer = setTimeout(() => ctrl.abort(), 3000);
+    const response = await fetch(targetUrl, { signal: ctrl.signal, redirect: 'manual', headers: { 'User-Agent': 'BestieChatBot/1.0' } });
+    if (!response.ok) return res.status(response.status).json({ error: 'Failed to fetch preview' });
     const html = await response.text();
     const getMeta = (n) => {
       const m = html.match(new RegExp(`<meta[^>]+(?:property|name)=["']${n}["'][^>]+content=["']([^"']+)["']`, 'i'));
@@ -123,7 +128,11 @@ app.get('/api/link-preview', async (req, res) => {
     let title = getMeta('og:title') || getMeta('twitter:title');
     if (!title) { const tm = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i); title = tm ? tm[1].trim() : ''; }
     res.json({ title: title || parsedUrl.hostname, description: getMeta('og:description') || getMeta('description') || '', image: getMeta('og:image') || getMeta('twitter:image') || '', url: targetUrl });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    res.status(500).json({ error: 'Could not generate link preview' });
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 });
 
 // ── File upload ───────────────────────────────────────────────────────────────
@@ -211,6 +220,16 @@ io.on('connection', (socket) => {
   // ── Join ──────────────────────────────────────────────────────────────────
   socket.on('join', async ({ name, room, nickname, password } = {}) => {
     try {
+      if (currentRoom) {
+        socket.leave(currentRoom);
+        const oldUsers = getRoomUsers(currentRoom);
+        if (oldUsers) {
+          oldUsers.delete(socket.id);
+          broadcastPresence(currentRoom);
+          if (oldUsers.size === 0) rooms.delete(currentRoom);
+        }
+      }
+
       username = normalizeName(name) || socket.data.authenticatedUser || 'Bestie';
       currentRoom = normalizeRoom(room || 'our-private-space');
 
@@ -475,20 +494,20 @@ io.on('connection', (socket) => {
 
   // ── Poll vote ─────────────────────────────────────────────────────────────
   socket.on('poll-vote', async ({ messageId, option }) => {
-    if (!username || !currentRoom) return;
-    const msg = await mStore.findMessage(currentRoom, messageId);
-    if (!msg || msg.type !== 'poll') return;
-    const votes = msg.votes || {};
-    votes[username] = option;
-    // Update votes in DB
-    const { Message: MsgModel } = require('./models/Message');
-    // Using mongoose directly
-    const mongoose = require('mongoose');
-    if (mongoose.connection.readyState === 1) {
+    try {
+      if (!username || !currentRoom) return;
+      const msg = await mStore.findMessage(currentRoom, messageId);
+      if (!msg || msg.type !== 'poll') return;
+      const votes = msg.votes || {};
+      votes[username] = option;
       const MsgDoc = require('./models/Message');
-      await MsgDoc.findOneAndUpdate({ id: messageId }, { $set: { votes } });
-    }
-    io.to(currentRoom).emit('poll-update', { messageId, votes });
+      if (mongoose.connection.readyState === 1) {
+        await MsgDoc.findOneAndUpdate({ id: messageId }, { $set: { votes } });
+      } else {
+        msg.votes = votes;
+      }
+      io.to(currentRoom).emit('poll-update', { messageId, votes });
+    } catch (err) { console.error('poll-vote error:', err); }
   });
 
   // ── WebRTC ────────────────────────────────────────────────────────────────
@@ -556,7 +575,9 @@ io.on('connection', (socket) => {
   // ── Disconnect ────────────────────────────────────────────────────────────
   socket.on('disconnect', () => {
     if (username && currentRoom) {
-      getRoomUsers(currentRoom).delete(socket.id);
+      const roomUsers = getRoomUsers(currentRoom);
+      roomUsers.delete(socket.id);
+      if (roomUsers.size === 0) rooms.delete(currentRoom);
       mStore.setLastSeen(username);
       socket.to(currentRoom).emit('system', randomLeaveMessage(username));
       broadcastPresence(currentRoom);

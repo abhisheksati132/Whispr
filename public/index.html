@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles.css?v=11100" />
+  <link rel="stylesheet" href="/styles.css?v=11200" />
 </head>
 <body>
 
@@ -66,6 +66,11 @@
           <input id="nameInput" type="text" class="login-input" placeholder="e.g. Priya, Alex, Luna…" maxlength="20" autocomplete="username" autocapitalize="words" />
         </div>
 
+        <div id="passwordField" class="login-field" style="display:none">
+          <label class="login-label" for="passwordInput">Room Password</label>
+          <input id="passwordInput" type="password" class="login-input" placeholder="Enter password…" autocomplete="current-password" />
+        </div>
+
         <input id="nicknameInput" type="hidden" />
         <div id="loginError" class="login-error"></div>
 
@@ -77,13 +82,15 @@
         <button type="button" onclick="BestieChat.copyInviteLink()" class="login-invite-btn">
           🔗 Copy 1-Click Invite Link
         </button>
+
+        <button id="installBtn" type="button" style="display:none; margin-top:10px;" class="login-btn">Install App 📱</button>
       </div>
     </div>
   </div>
 </div>
 
 <!-- ═══════════════════ CHAT APP ═══════════════════ -->
-<div id="chat" style="display:flex !important;">
+<div id="chat">
 
   <!-- Sidebar overlay for mobile -->
   <div id="sidebarOverlay" onclick="BestieChat.closeSidebar()"></div>
@@ -94,6 +101,7 @@
     <div class="sidebar-brand">
       <span class="brand-icon">✨</span>
       <span class="brand-text">hmmumm</span>
+      <span id="unreadBadge" class="unread-badge" style="display:none; background:#ec4899; color:#fff; font-size:11px; font-weight:700; border-radius:10px; padding:2px 8px; margin-left:auto;">0</span>
     </div>
 
     <!-- My Profile Card -->
@@ -298,8 +306,8 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
         </span>
         <span class="attach-label">Camera</span>
-        <input type="file" id="cameraFileInput" accept="image/*" capture="environment" style="display:none" onchange="BestieChat.uploadCameraFile(this)" />
       </button>
+      <input type="file" id="cameraFileInput" accept="image/*" capture="environment" style="display:none" onchange="BestieChat.uploadCameraFile(this)" />
       <button class="attach-item" onclick="BestieChat.openDoodle()" title="Doodle">
         <span class="attach-icon" style="background:#3b82f6">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
@@ -351,7 +359,7 @@
     </div>
 
     <!-- Sticker Panel -->
-    <div id="stickerPanel" class="sticker-panel" style="display:none; position:absolute; bottom:80px; left:16px; background:var(--panel); border:1px solid var(--border-soft); border-radius:18px; padding:14px; width:320px; max-height:300px; z-index:100; box-shadow:var(--shadow);">
+    <div id="stickerPanel" class="sticker-panel" style="display:none; position:absolute; bottom:80px; left:16px; background:var(--panel); border:1px solid var(--border-soft); border-radius:18px; padding:14px; max-width:calc(100vw - 32px); width:320px; max-height:300px; z-index:100; box-shadow:var(--shadow);">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
         <span style="font-size:13px; font-weight:600; color:var(--text);">✨ Expressive Stickers</span>
         <button onclick="BestieChat.toggleStickerPanel()" style="background:none; border:none; color:var(--muted); font-size:14px; cursor:pointer;">✕</button>
@@ -967,11 +975,11 @@
 
 <!-- Scripts -->
 <script src="/socket.io/socket.io.js"></script>
-<script src="/app.js?v=11100"></script>
+<script src="/app.js?v=11200"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js?v=11100').catch(console.error);
+      navigator.serviceWorker.register('/sw.js?v=11200').catch(console.error);
     });
   }
   function forceClearAppCache() {

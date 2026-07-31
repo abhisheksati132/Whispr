@@ -100,36 +100,47 @@ const GAME_PROMPTS = {
   ]
 };
 
+function toStr(val) {
+  if (typeof val === 'string') return val;
+  if (val === null || val === undefined) return '';
+  return String(val);
+}
+
 function normalizeName(name) {
-  return (name || 'Anonymous').trim().slice(0, 20) || 'Anonymous';
+  const str = toStr(name) || 'Anonymous';
+  return str.trim().slice(0, 20) || 'Anonymous';
 }
 
 function normalizeRoom(room) {
-  const cleaned = (room || 'bestie').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const str = toStr(room) || 'bestie';
+  const cleaned = str.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   return cleaned || 'bestie';
 }
 
 function normalizeText(text) {
-  return (text || '').trim().slice(0, 2000) || '';
+  return toStr(text).trim().slice(0, 2000) || '';
 }
 
 function normalizeNickname(nickname, fallback) {
-  const cleaned = (nickname || fallback || '').trim().slice(0, 24);
-  return cleaned || fallback;
+  const str = toStr(nickname) || toStr(fallback);
+  const cleaned = str.trim().slice(0, 24);
+  return cleaned || toStr(fallback);
 }
 
 function randomJoinMessage(name) {
+  const safeName = normalizeName(name);
   const tpl = JOIN_MESSAGES[Math.floor(Math.random() * JOIN_MESSAGES.length)];
-  return tpl.replace('{name}', name);
+  return tpl.replace('{name}', safeName);
 }
 
 function randomLeaveMessage(name) {
+  const safeName = normalizeName(name);
   const tpl = LEAVE_MESSAGES[Math.floor(Math.random() * LEAVE_MESSAGES.length)];
-  return tpl.replace('{name}', name);
+  return tpl.replace('{name}', safeName);
 }
 
 function randomGamePrompt(type) {
-  let key = type;
+  let key = toStr(type);
   if (key === 'would_you_rather') key = 'would-you-rather';
   if (key === 'truth_or_dare' || key === 'truth-or-dare') {
     key = Math.random() > 0.5 ? 'truth' : 'dare';
@@ -144,7 +155,12 @@ function randomGamePrompt(type) {
 }
 
 function isImageUrl(text) {
-  return /^https?:\/\/.+\.(gif|png|jpe?g|webp)(\?.*)?$/i.test(text.trim());
+  const str = toStr(text);
+  return /^https?:\/\/.+\.(gif|png|jpe?g|webp)(\?.*)?$/i.test(str.trim());
+}
+
+function escapeRegex(str) {
+  return toStr(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 module.exports = {
@@ -156,6 +172,7 @@ module.exports = {
   randomLeaveMessage,
   randomGamePrompt,
   isImageUrl,
+  escapeRegex,
   JOIN_MESSAGES,
   GAME_PROMPTS
 };

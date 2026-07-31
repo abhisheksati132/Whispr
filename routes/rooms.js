@@ -92,10 +92,11 @@ router.post('/dm', authMw, async (req, res) => {
 router.get('/users/search', authMw, async (req, res) => {
   try {
     const { q } = req.query;
-    if (!q || q.length < 2) return res.json([]);
+    if (!q || typeof q !== 'string' || q.length < 2) return res.json([]);
     if (!isMongoReady()) return res.json([]);
+    const safeQ = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const users = await User.find({
-      username: { $regex: q.toLowerCase(), $options: 'i' }
+      username: { $regex: safeQ.toLowerCase(), $options: 'i' }
     }).limit(8).select('username avatar color').lean();
     res.json(users.filter(u => u.username !== req.username));
   } catch (err) {

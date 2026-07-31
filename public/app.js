@@ -621,7 +621,9 @@
 
     let html = '';
     if (!msg.deleted) {
-      html += `<button onclick="BestieChat.replyToMessage('${msg.id}','${escapeHtml(msg.user)}','${escapeHtml((msg.text||'').replace(/'/g,"&#39;"))}','${msg.type||'text'}')">💬 Reply</button>`;
+      const safeUser = escapeHtml((msg.user || '').replace(/'/g, "&#39;"));
+      const safeText = escapeHtml((msg.text || '').replace(/'/g, "&#39;"));
+      html += `<button onclick="BestieChat.replyToMessage('${msg.id}','${safeUser}','${safeText}','${msg.type||'text'}')">💬 Reply</button>`;
       if (mine && (msg.type === 'text' || !msg.type)) {
         html += `<button onclick="BestieChat.startEditMessage('${msg.id}','${escapeHtml((msg.text||'').replace(/'/g,"&#39;"))}')">✏️ Edit</button>`;
       }
@@ -748,12 +750,17 @@
   }
 
   function updateUnreadBadge() {
+    if (els.unreadBadge) {
+      if (unreadCount > 0 && document.hidden) {
+        els.unreadBadge.style.display = 'inline';
+        els.unreadBadge.textContent   = unreadCount > 99 ? '99+' : unreadCount;
+      } else {
+        els.unreadBadge.style.display = 'none';
+      }
+    }
     if (unreadCount > 0 && document.hidden) {
-      els.unreadBadge.style.display = 'inline';
-      els.unreadBadge.textContent   = unreadCount > 99 ? '99+' : unreadCount;
       document.title = `(${unreadCount}) hmmumm ✨`;
     } else {
-      els.unreadBadge.style.display = 'none';
       document.title = 'hmmumm ✨';
     }
   }
@@ -2466,25 +2473,34 @@
 
   function encryptE2EE(text) {
     if (!e2eEnabled || !e2eKey) return text;
-    let res = '';
-    for (let i = 0; i < text.length; i++) {
-      res += String.fromCharCode(text.charCodeAt(i) ^ e2eKey.charCodeAt(i % e2eKey.length));
+    try {
+      const encoder = new TextEncoder();
+      const textBytes = encoder.encode(text);
+      const keyBytes = encoder.encode(e2eKey);
+      const res = new Uint8Array(textBytes.length);
+      for (let i = 0; i < textBytes.length; i++) {
+        res[i] = textBytes[i] ^ keyBytes[i % keyBytes.length];
+      }
+      let binary = '';
+      for (let i = 0; i < res.length; i++) binary += String.fromCharCode(res[i]);
+      return '🔒:' + btoa(binary);
+    } catch {
+      return text;
     }
-    return '🔒:' + btoa(unescape(encodeURIComponent(res)));
   }
 
   function decryptE2EE(text) {
     if (!text || !text.startsWith('🔒:')) return text;
     if (!e2eKey) return '🔒 [Encrypted — Enter Secret Key to View]';
     try {
-      // '🔒' is a surrogate pair = 2 JS chars, plus ':' = 3 chars total
-      const base64 = text.substring(3);
-      const raw = decodeURIComponent(escape(atob(base64)));
-      let res = '';
-      for (let i = 0; i < raw.length; i++) {
-        res += String.fromCharCode(raw.charCodeAt(i) ^ e2eKey.charCodeAt(i % e2eKey.length));
+      const base64 = text.replace(/^🔒:/, '');
+      const binary = atob(base64);
+      const keyBytes = new TextEncoder().encode(e2eKey);
+      const res = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        res[i] = binary.charCodeAt(i) ^ keyBytes[i % keyBytes.length];
       }
-      return res;
+      return new TextDecoder().decode(res);
     } catch {
       return '🔒 [Decryption Failed]';
     }
@@ -2734,7 +2750,8 @@
     const sorted = [...sharedGlossary].sort((a,b) => b.word.length - a.word.length);
     sorted.forEach(g => {
       const word = escapeHtml(g.word);
-      const rx = new RegExp(`\\b(${word})\\b`, 'gi');
+      const safeWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const rx = new RegExp(`\\b(${safeWord})\\b`, 'gi');
       escaped = escaped.replace(rx, `<span class="glossary-word-highlight" title="${escapeHtml(g.meaning)}" onclick="alert('${escapeHtml(g.word)}: ${escapeHtml(g.meaning)}')">$1</span>`);
     });
     return escaped;

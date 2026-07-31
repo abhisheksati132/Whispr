@@ -1,5 +1,5 @@
 // Cache Version - force complete cache wipe
-const CACHE = 'bestie-v11100-flush';
+const CACHE = 'bestie-v11200-flush';
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();
@@ -16,13 +16,15 @@ self.addEventListener('activate', (e) => {
 // Network-First Strategy for all assets
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
+  if (!e.request.url.startsWith('http')) return;
   if (e.request.url.includes('socket.io/?')) return;
+  if (e.request.url.includes('/api/')) return;
   
   e.respondWith(
     fetch(e.request).then((response) => {
       if (response && response.status === 200 && response.type !== 'opaque') {
         const clone = response.clone();
-        caches.open(CACHE).then((c) => c.put(e.request, clone));
+        caches.open(CACHE).then((c) => c.put(e.request, clone).catch(() => {}));
       }
       return response;
     }).catch(() => caches.match(e.request))

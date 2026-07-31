@@ -1603,7 +1603,7 @@ header {
 
 /* ═══════════════════ 15. EXTRAS MODAL (OUR SPACE & SETTINGS) ═══════════════════ */
 #extrasPanel.modal-overlay {
-  z-index: 1000;
+  z-index: 4000;
 }
 #extrasPanel .modal-card {
   max-height: 85vh;

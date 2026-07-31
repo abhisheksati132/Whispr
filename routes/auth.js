@@ -92,21 +92,12 @@ router.post('/login', async (req, res) => {
       user = memoryUsers.get(clean);
     }
 
-    // Auto-create user on first login so login ALWAYS works!
     if (!user) {
-      const pinHash = await bcrypt.hash(String(pin), 10);
-      const avatarEmoji = '✨';
-      if (isMongoReady()) {
-        user = await User.create({ username: clean, pinHash, avatar: avatarEmoji }).catch(() => null);
-      }
-      if (!user) {
-        user = { username: clean, pinHash, avatar: avatarEmoji, color: '#818cf8', statusBio: '', nickname: '' };
-        memoryUsers.set(clean, user);
-      }
-    } else {
-      // Check existing PIN
-      const match = await bcrypt.compare(String(pin), user.pinHash);
-      if (!match) return res.status(401).json({ error: 'Wrong PIN — try again.' });
+      return res.status(401).json({ error: 'User not found. Please register or check username.' });
+    }
+    // Check existing PIN
+    const match = await bcrypt.compare(String(pin), user.pinHash);
+    if (!match) return res.status(401).json({ error: 'Wrong PIN — try again.' });
 
       if (isMongoReady() && user.save) {
         user.lastSeen = Date.now();

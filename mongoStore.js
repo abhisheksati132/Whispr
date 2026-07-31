@@ -99,8 +99,10 @@ async function addMessage(roomName, msgData) {
 
   if (!isConnected()) {
     if (!memMessages.has(roomName)) memMessages.set(roomName, []);
-    memMessages.get(roomName).push(message);
-    const count = memMessages.get(roomName).length;
+    const msgs = memMessages.get(roomName);
+    msgs.push(message);
+    if (msgs.length > 200) msgs.shift();
+    const count = msgs.length;
     if (!memRooms.has(roomName)) memRooms.set(roomName, defaultRoomMeta(roomName));
     const room = memRooms.get(roomName);
     room.messageCount = count;
