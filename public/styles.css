@@ -1274,8 +1274,11 @@ header {
   gap: 4px;
   box-shadow: var(--shadow);
   z-index: 100;
+  max-height: 260px;
+  max-width: 320px;
+  overflow-y: auto;
 }
-#emojiPicker.open { display: grid; }
+#emojiPicker.open { display: grid !important; }
 #emojiPicker button {
   width: 32px;
   height: 32px;
@@ -1301,7 +1304,7 @@ header {
 }
 #gameMenu { right: 16px; width: 200px; }
 #gifPanel { left: 16px; width: 300px; }
-#gameMenu.open, #gifPanel.open { display: flex; }
+#gameMenu.open, #gifPanel.open { display: flex !important; }
 
 /* ═══════════════════ 11. ATTACH MENU ═══════════════════ */
 #attachMenu {
