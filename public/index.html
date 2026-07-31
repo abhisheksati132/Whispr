@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles.css?v=10900" />
+  <link rel="stylesheet" href="/styles.css?v=11000" />
 </head>
 <body>
 
@@ -119,22 +119,10 @@
 
     <!-- Navigation -->
     <nav class="sidebar-nav">
-      <div class="nav-group">
-        <button class="nav-item active" id="navItemChat" onclick="BestieChat.sidebarNavTo('chat')">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          <span>Chat</span>
-        </button>
-        <!-- DM Chat List (Nested under Chat) -->
-        <div class="sidebar-chats nested-chats">
-          <div class="sidebar-chats-header">
-            <span>Direct Messages</span>
-            <button class="new-chat-btn" onclick="BestieChat.openNewChatModal()" title="New Chat">＋</button>
-          </div>
-          <div id="dmList" class="dm-list">
-            <div class="dm-list-empty" style="font-size:11px; margin-top:4px;">No chats yet</div>
-          </div>
-        </div>
-      </div>
+      <button class="nav-item active" id="navItemChat" onclick="BestieChat.sidebarNavTo('chat')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span>Chat</span>
+      </button>
       <button class="nav-item" id="navItemSpace" onclick="BestieChat.sidebarNavTo('space')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
         <span>Our Space</span>
@@ -191,6 +179,10 @@
 
       <!-- Actions -->
       <div class="header-actions">
+        <button class="icon-btn chats-list-btn" title="Chats & Direct Messages" onclick="BestieChat.openChatsModal()" style="font-size: 15px; width: auto; padding: 0 10px; border-radius: 16px; gap: 4px; display: flex; align-items: center; background: rgba(255,255,255,0.06);">
+          <span>💬</span>
+          <span style="font-size: 12px; font-weight: 600;">Chats</span>
+        </button>
         <button class="icon-btn call-audio-btn" title="Voice Call" onclick="BestieChat.startCall('audio')">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
         </button>
@@ -358,11 +350,32 @@
       </button>
     </div>
 
+    <!-- Sticker Panel -->
+    <div id="stickerPanel" class="sticker-panel" style="display:none; position:absolute; bottom:80px; left:16px; background:var(--panel); border:1px solid var(--border-soft); border-radius:18px; padding:14px; width:300px; max-height:280px; z-index:100; box-shadow:var(--shadow);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <span style="font-size:13px; font-weight:600; color:var(--text);">✨ Cute Stickers</span>
+        <button onclick="BestieChat.toggleStickerPanel()" style="background:none; border:none; color:var(--muted); font-size:14px; cursor:pointer;">✕</button>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; max-height:220px; overflow-y:auto;">
+        <img src="https://media.giphy.com/media/l41K3tzVl3y5K/giphy.gif" style="width:100%; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
+        <img src="https://media.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif" style="width:100%; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
+        <img src="https://media.giphy.com/media/26n6WywOy1rOmJSmQ/giphy.gif" style="width:100%; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
+        <img src="https://media.giphy.com/media/dzaUX7CAG0Ihi/giphy.gif" style="width:100%; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
+        <img src="https://media.giphy.com/media/vFKqnCdLPNOKc/giphy.gif" style="width:100%; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
+        <img src="https://media.giphy.com/media/mlvseq9yvZhba/giphy.gif" style="width:100%; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
+        <img src="https://media.giphy.com/media/13Hgw8T855x5a8/giphy.gif" style="width:100%; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
+        <img src="https://media.giphy.com/media/Bcfb1FhZ1xY1/giphy.gif" style="width:100%; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
+      </div>
+    </div>
+
     <!-- Input Bar -->
     <div id="inputBarContainer">
       <div class="input-pill">
         <button class="pill-btn" onclick="BestieChat.toggleEmojiPicker()" title="Emoji" data-emoji-toggle>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg>
+        </button>
+        <button class="pill-btn" onclick="BestieChat.toggleStickerPanel()" title="Stickers">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 14.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm-1-4a1 1 0 0 1-1-1V8a1 1 0 0 1 2 0v3.5a1 1 0 0 1-1 1z"/></svg>
         </button>
         <input id="msgInput" type="text" placeholder="Message…" autocomplete="off" maxlength="2000" />
         <span id="charCount" style="font-size:0.72rem; color:var(--accent); font-weight:600; margin-right:2px;"></span>
@@ -900,6 +913,25 @@
   </div>
 </div>
 
+<!-- Direct Messages & Chats Manager Modal -->
+<div id="chatsModal" class="modal-overlay" style="display:none" onclick="if(event.target===this) BestieChat.closeChatsModal()">
+  <div class="modal-card" style="max-width:440px; width:90%;">
+    <div class="modal-header">
+      <h3>💬 Direct Messages & Chats</h3>
+      <button class="modal-close" onclick="BestieChat.closeChatsModal()">✕</button>
+    </div>
+    <div style="padding:16px 20px 20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <span style="font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Your Active Chats</span>
+        <button class="new-chat-btn" onclick="BestieChat.closeChatsModal(); BestieChat.openNewChatModal();" style="padding:4px 10px; width:auto; height:28px; font-size:12px;">＋ Start New DM</button>
+      </div>
+      <div id="dmList" class="dm-list" style="max-height:300px; overflow-y:auto;">
+        <div class="dm-list-empty">No chats yet · start a DM above!</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- New Chat / DM Modal -->
 <div id="newChatModal" class="modal-overlay" style="display:none" onclick="if(event.target===this) BestieChat.closeNewChatModal()">
   <div class="modal-card" style="max-width:400px;">
@@ -923,11 +955,11 @@
 
 <!-- Scripts -->
 <script src="/socket.io/socket.io.js"></script>
-<script src="/app.js?v=10900"></script>
+<script src="/app.js?v=11000"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js?v=10900').catch(console.error);
+      navigator.serviceWorker.register('/sw.js?v=11000').catch(console.error);
     });
   }
   function forceClearAppCache() {

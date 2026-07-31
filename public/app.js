@@ -1358,6 +1358,8 @@
     socket.emit('message', { type: 'image', url, text: '' });
     playSound('send');
     els.gifPanel.classList.remove('open');
+    const panel = document.getElementById('stickerPanel');
+    if (panel) panel.style.display = 'none';
   }
 
   // ═══════════════════ EXTRAS & GAMES ═══════════════════
@@ -4117,6 +4119,22 @@
     }
   }
 
+  function openChatsModal() {
+    loadChatList();
+    showModal('chatsModal');
+  }
+
+  function closeChatsModal() {
+    hideModal('chatsModal');
+  }
+
+  function toggleStickerPanel() {
+    const panel = document.getElementById('stickerPanel');
+    if (!panel) return;
+    const isVisible = panel.style.display !== 'none';
+    panel.style.display = isVisible ? 'none' : 'block';
+  }
+
   function toggleQuickMenu() {
     toggleModal('quickMenu');
   }
@@ -4163,7 +4181,7 @@
     // Auth
     setAuthMode, selectLoginAvatar, quickReentry, showFullLoginForm, copyInviteLink, togglePasswordVisibility, logout,
     // Multi-chat DMs
-    loadChatList, switchRoom, openNewChatModal, closeNewChatModal, searchUsersForDM, startDMWith,
+    loadChatList, switchRoom, openNewChatModal, closeNewChatModal, searchUsersForDM, startDMWith, openChatsModal, closeChatsModal, toggleStickerPanel,
     scrollToBottom: scrollBottom
   };
 

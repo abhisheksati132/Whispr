@@ -2192,6 +2192,17 @@ body.night-glow header, body.night-glow #inputBarContainer { box-shadow: 0 0 30p
   font-weight: 600;
   color: var(--text);
 }
+.chats-list-btn:hover {
+  background: rgba(255,255,255,0.12) !important;
+  color: var(--accent) !important;
+}
+.sticker-panel img {
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+.sticker-panel img:hover {
+  transform: scale(1.1);
+  background: rgba(255,255,255,0.15) !important;
+}
 .game-hub-desc {
   font-size: 11px;
   color: var(--muted);

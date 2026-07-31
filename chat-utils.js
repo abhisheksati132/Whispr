@@ -91,6 +91,12 @@ const GAME_PROMPTS = {
     'Rapid Fire! Answer FAST: Summer or Winter? | Sweet or Spicy? | City or Nature? | Introvert or Extrovert? | Logic or Feelings?',
     'Rapid Fire! Answer FAST: Past or Future? | Love or Money? | Adventure or Comfort? | Early or Late? | Talking or Listening?',
     'Rapid Fire! Answer FAST: Photos or Videos? | Cook or Order out? | Alone time or Social? | Planner or Go-with-flow? | Hugs or Handshakes?'
+  ],
+  '20-questions': [
+    '🧠 20 Questions Game: Think of a Person, Place, or Object! Your bestie gets 20 Yes/No questions to guess it.',
+    '🧠 20 Questions Game: Think of a famous movie or TV character! Ask Yes/No questions in chat to guess.',
+    '🧠 20 Questions Game: Think of a food or drink! Ask 20 Yes/No questions to guess what it is.',
+    '🧠 20 Questions Game: Think of a place you want to travel to! Your bestie has 20 questions to figure it out.'
   ]
 };
 
@@ -123,11 +129,18 @@ function randomLeaveMessage(name) {
 }
 
 function randomGamePrompt(type) {
-  const list = GAME_PROMPTS[type];
+  let key = type;
+  if (key === 'would_you_rather') key = 'would-you-rather';
+  if (key === 'truth_or_dare' || key === 'truth-or-dare') {
+    key = Math.random() > 0.5 ? 'truth' : 'dare';
+  }
+  if (key === '20_questions') key = '20-questions';
+
+  const list = GAME_PROMPTS[key];
   if (!list) return null;
   const item = list[Math.floor(Math.random() * list.length)];
-  if (typeof item === 'string') return { type, text: item };
-  return { type, ...item };
+  if (typeof item === 'string') return { type: key, text: item };
+  return { type: key, ...item };
 }
 
 function isImageUrl(text) {
