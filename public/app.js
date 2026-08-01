@@ -3458,6 +3458,7 @@
         if (!e.target.closest('#gameMenu')     && !e.target.closest('[data-game-toggle]'))  { if (els.gameMenu) els.gameMenu.classList.remove('open'); }
         if (!e.target.closest('#gifPanel')     && !e.target.closest('.attach-item'))        { if (els.gifPanel) els.gifPanel.classList.remove('open'); }
         if (!e.target.closest('#feelingsPanel')&& !e.target.closest('[title="Feelings"]'))  { if (els.feelingsPanel) els.feelingsPanel.classList.remove('open'); }
+        if (!e.target.closest('#stickerPanel') && !e.target.closest('[title="Stickers"]'))  { const sP = document.getElementById('stickerPanel'); if (sP) sP.style.display = 'none'; }
         if (!e.target.closest('#contextMenu')  && !e.target.closest('.msg-wrap'))           hideContextMenu();
         if (!e.target.closest('#attachMenu')   && !e.target.closest('#attachBtn'))          { if (els.attachMenu) els.attachMenu.style.display = 'none'; }
         if (!e.target.closest('.msg-wrap'))    document.querySelectorAll('.msg-wrap.touched').forEach((el) => el.classList.remove('touched'));

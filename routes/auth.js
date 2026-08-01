@@ -99,10 +99,9 @@ router.post('/login', async (req, res) => {
     const match = await bcrypt.compare(String(pin), user.pinHash);
     if (!match) return res.status(401).json({ error: 'Wrong PIN — try again.' });
 
-      if (isMongoReady() && user.save) {
-        user.lastSeen = Date.now();
-        await user.save().catch(() => {});
-      }
+    if (isMongoReady() && user.save) {
+      user.lastSeen = Date.now();
+      await user.save().catch(() => {});
     }
 
     const token = jwt.sign({ username: user.username }, JWT_SECRET, { expiresIn: '30d' });

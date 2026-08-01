@@ -271,25 +271,31 @@ io.on('connection', (socket) => {
 
   // ── Clear history ─────────────────────────────────────────────────────────
   socket.on('clear-history', async () => {
-    if (!currentRoom) return;
-    await mStore.clearHistory(currentRoom);
-    io.to(currentRoom).emit('history-cleared');
-    io.to(currentRoom).emit('system', '🧹 Chat history was cleared.');
+    try {
+      if (!currentRoom) return;
+      await mStore.clearHistory(currentRoom);
+      io.to(currentRoom).emit('history-cleared');
+      io.to(currentRoom).emit('system', '🧹 Chat history was cleared.');
+    } catch (err) { console.error('clear-history error:', err); }
   });
 
   socket.on('set-room-password', async (pass) => {
-    if (!currentRoom) return;
-    const safePass = String(pass || '').trim();
-    await mStore.updateRoomMeta(currentRoom, { roomPassword: safePass });
-    socket.emit('password-updated', { hasPassword: Boolean(safePass) });
-    io.to(currentRoom).emit('system', safePass ? '🔒 Room password updated.' : '🔓 Room password removed.');
+    try {
+      if (!currentRoom) return;
+      const safePass = String(pass || '').trim();
+      await mStore.updateRoomMeta(currentRoom, { roomPassword: safePass });
+      socket.emit('password-updated', { hasPassword: Boolean(safePass) });
+      io.to(currentRoom).emit('system', safePass ? '🔒 Room password updated.' : '🔓 Room password removed.');
+    } catch (err) { console.error('set-room-password error:', err); }
   });
 
   socket.on('set-disappearing-timer', async (durationMs) => {
-    if (!currentRoom) return;
-    const ms = typeof durationMs === 'number' ? Math.max(0, durationMs) : 0;
-    await mStore.updateRoomMeta(currentRoom, { disappearingTimer: ms });
-    io.to(currentRoom).emit('disappearing-updated', { durationMs: ms });
+    try {
+      if (!currentRoom) return;
+      const ms = typeof durationMs === 'number' ? Math.max(0, durationMs) : 0;
+      await mStore.updateRoomMeta(currentRoom, { disappearingTimer: ms });
+      io.to(currentRoom).emit('disappearing-updated', { durationMs: ms });
+    } catch (err) { console.error('set-disappearing-timer error:', err); }
   });
 
   // ── Message ───────────────────────────────────────────────────────────────
@@ -343,47 +349,57 @@ io.on('connection', (socket) => {
 
   // ── Secret message ────────────────────────────────────────────────────────
   socket.on('secret-message', async ({ text } = {}) => {
-    if (!username || !currentRoom) return;
-    const safe = normalizeText(text); if (!safe) return;
-    const profile = await mStore.getProfile(username);
-    const id = crypto.randomUUID();
-    const msg = { id, user: username, text: safe, type:'secret', time: Date.now(), reactions:{}, profile: { avatar: profile.avatar, color: profile.color, nickname: profile.nickname } };
-    io.to(currentRoom).emit('message', msg);
-    setTimeout(() => io.to(currentRoom).emit('message-deleted', { messageId: id }), 30000);
+    try {
+      if (!username || !currentRoom) return;
+      const safe = normalizeText(text); if (!safe) return;
+      const profile = await mStore.getProfile(username);
+      const id = crypto.randomUUID();
+      const msg = { id, user: username, text: safe, type:'secret', time: Date.now(), reactions:{}, profile: { avatar: profile.avatar, color: profile.color, nickname: profile.nickname } };
+      io.to(currentRoom).emit('message', msg);
+      setTimeout(() => io.to(currentRoom).emit('message-deleted', { messageId: id }), 30000);
+    } catch (err) { console.error('secret-message error:', err); }
   });
 
   // ── Edit message ──────────────────────────────────────────────────────────
   socket.on('edit-message', async ({ messageId, text } = {}) => {
-    if (!username || !currentRoom || !messageId) return;
-    const safe = normalizeText(text); if (!safe) return;
-    const msg = await mStore.findMessage(currentRoom, messageId);
-    if (!msg || msg.user !== username || msg.deleted) return;
-    const updated = await mStore.editMessage(currentRoom, messageId, safe);
-    if (updated) io.to(currentRoom).emit('message-edited', { messageId, text: safe, editedAt: updated.editedAt });
+    try {
+      if (!username || !currentRoom || !messageId) return;
+      const safe = normalizeText(text); if (!safe) return;
+      const msg = await mStore.findMessage(currentRoom, messageId);
+      if (!msg || msg.user !== username || msg.deleted) return;
+      const updated = await mStore.editMessage(currentRoom, messageId, safe);
+      if (updated) io.to(currentRoom).emit('message-edited', { messageId, text: safe, editedAt: updated.editedAt });
+    } catch (err) { console.error('edit-message error:', err); }
   });
 
   // ── Delete message ────────────────────────────────────────────────────────
   socket.on('delete-message', async ({ messageId } = {}) => {
-    if (!username || !currentRoom || !messageId) return;
-    const msg = await mStore.findMessage(currentRoom, messageId);
-    if (!msg || msg.user !== username) return;
-    await mStore.deleteMessage(currentRoom, messageId);
-    io.to(currentRoom).emit('message-deleted', { messageId });
+    try {
+      if (!username || !currentRoom || !messageId) return;
+      const msg = await mStore.findMessage(currentRoom, messageId);
+      if (!msg || msg.user !== username) return;
+      await mStore.deleteMessage(currentRoom, messageId);
+      io.to(currentRoom).emit('message-deleted', { messageId });
+    } catch (err) { console.error('delete-message error:', err); }
   });
 
   // ── Pin / Unpin ───────────────────────────────────────────────────────────
   socket.on('pin-message', async ({ messageId } = {}) => {
-    if (!currentRoom || !messageId) return;
-    await mStore.pinMessage(currentRoom, messageId);
-    const history = await mStore.getMessages(currentRoom, 200);
-    const msg = history.find(m => m.id === messageId) || null;
-    io.to(currentRoom).emit('pinned-update', { messageId, msg });
+    try {
+      if (!currentRoom || !messageId) return;
+      await mStore.pinMessage(currentRoom, messageId);
+      const history = await mStore.getMessages(currentRoom, 200);
+      const msg = history.find(m => m.id === messageId) || null;
+      io.to(currentRoom).emit('pinned-update', { messageId, msg });
+    } catch (err) { console.error('pin-message error:', err); }
   });
 
   socket.on('unpin-message', async () => {
-    if (!currentRoom) return;
-    await mStore.pinMessage(currentRoom, null);
-    io.to(currentRoom).emit('pinned-update', { messageId: null, msg: null });
+    try {
+      if (!currentRoom) return;
+      await mStore.pinMessage(currentRoom, null);
+      io.to(currentRoom).emit('pinned-update', { messageId: null, msg: null });
+    } catch (err) { console.error('unpin-message error:', err); }
   });
 
   // ── Shared pad ────────────────────────────────────────────────────────────
@@ -394,41 +410,49 @@ io.on('connection', (socket) => {
 
   // ── View-once expire ──────────────────────────────────────────────────────
   socket.on('view-once-expire', async ({ messageId } = {}) => {
-    if (!currentRoom || !messageId) return;
-    const msg = await mStore.findMessage(currentRoom, messageId);
-    if (msg) {
-      await mStore.editMessage(currentRoom, messageId, '👁️ Photo expired');
-      io.to(currentRoom).emit('view-once-expired', { messageId });
-    }
+    try {
+      if (!currentRoom || !messageId) return;
+      const msg = await mStore.findMessage(currentRoom, messageId);
+      if (msg) {
+        await mStore.editMessage(currentRoom, messageId, '👁️ Photo expired');
+        io.to(currentRoom).emit('view-once-expired', { messageId });
+      }
+    } catch (err) { console.error('view-once-expire error:', err); }
   });
 
   // ── Read receipt ──────────────────────────────────────────────────────────
   socket.on('read-receipt', async ({ messageId } = {}) => {
-    if (!username || !currentRoom || !messageId) return;
-    const readBy = await mStore.updateReadReceipt(currentRoom, username, messageId);
-    io.to(currentRoom).emit('receipt-update', readBy);
+    try {
+      if (!username || !currentRoom || !messageId) return;
+      const readBy = await mStore.updateReadReceipt(currentRoom, username, messageId);
+      io.to(currentRoom).emit('receipt-update', readBy);
+    } catch (err) { console.error('read-receipt error:', err); }
   });
 
   // ── Reactions ─────────────────────────────────────────────────────────────
   socket.on('react', async ({ messageId, emoji, add }) => {
-    if (!username || !currentRoom) return;
-    const msg = await mStore.updateMessageReaction(currentRoom, messageId, emoji, username, add);
-    if (!msg) return;
-    io.to(currentRoom).emit('reaction-update', { messageId, reactions: msg.reactions });
+    try {
+      if (!username || !currentRoom) return;
+      const msg = await mStore.updateMessageReaction(currentRoom, messageId, emoji, username, add);
+      if (!msg) return;
+      io.to(currentRoom).emit('reaction-update', { messageId, reactions: msg.reactions });
+    } catch (err) { console.error('react error:', err); }
   });
 
   // ── Profile ───────────────────────────────────────────────────────────────
   socket.on('update-profile-bio', async ({ avatar, statusBio, color }) => {
-    if (!username) return;
-    const updates = {};
-    if (avatar) updates.avatar = avatar;
-    if (statusBio !== undefined) updates.statusBio = statusBio;
-    if (color) updates.color = color;
-    const updated = await mStore.updateProfile(username, updates);
-    if (currentRoom) {
-      getRoomUsers(currentRoom).set(socket.id, { name: username, profile: updated });
-      io.to(currentRoom).emit('profile-updated', { username, profile: updated });
-    }
+    try {
+      if (!username) return;
+      const updates = {};
+      if (avatar) updates.avatar = avatar;
+      if (statusBio !== undefined) updates.statusBio = statusBio;
+      if (color) updates.color = color;
+      const updated = await mStore.updateProfile(username, updates);
+      if (currentRoom) {
+        getRoomUsers(currentRoom).set(socket.id, { name: username, profile: updated });
+        io.to(currentRoom).emit('profile-updated', { username, profile: updated });
+      }
+    } catch (err) { console.error('update-profile-bio error:', err); }
   });
 
   // ── Connect 4 ─────────────────────────────────────────────────────────────
@@ -436,9 +460,11 @@ io.on('connection', (socket) => {
 
   // ── Typing ────────────────────────────────────────────────────────────────
   socket.on('typing', async () => {
-    if (!username || !currentRoom) return;
-    const profile = await mStore.getProfile(username);
-    socket.to(currentRoom).emit('typing', profile.nickname || username);
+    try {
+      if (!username || !currentRoom) return;
+      const profile = await mStore.getProfile(username);
+      socket.to(currentRoom).emit('typing', profile.nickname || username);
+    } catch (err) { console.error('typing error:', err); }
   });
 
   // ── Heartbeat ─────────────────────────────────────────────────────────────
@@ -446,50 +472,58 @@ io.on('connection', (socket) => {
 
   // ── Games ─────────────────────────────────────────────────────────────────
   socket.on('start-game', async (type) => {
-    if (!username || !currentRoom) return;
-    if (type === 'pictionary') {
-      const word = PICTIONARY_WORDS[Math.floor(Math.random() * PICTIONARY_WORDS.length)];
+    try {
+      if (!username || !currentRoom) return;
+      if (type === 'pictionary') {
+        const word = PICTIONARY_WORDS[Math.floor(Math.random() * PICTIONARY_WORDS.length)];
+        const profile = await mStore.getProfile(username);
+        const display = profile.nickname || username;
+        roomPictionaryState.set(currentRoom, { word, drawer: username });
+        socket.emit('pictionary-word', { word });
+        io.to(currentRoom).emit('pictionary-start', { drawer: display });
+        io.to(currentRoom).emit('system', `🎨 ${display} started Pictionary! Guess their drawing in chat!`);
+        return;
+      }
+      const prompt = randomGamePrompt(type); if (!prompt) return;
       const profile = await mStore.getProfile(username);
       const display = profile.nickname || username;
-      roomPictionaryState.set(currentRoom, { word, drawer: username });
-      socket.emit('pictionary-word', { word });
-      io.to(currentRoom).emit('pictionary-start', { drawer: display });
-      io.to(currentRoom).emit('system', `🎨 ${display} started Pictionary! Guess their drawing in chat!`);
-      return;
-    }
-    const prompt = randomGamePrompt(type); if (!prompt) return;
-    const profile = await mStore.getProfile(username);
-    const display = profile.nickname || username;
-    io.to(currentRoom).emit('game-prompt', { from: display, type: prompt.type, question: prompt.text||prompt.q, options: prompt.a ? [prompt.a, prompt.b] : null });
+      io.to(currentRoom).emit('game-prompt', { from: display, type: prompt.type, question: prompt.text||prompt.q, options: prompt.a ? [prompt.a, prompt.b] : null });
+    } catch (err) { console.error('start-game error:', err); }
   });
 
   // ── Room meta ─────────────────────────────────────────────────────────────
-  socket.on('update-mood', async (mood) => { if (!currentRoom) return; await mStore.updateRoomMeta(currentRoom, { mood: String(mood||'').slice(0,100) }); io.to(currentRoom).emit('mood-update', mood); });
-  socket.on('update-jokes', async (jokes) => { if (!currentRoom) return; const safe=(Array.isArray(jokes)?jokes:[]).map(j=>String(j).slice(0,200)).slice(0,20); await mStore.updateRoomMeta(currentRoom,{jokes:safe}); io.to(currentRoom).emit('jokes-update',safe); });
-  socket.on('update-countdown', async ({label,date}={}) => { if (!currentRoom) return; const cd={label:String(label||'').slice(0,50),date:date||null}; await mStore.updateRoomMeta(currentRoom,{countdown:cd}); io.to(currentRoom).emit('countdown-update',cd); });
+  socket.on('update-mood', async (mood) => { try { if (!currentRoom) return; await mStore.updateRoomMeta(currentRoom, { mood: String(mood||'').slice(0,100) }); io.to(currentRoom).emit('mood-update', mood); } catch (err) { console.error('update-mood error:', err); } });
+  socket.on('update-jokes', async (jokes) => { try { if (!currentRoom) return; const safe=(Array.isArray(jokes)?jokes:[]).map(j=>String(j).slice(0,200)).slice(0,20); await mStore.updateRoomMeta(currentRoom,{jokes:safe}); io.to(currentRoom).emit('jokes-update',safe); } catch (err) { console.error('update-jokes error:', err); } });
+  socket.on('update-countdown', async ({label,date}={}) => { try { if (!currentRoom) return; const cd={label:String(label||'').slice(0,50),date:date||null}; await mStore.updateRoomMeta(currentRoom,{countdown:cd}); io.to(currentRoom).emit('countdown-update',cd); } catch (err) { console.error('update-countdown error:', err); } });
 
   socket.on('update-nickname', async (nick) => {
-    if (!username) return;
-    const safe = normalizeNickname(nick, username);
-    await mStore.updateProfile(username, { nickname: safe });
-    const userEntry = currentRoom && getRoomUsers(currentRoom).get(socket.id);
-    if (userEntry) userEntry.profile.nickname = safe;
-    if (currentRoom) broadcastPresence(currentRoom);
+    try {
+      if (!username) return;
+      const safe = normalizeNickname(nick, username);
+      await mStore.updateProfile(username, { nickname: safe });
+      const userEntry = currentRoom && getRoomUsers(currentRoom).get(socket.id);
+      if (userEntry) userEntry.profile.nickname = safe;
+      if (currentRoom) broadcastPresence(currentRoom);
+    } catch (err) { console.error('update-nickname error:', err); }
   });
 
   // ── Feelings ──────────────────────────────────────────────────────────────
   socket.on('set-feeling', (feelingKey) => {
-    if (!username) return;
-    const f = mStore.setFeeling(username, feelingKey); if (!f) return;
-    if (currentRoom) io.to(currentRoom).emit('feelings-update', mStore.getFeelings());
+    try {
+      if (!username) return;
+      const f = mStore.setFeeling(username, feelingKey); if (!f) return;
+      if (currentRoom) io.to(currentRoom).emit('feelings-update', mStore.getFeelings());
+    } catch (err) { console.error('set-feeling error:', err); }
   });
 
   // ── Empathy pulse ─────────────────────────────────────────────────────────
   socket.on('empathy-pulse', async () => {
-    if (!username || !currentRoom) return;
-    const profile = await mStore.getProfile(username);
-    socket.to(currentRoom).emit('empathy-pulse', { from: profile.nickname || username });
-    sendPushToRoom(currentRoom, username, `${profile.nickname||username} 💓`, 'sent you an empathy pulse');
+    try {
+      if (!username || !currentRoom) return;
+      const profile = await mStore.getProfile(username);
+      socket.to(currentRoom).emit('empathy-pulse', { from: profile.nickname || username });
+      sendPushToRoom(currentRoom, username, `${profile.nickname||username} 💓`, 'sent you an empathy pulse');
+    } catch (err) { console.error('empathy-pulse error:', err); }
   });
 
   // ── Poll vote ─────────────────────────────────────────────────────────────
@@ -511,65 +545,77 @@ io.on('connection', (socket) => {
   });
 
   // ── WebRTC ────────────────────────────────────────────────────────────────
-  socket.on('call-invite', (payload) => { if (currentRoom) { socket.to(currentRoom).emit('call-invite', { from: username, offer: payload.offer, type: payload.type }); sendPushToRoom(currentRoom, username, `Incoming ${payload.type||'voice'} call! 📞`, `From ${username}`); } });
-  socket.on('call-accept', (payload) => { if (currentRoom) socket.to(currentRoom).emit('call-accept', { answer: payload.answer }); });
-  socket.on('call-decline', () => { if (currentRoom) socket.to(currentRoom).emit('call-decline'); });
-  socket.on('call-candidate', (payload) => { if (currentRoom) socket.to(currentRoom).emit('call-candidate', { candidate: payload.candidate }); });
-  socket.on('call-hangup', () => { if (currentRoom) socket.to(currentRoom).emit('call-hangup'); });
+  socket.on('call-invite', (payload) => { try { if (currentRoom) { socket.to(currentRoom).emit('call-invite', { from: username, offer: payload.offer, type: payload.type }); sendPushToRoom(currentRoom, username, `Incoming ${payload.type||'voice'} call! 📞`, `From ${username}`); } } catch (err) { console.error('call-invite error:', err); } });
+  socket.on('call-accept', (payload) => { try { if (currentRoom) socket.to(currentRoom).emit('call-accept', { answer: payload.answer }); } catch (err) { console.error('call-accept error:', err); } });
+  socket.on('call-decline', () => { try { if (currentRoom) socket.to(currentRoom).emit('call-decline'); } catch (err) { console.error('call-decline error:', err); } });
+  socket.on('call-candidate', (payload) => { try { if (currentRoom) socket.to(currentRoom).emit('call-candidate', { candidate: payload.candidate }); } catch (err) { console.error('call-candidate error:', err); } });
+  socket.on('call-hangup', () => { try { if (currentRoom) socket.to(currentRoom).emit('call-hangup'); } catch (err) { console.error('call-hangup error:', err); } });
 
   // ── Co-Draw ───────────────────────────────────────────────────────────────
-  socket.on('draw-stroke', (data) => { if (currentRoom) socket.to(currentRoom).emit('draw-stroke', data); });
-  socket.on('draw-clear', () => { if (currentRoom) socket.to(currentRoom).emit('draw-clear'); });
+  socket.on('draw-stroke', (data) => { try { if (currentRoom) socket.to(currentRoom).emit('draw-stroke', data); } catch (err) { console.error('draw-stroke error:', err); } });
+  socket.on('draw-clear', () => { try { if (currentRoom) socket.to(currentRoom).emit('draw-clear'); } catch (err) { console.error('draw-clear error:', err); } });
 
   // ── Watch Together ────────────────────────────────────────────────────────
-  socket.on('watch-sync', (data) => { if (currentRoom) socket.to(currentRoom).emit('watch-sync', data); });
+  socket.on('watch-sync', (data) => { try { if (currentRoom) socket.to(currentRoom).emit('watch-sync', data); } catch (err) { console.error('watch-sync error:', err); } });
 
   // ── Games relay ───────────────────────────────────────────────────────────
-  socket.on('game-move', (data) => { if (currentRoom) socket.to(currentRoom).emit('game-move', data); });
+  socket.on('game-move', (data) => { try { if (currentRoom) socket.to(currentRoom).emit('game-move', data); } catch (err) { console.error('game-move error:', err); } });
   socket.on('game-result', async ({ winner } = {}) => {
-    if (!currentRoom) return;
-    const scores = await mStore.updateGameScore(currentRoom, winner || null);
-    io.to(currentRoom).emit('score-update', scores);
+    try {
+      if (!currentRoom) return;
+      const scores = await mStore.updateGameScore(currentRoom, winner || null);
+      io.to(currentRoom).emit('score-update', scores);
+    } catch (err) { console.error('game-result error:', err); }
   });
 
   // ── Nudge / Haptic ────────────────────────────────────────────────────────
-  socket.on('nudge', () => { if (currentRoom) socket.to(currentRoom).emit('nudge', { from: username }); });
-  socket.on('haptic-touch', (data) => { if (currentRoom) socket.to(currentRoom).emit('haptic-touch', data); });
+  socket.on('nudge', () => { try { if (currentRoom) socket.to(currentRoom).emit('nudge', { from: username }); } catch (err) { console.error('nudge error:', err); } });
+  socket.on('haptic-touch', (data) => { try { if (currentRoom) socket.to(currentRoom).emit('haptic-touch', data); } catch (err) { console.error('haptic-touch error:', err); } });
 
   // ── Shared notebook syncs ─────────────────────────────────────────────────
   socket.on('update-diary', async (diary) => {
-    if (!currentRoom) return;
-    const safe = (Array.isArray(diary)?diary:[]).map(d=>({ date:String(d.date||''), text:String(d.text||'').slice(0,500), image:String(d.image||'') })).slice(0,100);
-    await mStore.updateRoomMeta(currentRoom, { diary: safe });
-    io.to(currentRoom).emit('diary-update', safe);
+    try {
+      if (!currentRoom) return;
+      const safe = (Array.isArray(diary)?diary:[]).map(d=>({ date:String(d.date||''), text:String(d.text||'').slice(0,500), image:String(d.image||'') })).slice(0,100);
+      await mStore.updateRoomMeta(currentRoom, { diary: safe });
+      io.to(currentRoom).emit('diary-update', safe);
+    } catch (err) { console.error('update-diary error:', err); }
   });
   socket.on('update-bucketlist', async (list) => {
-    if (!currentRoom) return;
-    const safe = (Array.isArray(list)?list:[]).map(b=>({ text:String(b.text||'').slice(0,100), done:Boolean(b.done), dateCompleted:b.dateCompleted||null })).slice(0,100);
-    await mStore.updateRoomMeta(currentRoom, { bucketList: safe });
-    io.to(currentRoom).emit('bucketlist-update', safe);
+    try {
+      if (!currentRoom) return;
+      const safe = (Array.isArray(list)?list:[]).map(b=>({ text:String(b.text||'').slice(0,100), done:Boolean(b.done), dateCompleted:b.dateCompleted||null })).slice(0,100);
+      await mStore.updateRoomMeta(currentRoom, { bucketList: safe });
+      io.to(currentRoom).emit('bucketlist-update', safe);
+    } catch (err) { console.error('update-bucketlist error:', err); }
   });
   socket.on('update-calendar', async (cal) => {
-    if (!currentRoom) return;
-    const safe = (Array.isArray(cal)?cal:[]).map(c=>({ label:String(c.label||'').slice(0,100), date:String(c.date||'') })).slice(0,50);
-    await mStore.updateRoomMeta(currentRoom, { calendar: safe });
-    io.to(currentRoom).emit('calendar-update', safe);
+    try {
+      if (!currentRoom) return;
+      const safe = (Array.isArray(cal)?cal:[]).map(c=>({ label:String(c.label||'').slice(0,100), date:String(c.date||'') })).slice(0,50);
+      await mStore.updateRoomMeta(currentRoom, { calendar: safe });
+      io.to(currentRoom).emit('calendar-update', safe);
+    } catch (err) { console.error('update-calendar error:', err); }
   });
   socket.on('update-glossary', async (words) => {
-    if (!currentRoom) return;
-    const safe = (Array.isArray(words)?words:[]).map(w=>({ word:String(w.word||'').toLowerCase().trim().slice(0,30), meaning:String(w.meaning||'').slice(0,200) })).slice(0,50);
-    await mStore.updateRoomMeta(currentRoom, { glossary: safe });
-    io.to(currentRoom).emit('glossary-update', safe);
+    try {
+      if (!currentRoom) return;
+      const safe = (Array.isArray(words)?words:[]).map(w=>({ word:String(w.word||'').toLowerCase().trim().slice(0,30), meaning:String(w.meaning||'').slice(0,200) })).slice(0,50);
+      await mStore.updateRoomMeta(currentRoom, { glossary: safe });
+      io.to(currentRoom).emit('glossary-update', safe);
+    } catch (err) { console.error('update-glossary error:', err); }
   });
   socket.on('update-bonsai', async (bonsaiState) => {
-    if (!currentRoom) return;
-    const current = (await mStore.getRoomMeta(currentRoom)).bonsai || { growth:0, lastWatered:null };
-    const updated = {
-      growth: typeof bonsaiState.growth==='number' ? bonsaiState.growth : current.growth,
-      lastWatered: bonsaiState.lastWatered || current.lastWatered
-    };
-    await mStore.updateRoomMeta(currentRoom, { bonsai: updated });
-    io.to(currentRoom).emit('bonsai-update', updated);
+    try {
+      if (!currentRoom) return;
+      const current = (await mStore.getRoomMeta(currentRoom)).bonsai || { growth:0, lastWatered:null };
+      const updated = {
+        growth: typeof bonsaiState.growth==='number' ? bonsaiState.growth : current.growth,
+        lastWatered: bonsaiState.lastWatered || current.lastWatered
+      };
+      await mStore.updateRoomMeta(currentRoom, { bonsai: updated });
+      io.to(currentRoom).emit('bonsai-update', updated);
+    } catch (err) { console.error('update-bonsai error:', err); }
   });
 
   // ── Disconnect ────────────────────────────────────────────────────────────
