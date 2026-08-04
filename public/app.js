@@ -2304,17 +2304,14 @@
         localStorage.setItem('bestieChatWallpaper', 'custom');
         localStorage.setItem('bestieChatWallpaperUrl', url);
       }
-    } else if (selected === 'gradient-cyber') {
-      messagesEl.style.background = 'linear-gradient(135deg, #0d0221 0%, #261052 50%, #150536 100%)';
+    } else if (selected === 'gradient-mint') {
+      messagesEl.style.background = 'linear-gradient(135deg, #eaf2ed 0%, #f4f9f6 50%, #d1e8da 100%)';
       localStorage.setItem('bestieChatWallpaper', selected);
-    } else if (selected === 'gradient-emerald') {
-      messagesEl.style.background = 'linear-gradient(135deg, #021a12 0%, #0c382b 50%, #04261c 100%)';
+    } else if (selected === 'gradient-frost') {
+      messagesEl.style.background = 'linear-gradient(135deg, #f8fcf9 0%, #ffffff 50%, #f0f7f4 100%)';
       localStorage.setItem('bestieChatWallpaper', selected);
-    } else if (selected === 'gradient-sunset') {
-      messagesEl.style.background = 'linear-gradient(135deg, #1a0c16 0%, #381b30 50%, #281222 100%)';
-      localStorage.setItem('bestieChatWallpaper', selected);
-    } else if (selected === 'gradient-starry') {
-      messagesEl.style.background = 'linear-gradient(135deg, #07090f 0%, #1a2235 50%, #0a0f1e 100%)';
+    } else if (selected === 'gradient-pearl') {
+      messagesEl.style.background = 'linear-gradient(135deg, #fffcf9 0%, #ffffff 50%, #f9f5f0 100%)';
       localStorage.setItem('bestieChatWallpaper', selected);
     } else if (selected && selected.startsWith('#')) {
       messagesEl.style.backgroundColor = selected;

@@ -761,28 +761,15 @@
         </div>
       </div>
       <div class="extra-block">
-        <label>Theme 🎨</label>
-        <select id="accentSelect" onchange="BestieChat.changeAccent(this.value)">
-          <option value="telegram">Default Dark</option>
-          <option value="whatsapp">WhatsApp Dark</option>
-          <option value="cyberpunk">Cyberpunk</option>
-          <option value="emerald">Neon Emerald</option>
-          <option value="sunset">Sunset Orange</option>
-          <option value="rose">Velvet Rose</option>
-          <option value="light">Light Mode</option>
-        </select>
-      </div>
-      <div class="extra-block">
         <label>Chat Wallpaper 🖼️</label>
         <select id="wallpaperSelect" onchange="BestieChat.changeWallpaper(this.value)">
-          <option value="">Default</option>
-          <option value="#0a0f1e">Solid Dark Navy</option>
-          <option value="#1c1124">Solid Deep Orchid</option>
-          <option value="#0c1d1a">Solid Teal Forest</option>
-          <option value="gradient-cyber">Cyber Purple</option>
-          <option value="gradient-emerald">Emerald Glow</option>
-          <option value="gradient-sunset">Sunset Dusk</option>
-          <option value="gradient-starry">Starry Night</option>
+          <option value="">Default Mint</option>
+          <option value="#ffffff">Solid Pure White</option>
+          <option value="#f8fcf9">Solid Soft Frost</option>
+          <option value="#eaf2ed">Solid Sage Gray</option>
+          <option value="gradient-mint">Mint Breeze Gradient</option>
+          <option value="gradient-frost">Frost White Gradient</option>
+          <option value="gradient-pearl">Pearlescent Gradient</option>
           <option value="custom">Custom Image URL</option>
         </select>
         <input id="wallpaperUrlInput" type="text" placeholder="Paste image link..." style="display:none; margin-top:6px;" onchange="BestieChat.changeWallpaper('custom', this.value)" />
@@ -980,7 +967,7 @@
 
 <!-- Scripts -->
 <script src="/socket.io/socket.io.js"></script>
-<script src="/app.js?v=11300"></script>
+<script src="/app.js?v=23"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
