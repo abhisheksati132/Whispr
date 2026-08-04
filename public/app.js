@@ -2313,7 +2313,7 @@
     } else if (selected === 'gradient-pearl') {
       messagesEl.style.background = 'linear-gradient(135deg, #fffcf9 0%, #ffffff 50%, #f9f5f0 100%)';
       localStorage.setItem('bestieChatWallpaper', selected);
-    } else if (selected && selected.startsWith('#')) {
+    } else if (selected && selected.startsWith('#') && !['#0a0f1e', '#1c1124', '#0c1d1a'].includes(selected.toLowerCase())) {
       messagesEl.style.backgroundColor = selected;
       localStorage.setItem('bestieChatWallpaper', selected);
     } else {
