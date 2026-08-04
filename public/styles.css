@@ -501,8 +501,18 @@ select option {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  overflow-y: auto;
   z-index: 20;
+}
+
+.sidebar-drawer {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.sidebar-drawer-footer {
+  margin-top: auto;
 }
 
 .sidebar-brand {
@@ -1270,8 +1280,8 @@ header {
   border-radius: 16px;
   padding: 12px;
   display: none;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 4px;
+  grid-template-columns: repeat(auto-fit, minmax(36px, 1fr));
+  gap: 6px;
   box-shadow: var(--shadow);
   z-index: 100;
   max-height: 260px;
@@ -1911,7 +1921,15 @@ header {
 
 /* ═══════════════════ 21. MOBILE RESPONSIVE ═══════════════════ */
 @media (max-width: 768px) {
-  #sidebar { 
+  #sidebar {
+    position: static;
+    width: auto;
+    min-width: auto;
+    border-right: none;
+    z-index: 2500;
+  }
+  
+  .sidebar-drawer {
     position: fixed; 
     left: -280px; 
     width: 280px;
@@ -1920,8 +1938,51 @@ header {
     z-index: 2500;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+    background: var(--sidebar-bg);
+    overflow-y: auto;
   }
-  #sidebar.open { transform: translateX(280px); }
+  #sidebar.open .sidebar-drawer { transform: translateX(280px); }
+
+  .sidebar-drawer-footer {
+    display: none; /* Mobile has other ways to access these settings, or keep them inside drawer */
+  }
+
+  .sidebar-nav {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: center;
+    background: rgba(16,8,8,0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border-soft);
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px));
+    z-index: 2400;
+    flex-wrap: nowrap;
+  }
+  .sidebar-nav .nav-item {
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px;
+    font-size: 11px;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    width: auto;
+    text-align: center;
+  }
+  .sidebar-nav .nav-item.active {
+    color: var(--accent) !important;
+    background: transparent !important;
+  }
+  .sidebar-nav .nav-item svg {
+    margin: 0 auto;
+    width: 20px;
+    height: 20px;
+  }
   
   #sidebarOverlay, .sidebar-overlay { 
     display: block; 
@@ -1939,18 +2000,23 @@ header {
   }
   
   .header-menu-btn { display: flex !important; }
-  #chatMain { width: 100%; }
+  
+  /* Make room for bottom nav */
+  #chatMain { 
+    width: 100%; 
+    padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+  }
   
   /* Mobile Header */
   header {
     padding: 0 8px;
-    gap: 4px;
+    gap: 8px;
   }
-  .header-bestie { min-width: 0; }
-  .header-bestie-name { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .header-bestie-status { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .header-actions { gap: 2px; flex-shrink: 0; }
-  .icon-btn { width: 32px; height: 32px; font-size: 15px; flex-shrink: 0; }
+  .header-bestie { min-width: 0; flex: 1; }
+  .header-bestie-name { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .header-bestie-status { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .header-actions { gap: 4px; flex-shrink: 0; }
+  .icon-btn { width: 40px; height: 40px; font-size: 18px; flex-shrink: 0; }
 
   /* Mobile Messages */
   #messages {
@@ -1962,30 +2028,40 @@ header {
 
   /* Mobile Input Bar */
   #inputBarContainer {
-    padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px));
   }
   .input-pill {
-    padding: 3px 3px 3px 8px;
-    gap: 4px;
+    padding: 4px 4px 4px 10px;
+    gap: 6px;
   }
-  .pill-btn { width: 30px; height: 30px; font-size: 17px; flex-shrink: 0; }
-  #sendBtn { width: 34px; height: 34px; font-size: 15px; flex-shrink: 0; }
+  .pill-btn { width: 36px; height: 36px; font-size: 20px; flex-shrink: 0; }
+  #sendBtn { width: 40px; height: 40px; font-size: 18px; flex-shrink: 0; }
 
-  /* Mobile Modals */
+  /* Mobile Modals (Bottom Sheets) */
+  @keyframes slideUpMobile {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  
   .modal-overlay {
-    padding: 8px;
+    padding: 0;
+    align-items: flex-end; /* Snap to bottom */
   }
   .modal-card {
     max-width: 100% !important;
     width: 100% !important;
-    max-height: 92vh !important;
-    border-radius: 20px !important;
+    max-height: 85vh !important;
+    border-radius: 32px 32px 0 0 !important;
+    margin: 0 !important;
+    border-bottom: none !important;
+    animation: slideUpMobile 0.35s cubic-bezier(0.175, 0.885, 0.32, 1) !important;
     -webkit-overflow-scrolling: touch;
+    padding-bottom: env(safe-area-inset-bottom, 20px) !important;
   }
   .modal-header {
-    padding: 14px 16px 10px;
+    padding: 20px 24px 12px;
   }
-  .modal-header h3 { font-size: 14px; }
+  .modal-header h3 { font-size: 15px; }
 
   /* Mobile Games Grid */
   .games-grid {
@@ -2007,9 +2083,7 @@ header {
     grid-template-columns: repeat(2, 1fr);
     gap: 8px;
   }
-  #emojiPicker {
-    grid-template-columns: repeat(6, 1fr);
-  }
+
   .extras-tabs {
     flex-wrap: wrap;
     gap: 4px;
@@ -2151,12 +2225,9 @@ body.night-glow header, body.night-glow #inputBarContainer { box-shadow: 0 0 30p
 /* Games Hub */
 .games-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 12px;
   padding: 20px;
-}
-@media (max-width: 520px) {
-  .games-grid { grid-template-columns: 1fr; }
 }
 .game-hub-card {
   display: flex;

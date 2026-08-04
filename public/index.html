@@ -99,33 +99,35 @@
 
   <!-- ── SIDEBAR ── -->
   <aside id="sidebar">
-    <!-- Brand -->
-    <div class="sidebar-brand">
-      <span class="brand-icon">✨</span>
-      <span class="brand-text">hmmumm</span>
-      <span id="unreadBadge" class="unread-badge" style="display:none; background:#ec4899; color:#fff; font-size:11px; font-weight:700; border-radius:10px; padding:2px 8px; margin-left:auto;">0</span>
-    </div>
-
-    <!-- My Profile Card -->
-    <div class="sidebar-profile-card" onclick="BestieChat.openProfile()" title="Edit Profile">
-      <div id="sidebarMyAvatar" class="sidebar-avatar">✨</div>
-      <div class="sidebar-info">
-        <div id="sidebarMyName" class="sidebar-profile-name">@username</div>
-        <div id="sidebarMyBio" class="sidebar-profile-bio">tap to edit profile</div>
+    <div class="sidebar-drawer">
+      <!-- Brand -->
+      <div class="sidebar-brand">
+        <span class="brand-icon">✨</span>
+        <span class="brand-text">hmmumm</span>
+        <span id="unreadBadge" class="unread-badge" style="display:none; background:#ec4899; color:#fff; font-size:11px; font-weight:700; border-radius:10px; padding:2px 8px; margin-left:auto;">0</span>
       </div>
+
+      <!-- My Profile Card -->
+      <div class="sidebar-profile-card" onclick="BestieChat.openProfile()" title="Edit Profile">
+        <div id="sidebarMyAvatar" class="sidebar-avatar">✨</div>
+        <div class="sidebar-info">
+          <div id="sidebarMyName" class="sidebar-profile-name">@username</div>
+          <div id="sidebarMyBio" class="sidebar-profile-bio">tap to edit profile</div>
+        </div>
+      </div>
+
+      <div class="sidebar-divider"></div>
+
+
+
+      <!-- Streak -->
+      <div id="streakBadge" class="sidebar-streak">🔥 Start a streak!</div>
+
+      <!-- Their feeling -->
+      <div id="theirFeeling" class="sidebar-feeling"></div>
+
+      <div class="sidebar-divider"></div>
     </div>
-
-    <div class="sidebar-divider"></div>
-
-
-
-    <!-- Streak -->
-    <div id="streakBadge" class="sidebar-streak">🔥 Start a streak!</div>
-
-    <!-- Their feeling -->
-    <div id="theirFeeling" class="sidebar-feeling"></div>
-
-    <div class="sidebar-divider"></div>
 
     <!-- Navigation -->
     <nav class="sidebar-nav">
@@ -152,19 +154,21 @@
     </nav>
 
     <!-- Sidebar footer -->
-    <div class="sidebar-footer">
-      <button class="sidebar-icon-btn" id="soundBtn" onclick="BestieChat.toggleSound()" title="Toggle sound">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-      </button>
-      <button class="sidebar-icon-btn" onclick="BestieChat.toggleTheme()" title="Toggle theme" id="themeToggle">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-      </button>
-      <button class="sidebar-icon-btn" onclick="BestieChat.leaveChat()" title="Refresh chat">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-      </button>
-      <button class="sidebar-icon-btn" onclick="BestieChat.logout()" title="Logout / Leave Space" style="color:#f87171;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-      </button>
+    <div class="sidebar-drawer-footer">
+      <div class="sidebar-footer">
+        <button class="sidebar-icon-btn" id="soundBtn" onclick="BestieChat.toggleSound()" title="Toggle sound">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+        </button>
+        <button class="sidebar-icon-btn" onclick="BestieChat.toggleTheme()" title="Toggle theme" id="themeToggle">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+        <button class="sidebar-icon-btn" onclick="BestieChat.leaveChat()" title="Refresh chat">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        </button>
+        <button class="sidebar-icon-btn" onclick="BestieChat.logout()" title="Logout / Leave Space" style="color:#f87171;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
     </div>
   </aside>
 
