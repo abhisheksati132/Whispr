@@ -1003,26 +1003,30 @@
   }
 
   async function quickReentry() {
-    const token = localStorage.getItem('bestieChatToken');
-    if (!token) { showFullLoginForm(); return; }
+    const savedName = localStorage.getItem('bestieChatName');
+    if (!savedName) { showFullLoginForm(); return; }
+    
     try {
-      const resp = await fetch('/api/auth/me', { headers: { 'Authorization': `Bearer ${token}` } });
-      if (!resp.ok) throw new Error('invalid');
-      const user = await resp.json();
-      authToken = token;
-      myName    = user.username;
-      myProfile = { avatar: user.avatar || '\u2728', color: user.color || '#818cf8', statusBio: user.statusBio || '', nickname: user.nickname || '' };
+      myName = savedName;
+      const profileStr = localStorage.getItem('bestieChatProfile');
+      if (profileStr) {
+        try { myProfile = { ...myProfile, ...JSON.parse(profileStr) }; } catch(e){}
+      }
+      
       myRoom = localStorage.getItem('bestieChatRoom') || 'our-private-space';
+      
       if (els.login) els.login.setAttribute('style', 'display:none !important');
       if (els.chat)  els.chat.setAttribute('style', 'display:flex !important');
+      
       updateSidebarMyProfile();
       applyRoomTheme(myRoom);
+      
       if (!socket || !socket.connected) initSocket();
       else doSocketJoin();
+      
       initOfflineDB();
       setTimeout(loadChatList, 800);
     } catch (_) {
-      localStorage.removeItem('bestieChatToken');
       showFullLoginForm();
     }
   }
@@ -3510,12 +3514,15 @@
       updateSidebarMyProfile();
       checkPinLock();
 
-      // Load saved theme theme-light
-      const savedTheme = localStorage.getItem('bestieChatTheme') || 'dark';
-      if (savedTheme === 'light') {
-        document.body.classList.add('theme-light');
+      // Load saved theme (Mint Breeze is default light)
+      const savedTheme = localStorage.getItem('bestieChatTheme') || 'light';
+      if (savedTheme === 'dark') {
+        document.body.classList.add('theme-dark');
         const toggleBtn = document.getElementById('themeToggle');
         if (toggleBtn) toggleBtn.textContent = '☀️';
+      } else {
+        const toggleBtn = document.getElementById('themeToggle');
+        if (toggleBtn) toggleBtn.textContent = '🌙';
       }
 
       // Parse PWA Share Target URL params
@@ -3550,10 +3557,10 @@
   }
 
   function toggleTheme() {
-    const isLight = document.body.classList.toggle('theme-light');
-    localStorage.setItem('bestieChatTheme', isLight ? 'light' : 'dark');
+    const isDark = document.body.classList.toggle('theme-dark');
+    localStorage.setItem('bestieChatTheme', isDark ? 'dark' : 'light');
     const toggleBtn = document.getElementById('themeToggle');
-    if (toggleBtn) toggleBtn.textContent = isLight ? '☀️' : '🌙';
+    if (toggleBtn) toggleBtn.textContent = isDark ? '☀️' : '🌙';
   }
 
   function dismissDailyQuestion() {

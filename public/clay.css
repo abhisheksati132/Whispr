@@ -92,3 +92,16 @@ html, body {
   font-family: var(--font) !important;
 }
 
+body.theme-dark {
+  --mb-bg:        #0f172a;
+  --mb-bg2:       #1e293b;
+  --mb-sidebar:   #020617;
+  --mb-panel:     #0f172a;
+  --mb-surface:   #1e293b;
+  --mb-surface2:  #334155;
+  --mb-text:      #f8fafc;
+  --mb-text2:     #cbd5e1;
+  --mb-muted:     #64748b;
+  --mb-shadow:    0 4px 20px rgba(0,0,0,0.5);
+  --mb-shadow-sm: 0 2px 8px rgba(0,0,0,0.4);
+}
