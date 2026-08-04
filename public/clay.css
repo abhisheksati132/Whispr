@@ -1,81 +1,81 @@
 /* ═══════════════════════════════════════════════════════════════
-   🌹 ROSE RED — CLAYMORPHISM DESIGN SYSTEM
+   🍃 MINT BREEZE — CLAYMORPHISM DESIGN SYSTEM
    hmmumm / bestie-chat
 
-   Palette: deep rose · muted red · dusty pink · warm cream
-   Aesthetic: romantic, rich, human — like dried roses
-   No neon. No orange. Just depth and warmth.
+   Palette: soft gray-green · pure white · delicate mint · charcoal
+   Aesthetic: fresh, airy, calming, clean
 ═══════════════════════════════════════════════════════════════ */
 
 @import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap');
 
-/* ── Rose Red Design Tokens ── */
+/* ── Mint Breeze Design Tokens ── */
 :root {
-  --rr-bg:        #140a0a;
-  --rr-bg2:       #1c0e0e;
-  --rr-sidebar:   #100808;
-  --rr-panel:     #1e1010;
-  --rr-surface:   #2a1414;
-  --rr-surface2:  #361a1a;
+  --mb-bg:        #f4f9f6;
+  --mb-bg2:       #eaf2ed;
+  --mb-sidebar:   #ffffff;
+  --mb-panel:     #ffffff;
+  --mb-surface:   #ffffff;
+  --mb-surface2:  #f8fcf9;
 
-  --rr-accent:    #c0505a;
-  --rr-accent2:   #e8909a;
-  --rr-accent-deep:#8c3038;
+  --mb-accent:    #34d399;
+  --mb-accent2:   #10b981;
+  --mb-accent-deep:#059669;
   
-  --rr-text:      #f5eeee;
-  --rr-text2:     #ddc0c0;
-  --rr-muted:     #8a5555;
-  --rr-cream:     #f5e8e8;
+  --mb-text:      #1f2937;
+  --mb-text2:     #4b5563;
+  --mb-muted:     #9ca3af;
+  --mb-cream:     #ffffff;
 
-  --rr-shadow-sm:
-    0 2px 0 rgba(0,0,0,0.45),
-    0 4px 12px rgba(0,0,0,0.35),
-    0 0 0 1px rgba(245,232,232,0.06) inset,
-    0 1px 0 rgba(245,232,232,0.10) inset;
+  /* Claymorphism shadows for Light Mode */
+  --mb-shadow-sm:
+    0 2px 0 rgba(148, 163, 184, 0.2),
+    0 4px 12px rgba(148, 163, 184, 0.15),
+    0 0 0 1px rgba(255,255,255,0.8) inset,
+    0 1px 0 rgba(255,255,255,1) inset;
 
-  --rr-shadow:
-    0 5px 0 rgba(0,0,0,0.5),
-    0 10px 24px rgba(0,0,0,0.4),
-    0 0 0 1px rgba(245,232,232,0.07) inset,
-    0 1px 0 rgba(245,232,232,0.13) inset;
+  --mb-shadow:
+    0 5px 0 rgba(148, 163, 184, 0.25),
+    0 10px 24px rgba(148, 163, 184, 0.15),
+    0 0 0 1px rgba(255,255,255,0.8) inset,
+    0 1px 0 rgba(255,255,255,1) inset;
 
-  --rr-shadow-lg:
-    0 8px 0 rgba(0,0,0,0.55),
-    0 16px 40px rgba(0,0,0,0.45),
-    0 0 0 1px rgba(245,232,232,0.08) inset,
-    0 2px 0 rgba(245,232,232,0.16) inset;
+  --mb-shadow-lg:
+    0 8px 0 rgba(148, 163, 184, 0.3),
+    0 16px 40px rgba(148, 163, 184, 0.2),
+    0 0 0 1px rgba(255,255,255,0.9) inset,
+    0 2px 0 rgba(255,255,255,1) inset;
 
-  --rr-shadow-btn:
-    0 5px 0 #4a1418,
-    0 10px 20px rgba(0,0,0,0.3),
-    0 0 0 1px rgba(245,232,232,0.18) inset,
-    0 1px 0 rgba(255,255,255,0.20) inset;
+  --mb-shadow-btn:
+    0 5px 0 #059669,
+    0 10px 20px rgba(16, 185, 129, 0.25),
+    0 0 0 1px rgba(255,255,255,0.4) inset,
+    0 1px 0 rgba(255,255,255,0.6) inset;
 
   --font: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 /* ══ Override global CSS vars ══ */
 body {
-  --bg:           var(--rr-bg);
-  --bg2:          var(--rr-bg2);
-  --sidebar-bg:   var(--rr-sidebar);
-  --panel:        var(--rr-panel);
-  --surface:      var(--rr-surface);
-  --surface2:     var(--rr-surface2);
-  --text:         var(--rr-text);
-  --text2:        var(--rr-text2);
-  --muted:        var(--rr-muted);
-  --accent:       var(--rr-accent);
-  --accent2:      var(--rr-accent2);
-  --accent-glow:  rgba(192,80,90,0.14);
-  --border:       rgba(192,120,120,0.10);
-  --border-soft:  rgba(192,120,120,0.18);
-  --bubble-me:    #6b2428;
-  --bubble-me2:   #8c3038;
-  --bubble-them:  #2a1414;
-  --online:       #86efac;
-  --shadow:       var(--rr-shadow);
-  --shadow-sm:    var(--rr-shadow-sm);
+  --bg:           var(--mb-bg);
+  --bg2:          var(--mb-bg2);
+  --sidebar-bg:   var(--mb-sidebar);
+  --panel:        var(--mb-panel);
+  --surface:      var(--mb-surface);
+  --surface2:     var(--mb-surface2);
+  --text:         var(--mb-text);
+  --text2:        var(--mb-text2);
+  --muted:        var(--mb-muted);
+  --accent:       var(--mb-accent);
+  --accent2:      var(--mb-accent2);
+  --accent-glow:  rgba(52, 211, 153, 0.15);
+  --border:       rgba(148, 163, 184, 0.2);
+  --border-soft:  rgba(148, 163, 184, 0.3);
+  --bubble-me:    #34d399;
+  --bubble-me2:   #10b981;
+  --bubble-them:  #ffffff;
+  --online:       #10b981;
+  --shadow:       var(--mb-shadow);
+  --shadow-sm:    var(--mb-shadow-sm);
   --radius:       22px;
   --radius-sm:    16px;
   --radius-xs:    10px;
@@ -83,8 +83,8 @@ body {
 }
 
 html, body {
-  background: var(--rr-bg) !important;
-  color: var(--rr-text) !important;
+  background: var(--mb-bg) !important;
+  color: var(--mb-text) !important;
   font-family: var(--font) !important;
 }
 
