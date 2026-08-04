@@ -580,7 +580,7 @@ select option {
 header {
   height: 60px;
   min-height: 60px;
-  background: rgba(10,15,30,0.85);
+  background: var(--header-bg, rgba(10,15,30,0.85));
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border);
@@ -912,7 +912,7 @@ header {
 /* ═══════════════════ 8. INPUT BAR ═══════════════════ */
 #inputBarContainer {
   padding: 12px 16px 16px;
-  background: rgba(10,15,30,0.85);
+  background: var(--input-bg, rgba(10,15,30,0.85));
   backdrop-filter: blur(20px);
   border-top: 1px solid var(--border);
   display: flex;

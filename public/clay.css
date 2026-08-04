@@ -16,6 +16,9 @@
   --mb-panel:     #ffffff;
   --mb-surface:   #ffffff;
   --mb-surface2:  #f8fcf9;
+  --mb-header-bg: rgba(255, 255, 255, 0.85);
+  --mb-input-bg:  rgba(255, 255, 255, 0.85);
+
 
   --mb-accent:    #34d399;
   --mb-accent2:   #10b981;
@@ -62,6 +65,8 @@ body {
   --panel:        var(--mb-panel);
   --surface:      var(--mb-surface);
   --surface2:     var(--mb-surface2);
+  --header-bg:    var(--mb-header-bg);
+  --input-bg:     var(--mb-input-bg);
   --text:         var(--mb-text);
   --text2:        var(--mb-text2);
   --muted:        var(--mb-muted);
@@ -99,6 +104,8 @@ body.theme-dark {
   --mb-panel:     #0f172a;
   --mb-surface:   #1e293b;
   --mb-surface2:  #334155;
+  --mb-header-bg: rgba(15, 23, 42, 0.85);
+  --mb-input-bg:  rgba(15, 23, 42, 0.85);
   --mb-text:      #f8fafc;
   --mb-text2:     #cbd5e1;
   --mb-muted:     #64748b;
