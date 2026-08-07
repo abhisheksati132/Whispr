@@ -2308,16 +2308,16 @@
         localStorage.setItem('bestieChatWallpaper', 'custom');
         localStorage.setItem('bestieChatWallpaperUrl', url);
       }
-    } else if (selected === 'gradient-mint') {
-      messagesEl.style.background = 'linear-gradient(135deg, #eaf2ed 0%, #f4f9f6 50%, #d1e8da 100%)';
+    } else if (selected === 'gradient-lavender') {
+      messagesEl.style.background = 'linear-gradient(135deg, #efedf7 0%, #f7f6fb 50%, #e2dff0 100%)';
       localStorage.setItem('bestieChatWallpaper', selected);
-    } else if (selected === 'gradient-frost') {
-      messagesEl.style.background = 'linear-gradient(135deg, #f8fcf9 0%, #ffffff 50%, #f0f7f4 100%)';
+    } else if (selected === 'gradient-frost-violet') {
+      messagesEl.style.background = 'linear-gradient(135deg, #f3eff9 0%, #ffffff 50%, #ebdffd 100%)';
       localStorage.setItem('bestieChatWallpaper', selected);
-    } else if (selected === 'gradient-pearl') {
-      messagesEl.style.background = 'linear-gradient(135deg, #fffcf9 0%, #ffffff 50%, #f9f5f0 100%)';
+    } else if (selected === 'gradient-pearl-rose') {
+      messagesEl.style.background = 'linear-gradient(135deg, #fff2f5 0%, #ffffff 50%, #f5eefc 100%)';
       localStorage.setItem('bestieChatWallpaper', selected);
-    } else if (selected && selected.startsWith('#') && !['#0a0f1e', '#1c1124', '#0c1d1a'].includes(selected.toLowerCase())) {
+    } else if (selected && selected.startsWith('#') && !['#0a0f1e', '#1c1124', '#0c1d1a', '#f4f9f6', '#eaf2ed', '#f8fcf9'].includes(selected.toLowerCase())) {
       messagesEl.style.backgroundColor = selected;
       localStorage.setItem('bestieChatWallpaper', selected);
     } else {

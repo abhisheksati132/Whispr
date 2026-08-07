@@ -1,56 +1,55 @@
 /* ═══════════════════════════════════════════════════════════════
-   🍃 MINT BREEZE — CLAYMORPHISM DESIGN SYSTEM
+   🔮 LAVENDER MIST — CLAYMORPHISM DESIGN SYSTEM
    hmmumm / bestie-chat
 
-   Palette: soft gray-green · pure white · delicate mint · charcoal
-   Aesthetic: fresh, airy, calming, clean
-═══════════════════════════════════════════════════════════════ */
+   Palette: soft lavender-white · pure white · delicate amethyst · deep plum/charcoal
+   Aesthetic: fresh, dreamy, clean, modern
+   ═══════════════════════════════════════════════════════════════ */
 
 @import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap');
 
-/* ── Mint Breeze Design Tokens ── */
+/* ── Lavender Mist Design Tokens ── */
 :root {
-  --mb-bg:        #f4f9f6;
-  --mb-bg2:       #eaf2ed;
+  --mb-bg:        #f7f6fb;
+  --mb-bg2:       #efedf7;
   --mb-sidebar:   #ffffff;
   --mb-panel:     #ffffff;
   --mb-surface:   #ffffff;
-  --mb-surface2:  #f8fcf9;
+  --mb-surface2:  #fcfbfe;
   --mb-header-bg: rgba(255, 255, 255, 0.85);
   --mb-input-bg:  rgba(255, 255, 255, 0.85);
 
-
-  --mb-accent:    #34d399;
-  --mb-accent2:   #10b981;
-  --mb-accent-deep:#059669;
+  --mb-accent:    #a855f7;
+  --mb-accent2:   #8b5cf6;
+  --mb-accent-deep:#6d28d9;
   
-  --mb-text:      #1f2937;
-  --mb-text2:     #4b5563;
-  --mb-muted:     #9ca3af;
+  --mb-text:      #1e1b4b;
+  --mb-text2:     #4a3b5c;
+  --mb-muted:     #9a8c9e;
   --mb-cream:     #ffffff;
 
   /* Claymorphism shadows for Light Mode */
   --mb-shadow-sm:
-    0 2px 0 rgba(148, 163, 184, 0.2),
-    0 4px 12px rgba(148, 163, 184, 0.15),
+    0 2px 0 rgba(139, 92, 246, 0.12),
+    0 4px 12px rgba(139, 92, 246, 0.08),
     0 0 0 1px rgba(255,255,255,0.8) inset,
     0 1px 0 rgba(255,255,255,1) inset;
 
   --mb-shadow:
-    0 5px 0 rgba(148, 163, 184, 0.25),
-    0 10px 24px rgba(148, 163, 184, 0.15),
+    0 5px 0 rgba(139, 92, 246, 0.15),
+    0 10px 24px rgba(139, 92, 246, 0.1),
     0 0 0 1px rgba(255,255,255,0.8) inset,
     0 1px 0 rgba(255,255,255,1) inset;
 
   --mb-shadow-lg:
-    0 8px 0 rgba(148, 163, 184, 0.3),
-    0 16px 40px rgba(148, 163, 184, 0.2),
+    0 8px 0 rgba(139, 92, 246, 0.2),
+    0 16px 40px rgba(139, 92, 246, 0.15),
     0 0 0 1px rgba(255,255,255,0.9) inset,
     0 2px 0 rgba(255,255,255,1) inset;
 
   --mb-shadow-btn:
-    0 5px 0 #059669,
-    0 10px 20px rgba(16, 185, 129, 0.25),
+    0 5px 0 #6d28d9,
+    0 10px 20px rgba(139, 92, 246, 0.25),
     0 0 0 1px rgba(255,255,255,0.4) inset,
     0 1px 0 rgba(255,255,255,0.6) inset;
 
@@ -72,11 +71,11 @@ body {
   --muted:        var(--mb-muted);
   --accent:       var(--mb-accent);
   --accent2:      var(--mb-accent2);
-  --accent-glow:  rgba(52, 211, 153, 0.15);
-  --border:       rgba(148, 163, 184, 0.2);
-  --border-soft:  rgba(148, 163, 184, 0.3);
-  --bubble-me:    #34d399;
-  --bubble-me2:   #10b981;
+  --accent-glow:  rgba(168, 85, 247, 0.15);
+  --border:       rgba(139, 92, 246, 0.15);
+  --border-soft:  rgba(139, 92, 246, 0.25);
+  --bubble-me:    #a855f7;
+  --bubble-me2:   #7c3aed;
   --bubble-them:  #ffffff;
   --online:       #10b981;
   --shadow:       var(--mb-shadow);
@@ -98,17 +97,17 @@ html, body {
 }
 
 body.theme-dark {
-  --mb-bg:        #0f172a;
-  --mb-bg2:       #1e293b;
-  --mb-sidebar:   #020617;
-  --mb-panel:     #0f172a;
-  --mb-surface:   #1e293b;
-  --mb-surface2:  #334155;
-  --mb-header-bg: rgba(15, 23, 42, 0.85);
-  --mb-input-bg:  rgba(15, 23, 42, 0.85);
-  --mb-text:      #f8fafc;
-  --mb-text2:     #cbd5e1;
-  --mb-muted:     #64748b;
-  --mb-shadow:    0 4px 20px rgba(0,0,0,0.5);
+  --mb-bg:        #0f0e17;
+  --mb-bg2:       #181622;
+  --mb-sidebar:   #09080e;
+  --mb-panel:     #181622;
+  --mb-surface:   #181622;
+  --mb-surface2:  #211e2f;
+  --mb-header-bg: rgba(24, 22, 34, 0.85);
+  --mb-input-bg:  rgba(24, 22, 34, 0.85);
+  --mb-text:      #f5f3ff;
+  --mb-text2:     #d8b4fe;
+  --mb-muted:     #7c7189;
+  --mb-shadow:    0 4px 20px rgba(0,0,0,0.6);
   --mb-shadow-sm: 0 2px 8px rgba(0,0,0,0.4);
 }

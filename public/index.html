@@ -18,7 +18,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/styles.css?v=11302" />
-  <link rel="stylesheet" href="/clay.css?v=4" />
+  <link rel="stylesheet" href="/clay.css?v=5" />
 </head>
 <body>
 
@@ -763,13 +763,13 @@
       <div class="extra-block">
         <label>Chat Wallpaper 🖼️</label>
         <select id="wallpaperSelect" onchange="BestieChat.changeWallpaper(this.value)">
-          <option value="">Default Mint</option>
+          <option value="">Default Lavender</option>
           <option value="#ffffff">Solid Pure White</option>
-          <option value="#f8fcf9">Solid Soft Frost</option>
-          <option value="#eaf2ed">Solid Sage Gray</option>
-          <option value="gradient-mint">Mint Breeze Gradient</option>
-          <option value="gradient-frost">Frost White Gradient</option>
-          <option value="gradient-pearl">Pearlescent Gradient</option>
+          <option value="#f3f0f7">Solid Soft Lavender</option>
+          <option value="#e7e3f0">Solid Misty Lilac</option>
+          <option value="gradient-lavender">Lavender Mist Gradient</option>
+          <option value="gradient-frost-violet">Frost Violet Gradient</option>
+          <option value="gradient-pearl-rose">Pearlescent Rose Gradient</option>
           <option value="custom">Custom Image URL</option>
         </select>
         <input id="wallpaperUrlInput" type="text" placeholder="Paste image link..." style="display:none; margin-top:6px;" onchange="BestieChat.changeWallpaper('custom', this.value)" />
@@ -967,7 +967,7 @@
 
 <!-- Scripts -->
 <script src="/socket.io/socket.io.js"></script>
-<script src="/app.js?v=25"></script>
+<script src="/app.js?v=26"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
