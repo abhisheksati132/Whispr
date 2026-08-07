@@ -967,11 +967,12 @@
 
 <!-- Scripts -->
 <script src="/socket.io/socket.io.js"></script>
-<script src="/app.js?v=26"></script>
+<script src="/crypto-js.min.js"></script>
+<script src="/app.js?v=27"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js?v=11300').catch(console.error);
+      navigator.serviceWorker.register('/sw.js?v=11301').catch(console.error);
     });
   }
   function forceClearAppCache() {

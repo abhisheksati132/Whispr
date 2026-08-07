@@ -968,6 +968,17 @@
     applyRoomTheme(room);
     updateSidebarMyProfile();
 
+    initOfflineDB().then(() => {
+      if (els.messages) els.messages.innerHTML = '';
+      lastDateLabel = '';
+      loadCachedMessagesFromOfflineDB(room).then(msgs => {
+        if (allMessagesCached.length === 0 && msgs.length > 0) {
+          allMessagesCached = msgs;
+          msgs.forEach(m => renderMessage(m, true));
+        }
+      });
+    });
+
     fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -985,7 +996,6 @@
     if (!socket || !socket.connected) initSocket();
     else doSocketJoin();
 
-    initOfflineDB();
     setTimeout(loadChatList, 800);
   }
 
@@ -1020,11 +1030,20 @@
       
       updateSidebarMyProfile();
       applyRoomTheme(myRoom);
+
+      await initOfflineDB();
+      if (els.messages) els.messages.innerHTML = '';
+      lastDateLabel = '';
+      loadCachedMessagesFromOfflineDB(myRoom).then(msgs => {
+        if (allMessagesCached.length === 0 && msgs.length > 0) {
+          allMessagesCached = msgs;
+          msgs.forEach(m => renderMessage(m, true));
+        }
+      });
       
       if (!socket || !socket.connected) initSocket();
       else doSocketJoin();
       
-      initOfflineDB();
       setTimeout(loadChatList, 800);
     } catch (_) {
       showFullLoginForm();
@@ -1314,6 +1333,23 @@
     }
   }
 
+  function spawnFloatingEmoji(emoji, targetEl) {
+    if (!emoji) return;
+    const floating = document.createElement('div');
+    floating.className = 'floating-emoji';
+    floating.textContent = emoji;
+    if (targetEl) {
+      const rect = targetEl.getBoundingClientRect();
+      floating.style.left = `${rect.left + rect.width / 2 + (Math.random() * 20 - 10)}px`;
+      floating.style.top = `${rect.top}px`;
+    } else {
+      floating.style.left = `${window.innerWidth / 2 + (Math.random() * 60 - 30)}px`;
+      floating.style.top = `${window.innerHeight * 0.7}px`;
+    }
+    document.body.appendChild(floating);
+    setTimeout(() => floating.remove(), 1200);
+  }
+
   // ═══════════════════ REACTIONS ═══════════════════
   function react(messageId, emoji) {
     if (!joined) return;
@@ -1341,7 +1377,7 @@
     els.gifPanel.classList.remove('open');
     if (els.attachMenu) els.attachMenu.style.display = 'none';
   }
-  function insertEmoji(emoji) { els.msgInput.value += emoji; els.msgInput.focus(); toggleSendMicIcons(); }
+  function insertEmoji(emoji) { els.msgInput.value += emoji; els.msgInput.focus(); toggleSendMicIcons(); spawnFloatingEmoji(emoji, els.msgInput); }
   function startGame(type) { socket.emit('start-game', type); els.gameMenu.classList.remove('open'); }
 
   function toggleGifPanel() {
@@ -1766,6 +1802,9 @@
       (payload.history || []).forEach((m) => { if (m.user) profiles[m.user] = profiles[m.user] || {}; });
 
       allMessagesCached = payload.history || [];
+      clearRoomHistoryInOfflineDB(myRoom).then(() => {
+        saveMessagesHistoryToOfflineDB(allMessagesCached);
+      });
       if (els.messages) els.messages.innerHTML = '';
       lastDateLabel = '';
       allMessagesCached.forEach((m) => renderMessage(m, true));
@@ -1805,6 +1844,7 @@
 
     socket.on('message', (msg) => {
       allMessagesCached.push(msg);
+      saveMessageToOfflineDB(msg);
       renderMessage(msg);
       renderHeatmap();
       if (msg.user !== myName) {
@@ -1825,24 +1865,29 @@
     });
 
     socket.on('message-edited', ({ messageId, text, editedAt }) => {
+      const msg = allMessagesCached.find(m => m.id === messageId);
+      if (msg) {
+        msg.text = text;
+        msg.editedAt = editedAt;
+        saveMessageToOfflineDB(msg);
+      }
       const wrap = els.messages.querySelector(`[data-id="${messageId}"]`);
       if (!wrap) return;
       const msgEl = wrap.querySelector('.msg');
       if (!msgEl) return;
-      // Find the text node (last text in .msg, after meta/replyQuote)
-      const existing = msgEl.lastChild;
-      // Update: re-render text content nodes
-      const textNodes = [...msgEl.childNodes].filter((n) => n.nodeType === Node.TEXT_NODE || (n.nodeType === Node.ELEMENT_NODE && !['DIV','AUDIO','IMG','A'].includes(n.tagName)));
-      // Simpler: update the full text by replacing the last text content
       const textEl = msgEl.querySelector('.msg-text') || null;
       if (textEl) { textEl.textContent = text; }
-      // Add/update edited tag
       let editTag = msgEl.querySelector('.edited-tag');
       if (!editTag) { editTag = document.createElement('div'); editTag.className = 'edited-tag'; msgEl.appendChild(editTag); }
       editTag.textContent = 'edited';
     });
 
     socket.on('message-deleted', ({ messageId }) => {
+      const msg = allMessagesCached.find(m => m.id === messageId);
+      if (msg) {
+        msg.deleted = true;
+        saveMessageToOfflineDB(msg);
+      }
       const wrap = els.messages.querySelector(`[data-id="${messageId}"]`);
       if (!wrap) return;
       const msgEl = wrap.querySelector('.msg');
@@ -2062,6 +2107,7 @@
 
     socket.on('history-cleared', () => {
       allMessagesCached = [];
+      clearRoomHistoryInOfflineDB(myRoom);
       if (els.messages) els.messages.innerHTML = '';
       showToast('🧹 Chat history was cleared');
     });
@@ -2473,18 +2519,9 @@
   }
 
   function encryptE2EE(text) {
-    if (!e2eEnabled || !e2eKey) return text;
+    if (!e2eEnabled || !e2eKey || typeof CryptoJS === 'undefined') return text;
     try {
-      const encoder = new TextEncoder();
-      const textBytes = encoder.encode(text);
-      const keyBytes = encoder.encode(e2eKey);
-      const res = new Uint8Array(textBytes.length);
-      for (let i = 0; i < textBytes.length; i++) {
-        res[i] = textBytes[i] ^ keyBytes[i % keyBytes.length];
-      }
-      let binary = '';
-      for (let i = 0; i < res.length; i++) binary += String.fromCharCode(res[i]);
-      return '🔒:' + btoa(binary);
+      return '🔒:' + CryptoJS.AES.encrypt(text, e2eKey).toString();
     } catch {
       return text;
     }
@@ -2493,15 +2530,13 @@
   function decryptE2EE(text) {
     if (!text || !text.startsWith('🔒:')) return text;
     if (!e2eKey) return '🔒 [Encrypted — Enter Secret Key to View]';
+    if (typeof CryptoJS === 'undefined') return '🔒 [Crypto Library Offline]';
     try {
-      const base64 = text.replace(/^🔒:/, '');
-      const binary = atob(base64);
-      const keyBytes = new TextEncoder().encode(e2eKey);
-      const res = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) {
-        res[i] = binary.charCodeAt(i) ^ keyBytes[i % keyBytes.length];
-      }
-      return new TextDecoder().decode(res);
+      const ciphertext = text.replace(/^🔒:/, '');
+      const bytes = CryptoJS.AES.decrypt(ciphertext, e2eKey);
+      const dec = bytes.toString(CryptoJS.enc.Utf8);
+      if (!dec) throw new Error('Decryption empty');
+      return dec;
     } catch {
       return '🔒 [Decryption Failed]';
     }
@@ -4080,14 +4115,101 @@
     } catch (_) { showToast('\u274C Error starting DM'); }
   }
 
-  // ═══════════════════ OFFLINE QUEUE ═══════════════════
+  // ═══════════════════ OFFLINE QUEUE & CACHE ═══════════════════
   async function initOfflineDB() {
     if (!window.indexedDB) return;
     return new Promise(resolve => {
-      const req = indexedDB.open('bestie-offline-v1', 1);
-      req.onupgradeneeded = e => { try { e.target.result.createObjectStore('queue', { autoIncrement: true }); } catch(_) {} };
+      const req = indexedDB.open('bestie-store-v2', 1);
+      req.onupgradeneeded = e => {
+        const db = e.target.result;
+        try { db.createObjectStore('queue', { autoIncrement: true }); } catch(_) {}
+        try {
+          const msgStore = db.createObjectStore('messages', { keyPath: 'id' });
+          msgStore.createIndex('room', 'room', { unique: false });
+        } catch(_) {}
+      };
       req.onsuccess = e => { offlineDB = e.target.result; resolve(); };
       req.onerror  = () => resolve();
+    });
+  }
+
+  async function saveMessageToOfflineDB(msg) {
+    if (!offlineDB || !msg || !msg.id) return;
+    msg.room = myRoom;
+    return new Promise(resolve => {
+      try {
+        const tx = offlineDB.transaction('messages', 'readwrite');
+        tx.objectStore('messages').put(msg);
+        tx.oncomplete = resolve; tx.onerror = resolve;
+      } catch(_) { resolve(); }
+    });
+  }
+
+  async function saveMessagesHistoryToOfflineDB(history) {
+    if (!offlineDB || !history) return;
+    return new Promise(resolve => {
+      try {
+        const tx = offlineDB.transaction('messages', 'readwrite');
+        const store = tx.objectStore('messages');
+        history.forEach(msg => {
+          if (msg && msg.id) {
+            msg.room = myRoom;
+            store.put(msg);
+          }
+        });
+        tx.oncomplete = resolve; tx.onerror = resolve;
+      } catch(_) { resolve(); }
+    });
+  }
+
+  async function deleteMessageFromOfflineDB(messageId) {
+    if (!offlineDB) return;
+    return new Promise(resolve => {
+      try {
+        const tx = offlineDB.transaction('messages', 'readwrite');
+        tx.objectStore('messages').delete(messageId);
+        tx.oncomplete = resolve; tx.onerror = resolve;
+      } catch(_) { resolve(); }
+    });
+  }
+
+  async function clearRoomHistoryInOfflineDB(room) {
+    if (!offlineDB) return;
+    return new Promise(resolve => {
+      try {
+        const tx = offlineDB.transaction('messages', 'readwrite');
+        const store = tx.objectStore('messages');
+        const index = store.index('room');
+        const req = index.openCursor(IDBKeyRange.only(room));
+        req.onsuccess = e => {
+          const cursor = e.target.result;
+          if (cursor) {
+            cursor.delete();
+            cursor.continue();
+          } else {
+            resolve();
+          }
+        };
+        req.onerror = () => resolve();
+      } catch(_) { resolve(); }
+    });
+  }
+
+  async function loadCachedMessagesFromOfflineDB(room) {
+    if (!offlineDB) return [];
+    return new Promise(resolve => {
+      try {
+        const tx = offlineDB.transaction('messages', 'readonly');
+        const store = tx.objectStore('messages');
+        const index = store.index('room');
+        const req = index.getAll(IDBKeyRange.only(room));
+        req.onsuccess = e => {
+          const msgs = e.target.result || [];
+          msgs.sort((a, b) => (a.time || 0) - (b.time || 0));
+          resolve(msgs);
+        };
+        req.onerror = () => resolve([]);
+      } catch(_) { resolve([]); }
     });
   }
 
