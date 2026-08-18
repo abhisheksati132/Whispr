@@ -8,7 +8,12 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "display_override": [
+    "tabbed",
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
   "background_color": "#FAF9F5",
   "theme_color": "#FAF9F5",
   "orientation": "portrait-primary",
@@ -85,9 +90,41 @@
     }
   ],
   "prefer_related_applications": false,
-  "related_applications": [],
+  "related_applications": [
+    {
+      "platform": "play",
+      "id": "com.chatjh59.app",
+      "url": "https://play.google.com/store/apps/details?id=com.chatjh59.app"
+    }
+  ],
   "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
-  "widgets": [],
+  "widgets": [
+    {
+      "name": "chat Quick Status",
+      "short_name": "chat",
+      "description": "View recent messages and your status",
+      "tag": "chat-widget",
+      "template": "widget-template",
+      "ms_ac_template": "widget-ms-template.json",
+      "data": "widget-data.json",
+      "type": "application/json",
+      "screenshots": [
+        {
+          "src": "/screenshot-mobile.png",
+          "sizes": "540x960",
+          "label": "chat widget preview"
+        }
+      ],
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ],
+      "auth": false,
+      "update": 86400
+    }
+  ],
   "edge_side_panel": {
     "preferred_width": 400
   },
@@ -96,7 +133,10 @@
   },
   "scope_extensions": [
     {
-      "origin": "https://chat-jh59.onrender.com"
+      "origin": "chat-jh59.onrender.com"
+    },
+    {
+      "origin": "*.onrender.com"
     }
   ]
 }
