@@ -142,10 +142,10 @@
       "origin": "https://chat-jh59.onrender.com"
     },
     {
-      "origin": "https://*.onrender.com"
+      "origin": "https://onrender.com"
     },
     {
-      "origin": "chat-jh59.onrender.com"
+      "origin": "https://api.onrender.com"
     }
   ]
 }
