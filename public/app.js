@@ -267,6 +267,8 @@
       const mine = users.includes(myName);
       return `<span class="reaction-pill${mine ? ' mine' : ''}" onclick="BestieChat.react('${msg.id}','${emoji}')">${emoji} ${users.length}</span>`;
     }).join('');
+  }
+
   // ── OpenGraph Link Preview Fetcher ──
   const previewedLinks = new Set();
   function fetchAndRenderLinkPreview(messageId, text) {
