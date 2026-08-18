@@ -702,7 +702,7 @@
     const hNameEl     = document.getElementById('headerBestieName');
     const hStatusEl   = document.getElementById('headerBestieStatus');
 
-    let bestieDisplay = 'Bestie';
+    let bestieDisplay = 'Chat';
     let bestieAvatar  = '✨';
     let bestieStatus  = 'Offline';
     let isOnline      = false;
@@ -759,9 +759,9 @@
       }
     }
     if (unreadCount > 0 && document.hidden) {
-      document.title = `(${unreadCount}) hmmumm ✨`;
+      document.title = `(${unreadCount}) chat ✨`;
     } else {
-      document.title = 'hmmumm ✨';
+      document.title = 'chat ✨';
     }
   }
 
@@ -979,10 +979,10 @@
       });
     });
 
-    fetch('/api/auth/login', {
+    fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: cleanName, pin: '0000' })
+      body: JSON.stringify({ username: cleanName, pin: '0000', avatar: myProfile.avatar || '✨' })
     })
     .then(r => r.json())
     .then(data => {

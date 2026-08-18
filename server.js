@@ -642,7 +642,7 @@ setInterval(() => mStore.cleanDisappearingMessages().catch(()=>{}), 60 * 1000);
 // ── Start ─────────────────────────────────────────────────────────────────────
 if (require.main === module) {
   const PORT = process.env.PORT || 3000;
-  server.listen(PORT, '0.0.0.0', () => console.log(`✨ hmmumm running on port ${PORT}`));
+  server.listen(PORT, '0.0.0.0', () => console.log(`✨ chat running on port ${PORT}`));
 }
 
 module.exports = { app, server };

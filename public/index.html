@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>hmmumm ✨</title>
-  <meta name="description" content="Your private space to connect with your bestie. Real accounts, real persistence." />
+  <title>chat ✨</title>
+  <meta name="description" content="Private real-time chat space." />
   <link rel="manifest" href="/manifest.json?v=900" />
   <link rel="icon" type="image/x-icon" href="/favicon.ico?v=900" />
   <link rel="shortcut icon" type="image/png" href="/icon-192.png?v=900" />
@@ -12,7 +12,7 @@
   <meta name="theme-color" content="#0e0b1a" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="hmmumm" />
+  <meta name="apple-mobile-web-app-title" content="chat" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
@@ -41,14 +41,14 @@
     <div class="login-card">
       <!-- Brand -->
       <div class="login-brand" style="margin-bottom: 12px;">
-        <h1 class="brand-text-login" style="font-size: 38px; font-weight: 800; letter-spacing: -0.04em; margin: 0 0 2px 0; color: var(--text);">bestie</h1>
+        <h1 class="brand-text-login" style="font-size: 38px; font-weight: 800; letter-spacing: -0.04em; margin: 0 0 2px 0; color: var(--text);">chat</h1>
         <p class="login-tagline" style="font-size: 14px; font-weight: 500; color: var(--muted); margin: 0;">Your private space.</p>
       </div>
 
       <!-- Quick 1-Tap Re-entry (if returning user with valid JWT) -->
       <div id="quickReentryContainer" style="display:none; margin-bottom:12px; flex-direction:column; gap:12px; align-items:center;">
         <div id="quickReentryBtn" onclick="BestieChat.quickReentry()" style="font-size:16px; font-weight:600; color:var(--text); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:color 0.2s;" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color='var(--text)'">
-          <span id="quickReentryText">✨ Continue as Bestie</span>
+          <span id="quickReentryText">✨ Continue to Chat</span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </div>
         <div style="font-size:13px; color:var(--muted); cursor:pointer; transition:color 0.2s;" onclick="BestieChat.showFullLoginForm()" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">or log in with another name →</div>
@@ -98,7 +98,7 @@
     <div class="sidebar-drawer">
       <!-- Brand -->
       <div class="sidebar-brand">
-        <span class="brand-text" style="font-weight: 700; font-size: 19px; letter-spacing: -0.03em; color: var(--text);">bestie</span>
+        <span class="brand-text" style="font-weight: 700; font-size: 19px; letter-spacing: -0.03em; color: var(--text);">chat</span>
         <span id="unreadBadge" class="unread-badge" style="display:none; background:#10b981; color:#fff; font-size:11px; font-weight:700; border-radius:10px; padding:2px 8px; margin-left:auto;">0</span>
       </div>
 
@@ -181,7 +181,7 @@
       <div class="header-bestie" onclick="BestieChat.openProfile()">
         <div id="headerBestieAvatar" class="header-avatar">🐱</div>
         <div class="header-bestie-info">
-          <div id="headerBestieName" class="header-bestie-name">Bestie</div>
+          <div id="headerBestieName" class="header-bestie-name">Chat</div>
           <div id="headerBestieStatus" class="header-bestie-status bestie-status">Connecting…</div>
         </div>
       </div>
@@ -366,26 +366,22 @@
         <button onclick="BestieChat.toggleStickerPanel()" style="background:none; border:none; color:var(--muted); font-size:14px; cursor:pointer;">✕</button>
       </div>
       <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; max-height:240px; overflow-y:auto;">
-        <img src="https://media.giphy.com/media/26BRv0ThflsHCqDrG/giphy.gif" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
-        <img src="https://media.giphy.com/media/l0HlBO7eyXz4S3H4Y/giphy.gif" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
-        <img src="https://media.giphy.com/media/lrr9rH7bbQusE/giphy.gif" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
-        <img src="https://media.giphy.com/media/3o7TKsQ8X3x8F2V2lC/giphy.gif" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
-        <img src="https://media.giphy.com/media/26tn33aiTi1jkl6H6/giphy.gif" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
-        <img src="https://media.giphy.com/media/jd7vPTz4h9k4/giphy.gif" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
-        <img src="https://media.giphy.com/media/3o85xnoIXebk3xYx4Q/giphy.gif" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
-        <img src="https://media.giphy.com/media/l0NwHXQy3kUSfFF60/giphy.gif" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
-        <img src="https://media.giphy.com/media/xT0xeJpnrWC4XWblEk/giphy.gif" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
-        <img src="https://media.giphy.com/media/l41K3tzVl3y5K/giphy.gif" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
-        <img src="https://media.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
-        <img src="https://media.giphy.com/media/26n6WywOy1rOmJSmQ/giphy.gif" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
-        <img src="https://media.giphy.com/media/dzaUX7CAG0Ihi/giphy.gif" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
-        <img src="https://media.giphy.com/media/mlvseq9yvZhba/giphy.gif" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
-        <img src="https://media.giphy.com/media/vFKqnCdLPNOKc/giphy.gif" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
-        <img src="https://media.giphy.com/media/13Hgw8T855x5a8/giphy.gif" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
-        <img src="https://media.giphy.com/media/Bcfb1FhZ1xY1/giphy.gif" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
-        <img src="https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
-        <img src="https://media.giphy.com/media/g9582DNuQppxC/giphy.gif" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
-        <img src="https://media.giphy.com/media/Cmr1OMJ2FN0B2/giphy.gif" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
+        <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f389/512.gif" alt="Party" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
+        <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f602/512.gif" alt="Laugh" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
+        <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f60d/512.gif" alt="Heart Eyes" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
+        <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.gif" alt="Fire" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
+        <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/2728/512.gif" alt="Sparkles" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
+        <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f60e/512.gif" alt="Cool" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
+        <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f44d/512.gif" alt="Thumbs Up" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
+        <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f4af/512.gif" alt="100" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
+        <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f973/512.gif" alt="Celebration" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
+        <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f929/512.gif" alt="Star Struck" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
+        <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f31f/512.gif" alt="Glowing Star" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
+        <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f917/512.gif" alt="Hug" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
+        <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f64f/512.gif" alt="Pray" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
+        <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f97a/512.gif" alt="Pleading" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
+        <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f496/512.gif" alt="Sparkle Heart" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
+        <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f44b/512.gif" alt="Wave" style="width:100%; height:60px; object-fit:contain; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:4px;" onclick="BestieChat.sendSticker(this.src)" />
       </div>
     </div>
 

@@ -1,7 +1,7 @@
 {
-  "name": "bestie — Just Us 💭",
-  "short_name": "bestie",
-  "description": "Private, cozy real-time space for you and your bestie.",
+  "name": "chat",
+  "short_name": "chat",
+  "description": "Private real-time chat space.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0d0d1a",
