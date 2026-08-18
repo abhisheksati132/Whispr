@@ -403,6 +403,71 @@ async function cleanDisappearingMessages() {
     await Message.deleteMany({ room: r.name, time: { $lt: cutoff }, type: 'text' });
   }
 }
+async function markMessageDelivered(roomName, messageId, username) {
+  if (!isConnected()) {
+    const msgs = memMessages.get(roomName) || [];
+    const msg = msgs.find(m => m.id === messageId);
+    if (msg) {
+      if (!msg.deliveredTo) msg.deliveredTo = [];
+      if (username && !msg.deliveredTo.includes(username)) msg.deliveredTo.push(username);
+      return msg;
+    }
+    return null;
+  }
+  return Message.findOneAndUpdate(
+    { id: messageId, room: roomName },
+    { $addToSet: { deliveredTo: username } },
+    { new: true }
+  ).lean();
+}
+
+async function markMessageRead(roomName, messageId, username) {
+  if (!isConnected()) {
+    const msgs = memMessages.get(roomName) || [];
+    const msg = msgs.find(m => m.id === messageId);
+    if (msg) {
+      if (!msg.readByUsers) msg.readByUsers = [];
+      if (username && !msg.readByUsers.includes(username)) msg.readByUsers.push(username);
+      return msg;
+    }
+    return null;
+  }
+  return Message.findOneAndUpdate(
+    { id: messageId, room: roomName },
+    { $addToSet: { readByUsers: username } },
+    { new: true }
+  ).lean();
+}
+
+async function starMessage(roomName, messageId, username, starred) {
+  if (!isConnected()) {
+    const msgs = memMessages.get(roomName) || [];
+    const msg = msgs.find(m => m.id === messageId);
+    if (msg) {
+      if (!msg.starredBy) msg.starredBy = [];
+      if (starred) {
+        if (!msg.starredBy.includes(username)) msg.starredBy.push(username);
+      } else {
+        msg.starredBy = msg.starredBy.filter(u => u !== username);
+      }
+      return msg;
+    }
+    return null;
+  }
+  const update = starred
+    ? { $addToSet: { starredBy: username } }
+    : { $pull: { starredBy: username } };
+  return Message.findOneAndUpdate({ id: messageId, room: roomName }, update, { new: true }).lean();
+}
+
+async function getStarredMessages(roomName, username) {
+  if (!isConnected()) {
+    const msgs = memMessages.get(roomName) || [];
+    return msgs.filter(m => !m.deleted && m.starredBy && m.starredBy.includes(username));
+  }
+  return Message.find({ room: roomName, starredBy: username, deleted: { $ne: true } }).lean();
+}
+
 function persist() {} // no-op, MongoDB auto-persists
 
 module.exports = {
@@ -418,4 +483,5 @@ module.exports = {
   getUploadsDir, saveUpload,
   cleanExpiredRooms, cleanDisappearingMessages, persist,
   savePushSub, deletePushSub, getPushSubs,
+  markMessageDelivered, markMessageRead, starMessage, getStarredMessages
 };

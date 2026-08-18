@@ -229,8 +229,59 @@ function updateReadReceipt(room, username, messageId) {
   const state = getRoom(room);
   if (!state.readBy) state.readBy = {};
   state.readBy[username] = messageId;
+  
+  if (messageId) {
+    for (const msg of state.messages) {
+      if (!msg.readByUsers) msg.readByUsers = [];
+      if (!msg.readByUsers.includes(username)) msg.readByUsers.push(username);
+      if (msg.id === messageId) break;
+    }
+  }
   persist();
   return state.readBy;
+}
+
+function markMessageDelivered(room, messageId, username) {
+  const state = getRoom(room);
+  const msg = state.messages.find((m) => m.id === messageId);
+  if (!msg) return null;
+  if (!msg.deliveredTo) msg.deliveredTo = [];
+  if (username && !msg.deliveredTo.includes(username)) {
+    msg.deliveredTo.push(username);
+    persist();
+  }
+  return msg;
+}
+
+function markMessageRead(room, messageId, username) {
+  const state = getRoom(room);
+  const msg = state.messages.find((m) => m.id === messageId);
+  if (!msg) return null;
+  if (!msg.readByUsers) msg.readByUsers = [];
+  if (username && !msg.readByUsers.includes(username)) {
+    msg.readByUsers.push(username);
+    persist();
+  }
+  return msg;
+}
+
+function starMessage(room, messageId, username, starred) {
+  const state = getRoom(room);
+  const msg = state.messages.find((m) => m.id === messageId);
+  if (!msg) return null;
+  if (!msg.starredBy) msg.starredBy = [];
+  if (starred) {
+    if (!msg.starredBy.includes(username)) msg.starredBy.push(username);
+  } else {
+    msg.starredBy = msg.starredBy.filter((u) => u !== username);
+  }
+  persist();
+  return msg;
+}
+
+function getStarredMessages(room, username) {
+  const state = getRoom(room);
+  return state.messages.filter((m) => !m.deleted && m.starredBy && m.starredBy.includes(username));
 }
 
 function recordActivity(username) {
@@ -443,6 +494,10 @@ module.exports = {
   updateGameScore,
   clearHistory,
   cleanDisappearingMessages,
+  markMessageDelivered,
+  markMessageRead,
+  starMessage,
+  getStarredMessages,
   MOTD_PROMPTS,
   MILESTONES,
   FEELINGS

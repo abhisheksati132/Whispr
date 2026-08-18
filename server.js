@@ -81,6 +81,22 @@ app.get('/health', (_req, res) => res.send('ok'));
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', uptime: Math.floor(process.uptime()), timestamp: Date.now(), mongo: mongoose.connection.readyState === 1 }));
 app.get('/api/config', (_req, res) => res.json({ passwordRequired: Boolean(CHAT_PASSWORD), giphyKey: GIPHY_API_KEY }));
 app.get('/api/daily-question', (_req, res) => res.json({ question: mStore.getDailyQuestion() }));
+app.get('/api/export-chat', async (req, res) => {
+  try {
+    const room = normalizeRoom(req.query.room || 'our-private-space');
+    const messages = await mStore.getMessages(room, 5000);
+    const meta = await mStore.getRoomMeta(room);
+    res.json({
+      room,
+      exportedAt: new Date().toISOString(),
+      messageCount: messages.length,
+      messages,
+      meta
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Export failed' });
+  }
+});
 
 // ── OpenGraph Link Preview ───────────────────────────────────────────────────
 const linkPreviewCache = new Map();
@@ -400,6 +416,7 @@ io.on('connection', (socket) => {
       if (type === 'hug') msgData = { user: username, text: 'sent a hug 💌', type: 'hug' };
       else if (type === 'image') { if (!payload.url) return; msgData = { user: username, text: payload.text||'', url: payload.url, type:'image' }; }
       else if (type === 'voice') { if (!payload.url) return; msgData = { user: username, text:'', url: payload.url, duration: payload.duration||0, type:'voice' }; }
+      else if (type === 'video-note') { if (!payload.url) return; msgData = { user: username, text:'', url: payload.url, duration: payload.duration||0, type:'video-note' }; }
       else if (type === 'music') { if (!payload.url) return; msgData = { user: username, text: payload.text||payload.url, url: payload.url, type:'music' }; }
       else {
         const text = normalizeText(payload.text||''); if (!text) return;
@@ -430,6 +447,31 @@ io.on('connection', (socket) => {
 
       if (milestone) io.to(currentRoom).emit('milestone', { count: milestone, text: MILESTONE_TEXTS[milestone] || `🎉 ${milestone} messages!` });
     } catch (err) { console.error('message error:', err); }
+  });
+
+  // ── Granular Presence (typing, recording audio/video, sending media) ──────
+  socket.on('presence-status', ({ status } = {}) => {
+    try {
+      if (!currentRoom || !username) return;
+      socket.to(currentRoom).emit('presence-status-update', { user: username, status: status || 'idle' });
+    } catch (err) { console.error('presence-status error:', err); }
+  });
+
+  // ── Star / Bookmark message ───────────────────────────────────────────────
+  socket.on('star-message', async ({ messageId, starred } = {}) => {
+    try {
+      if (!currentRoom || !username || !messageId) return;
+      const updated = await mStore.starMessage(currentRoom, messageId, username, starred);
+      if (updated) io.to(currentRoom).emit('message-starred', { messageId, starredBy: updated.starredBy });
+    } catch (err) { console.error('star-message error:', err); }
+  });
+
+  socket.on('get-starred-messages', async (ack) => {
+    try {
+      if (!currentRoom || !username || typeof ack !== 'function') return;
+      const list = await mStore.getStarredMessages(currentRoom, username);
+      ack({ messages: list || [] });
+    } catch (err) { if (typeof ack === 'function') ack({ messages: [] }); }
   });
 
   // ── Secret message ────────────────────────────────────────────────────────
@@ -469,16 +511,20 @@ io.on('connection', (socket) => {
   });
 
   // ── Read & Delivery Receipts ──────────────────────────────────────────────
-  socket.on('mark-read', ({ messageIds } = {}) => {
+  socket.on('mark-read', async ({ messageIds } = {}) => {
     try {
       if (!currentRoom || !username || !Array.isArray(messageIds) || !messageIds.length) return;
+      for (const id of messageIds) {
+        await mStore.markMessageRead(currentRoom, id, username);
+      }
       socket.to(currentRoom).emit('messages-read', { messageIds, reader: username });
     } catch (err) { console.error('mark-read error:', err); }
   });
 
-  socket.on('mark-delivered', ({ messageId } = {}) => {
+  socket.on('mark-delivered', async ({ messageId } = {}) => {
     try {
       if (!currentRoom || !username || !messageId) return;
+      await mStore.markMessageDelivered(currentRoom, messageId, username);
       socket.to(currentRoom).emit('message-delivered', { messageId, receiver: username });
     } catch (err) { console.error('mark-delivered error:', err); }
   });

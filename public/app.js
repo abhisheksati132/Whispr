@@ -396,6 +396,16 @@
         ${editedTag}
       </div>`;
 
+    } else if (msg.type === 'video-note') {
+      body = `<div class="msg ${mine ? 'me' : 'them'}">
+        ${metaLine}${replyQuote}
+        <div class="video-circle-wrap" onclick="BestieChat.toggleVideoNoteAudio(this)">
+          <video src="${escapeHtml(msg.url)}" autoplay loop muted playsinline></video>
+          <div class="video-circle-mute-badge">🔇</div>
+        </div>
+        ${editedTag}
+      </div>`;
+
     } else if (msg.type === 'music') {
       const platform = getMusicPlatform(msg.url || '');
       const decMusicText = decryptE2EE(msg.text || msg.url);
@@ -446,17 +456,24 @@
       setTimeout(() => fetchAndRenderLinkPreview(msg.id, decText), 50);
     }
 
-    // Read tick (for own messages)
-    const tickState = msg.read ? 'read' : (msg.delivered ? 'delivered' : 'sent');
-    const tickSymbol = (msg.read || msg.delivered) ? '✓✓' : '✓';
-    const tickHtml = mine ? `<div class="read-tick ${tickState}" id="tick-${msg.id}">${tickSymbol}</div>` : '';
+    // Double-ticks and Star badge
+    const isRead = msg.readByUsers && msg.readByUsers.length > 0 && !msg.readByUsers.every(u => u === myName);
+    const isDelivered = msg.deliveredTo && msg.deliveredTo.length > 0 && !msg.deliveredTo.every(u => u === myName);
+    const tickState = isRead ? 'read' : (isDelivered ? 'delivered' : 'sent');
+    const tickSvg = isRead
+      ? `<svg viewBox="0 0 16 15" width="15" height="14" fill="none"><path d="M15.01 3.316l-7.92 8.56a.91.91 0 01-.67.3.91.91 0 01-.67-.3L2.3 8.35a.96.96 0 010-1.34.93.93 0 011.33 0l2.79 2.99 7.26-7.85a.93.93 0 011.33 0 .96.96 0 010 1.166z" fill="currentColor"/><path d="M10.87 3.316l-7.92 8.56a.91.91 0 01-.67.3.91.91 0 01-.67-.3L.16 10.35a.96.96 0 010-1.34.93.93 0 011.33 0l1.19 1.28 7.26-7.85a.93.93 0 011.33 0 .96.96 0 010 1.166z" fill="currentColor"/></svg>`
+      : (isDelivered
+        ? `<svg viewBox="0 0 16 15" width="15" height="14" fill="none"><path d="M15.01 3.316l-7.92 8.56a.91.91 0 01-.67.3.91.91 0 01-.67-.3L2.3 8.35a.96.96 0 010-1.34.93.93 0 011.33 0l2.79 2.99 7.26-7.85a.93.93 0 011.33 0 .96.96 0 010 1.166z" fill="currentColor"/><path d="M10.87 3.316l-7.92 8.56a.91.91 0 01-.67.3.91.91 0 01-.67-.3L.16 10.35a.96.96 0 010-1.34.93.93 0 011.33 0l1.19 1.28 7.26-7.85a.93.93 0 011.33 0 .96.96 0 010 1.166z" fill="currentColor"/></svg>`
+        : `<svg viewBox="0 0 16 15" width="15" height="14" fill="none"><path d="M12.01 3.316l-7.92 8.56a.91.91 0 01-.67.3.91.91 0 01-.67-.3L.3 8.35a.96.96 0 010-1.34.93.93 0 011.33 0l2.79 2.99 7.26-7.85a.93.93 0 011.33 0 .96.96 0 010 1.166z" fill="currentColor"/></svg>`);
+    const starHtml = (msg.starredBy && msg.starredBy.includes(myName)) ? `<span class="msg-star-badge" title="Starred">⭐</span>` : '';
+    const tickHtml = mine ? `<span class="msg-status-ticks ${tickState}" id="tick-${msg.id}">${tickSvg}</span>` : '';
 
     wrap.innerHTML = `
-      <div class="swipe-reply-icon">↩</div>
+      <div class="swipe-reply-hint">↩</div>
       ${body}
       <div class="react-bar">${renderReactionBar(msg.id)}</div>
       <div class="reactions" id="reactions-${msg.id}">${renderReactions(msg)}</div>
-      ${tickHtml}
+      <div style="display:flex; justify-content:flex-end; align-items:center; margin-top:2px;">${starHtml}${tickHtml}</div>
     `;
 
     // Observe unread incoming messages
@@ -472,16 +489,19 @@
     // Double-click to react with ❤️
     wrap.addEventListener('dblclick', (e) => {
       e.preventDefault();
-      if (!mine) react(msg.id, '❤️');
+      triggerDoubleTapHeart(wrap, msg.id);
     });
 
     // Touch double-tap
+    let _lastTapTime = 0;
     wrap.addEventListener('touchstart', (e) => {
       if (e.touches.length > 1) return;
       const now = Date.now();
-      if (now - lastTapTime < 300 && !mine) react(msg.id, '❤️');
-      lastTapTime = now;
-    });
+      if (now - _lastTapTime < 300) {
+        triggerDoubleTapHeart(wrap, msg.id);
+      }
+      _lastTapTime = now;
+    }, { passive: true });
 
     // Long-press context menu
     wrap.addEventListener('pointerdown', (e) => {
@@ -509,16 +529,20 @@
     wrap.addEventListener('touchmove', (e) => {
       const dx = e.touches[0].clientX - _swipeStartX;
       const dy = Math.abs(e.touches[0].clientY - _swipeStartY);
-      if (dx > 20 && dy < 40) {
+      if (dx > 25 && dy < 35) {
         _swiping = true;
-        wrap.classList.add('swiping');
-        wrap.style.transform = `translateX(${Math.min(dx, 70)}px)`;
+        wrap.classList.add('swiping-active');
+        wrap.style.transform = `translateX(${Math.min(dx, 65)}px)`;
       }
     }, { passive: true });
     wrap.addEventListener('touchend', () => {
-      wrap.classList.remove('swiping');
+      wrap.classList.remove('swiping-active');
       wrap.style.transform = '';
-      if (_swiping) { replyToMessage(msg.id); _swiping = false; }
+      if (_swiping) {
+        if ('vibrate' in navigator) { try { navigator.vibrate(25); } catch(e){} }
+        replyToMessage(msg.id, escapeHtml(msg.user || ''), escapeHtml(msg.text || ''), msg.type || 'text');
+        _swiping = false;
+      }
     });
 
     // Tap to show react bar on touch
@@ -691,6 +715,9 @@
       if (msg.text) {
         html += `<button onclick="BestieChat.copyText('${escapeHtml((msg.text||'').replace(/'/g,"&#39;"))}')">📋 Copy</button>`;
       }
+      const isStarred = msg.starredBy && msg.starredBy.includes(myName);
+      html += `<div class="ctx-divider"></div>`;
+      html += `<button onclick="BestieChat.toggleStarMessage('${msg.id}', ${!isStarred})">${isStarred ? '🌟 Unstar' : '⭐ Star'}</button>`;
     }
 
     els.contextMenu.innerHTML = html;
@@ -2130,6 +2157,51 @@
     socket.on('presence', ({ users, profiles: profs, lastSeen }) => {
       (profs || []).forEach((p) => { profiles[p.name] = p; });
       updateBestieHeaderState(users, lastSeen);
+    });
+
+    socket.on('presence-status-update', ({ user, status }) => {
+      if (user === myName) return;
+      const hStatusEl = document.getElementById('headerBestieStatus');
+      const bStatusEl = els.bestieStatus;
+      if (!hStatusEl && !bStatusEl) return;
+      
+      let text = 'Online';
+      if (status === 'typing') text = 'typing…';
+      else if (status === 'recording-audio') text = 'recording audio…';
+      else if (status === 'recording-video') text = 'recording video note…';
+      else if (status === 'uploading-media') text = 'sending photo…';
+      
+      if (hStatusEl) {
+        hStatusEl.textContent = text;
+        hStatusEl.classList.add('online');
+      }
+      if (bStatusEl) {
+        bStatusEl.textContent = text;
+        bStatusEl.classList.add('online');
+      }
+    });
+
+    socket.on('message-starred', ({ messageId, starredBy }) => {
+      const msg = allMessagesCached.find(m => m.id === messageId);
+      if (msg) {
+        msg.starredBy = starredBy || [];
+        saveMessageToOfflineDB(msg);
+      }
+      const wrap = els.messages.querySelector(`[data-id="${messageId}"]`);
+      if (wrap) {
+        let badge = wrap.querySelector('.msg-star-badge');
+        const isStarred = (starredBy || []).includes(myName);
+        if (isStarred && !badge) {
+          badge = document.createElement('span');
+          badge.className = 'msg-star-badge';
+          badge.title = 'Starred';
+          badge.textContent = '⭐';
+          const tickContainer = wrap.querySelector('div:last-child');
+          if (tickContainer) tickContainer.prepend(badge);
+        } else if (!isStarred && badge) {
+          badge.remove();
+        }
+      }
     });
 
     socket.on('typing', (name) => {
@@ -4504,8 +4576,159 @@
     panel.style.display = isVisible ? 'none' : 'block';
   }
 
-  function toggleQuickMenu() {
-    toggleModal('quickMenu');
+  // ═══════════════════ TELEGRAM & WHATSAPP SUITE ═══════════════════
+  function triggerDoubleTapHeart(wrap, msgId) {
+    const bubble = document.createElement('div');
+    bubble.className = 'heart-pop-bubble';
+    bubble.textContent = '❤️';
+    wrap.appendChild(bubble);
+    setTimeout(() => bubble.remove(), 800);
+    react(msgId, '❤️');
+    if ('vibrate' in navigator) { try { navigator.vibrate(30); } catch(e){} }
+  }
+
+  // ── Starred Messages ──
+  function toggleStarMessage(messageId, starred) {
+    if (!joined || !socket) return;
+    socket.emit('star-message', { messageId, starred: Boolean(starred) });
+    showToast(starred ? '⭐ Message starred' : '🌟 Message unstarred');
+    hideContextMenu();
+  }
+
+  function openStarredModal() {
+    const modal = document.getElementById('starredModal');
+    const listEl = document.getElementById('starredList');
+    const emptyEl = document.getElementById('starredEmpty');
+    if (!modal || !listEl) return;
+    modal.style.display = 'flex';
+    listEl.innerHTML = '';
+
+    const starred = allMessagesCached.filter(m => !m.deleted && m.starredBy && m.starredBy.includes(myName));
+    if (starred.length === 0) {
+      if (emptyEl) emptyEl.style.display = 'block';
+    } else {
+      if (emptyEl) emptyEl.style.display = 'none';
+      starred.forEach(m => {
+        const card = document.createElement('div');
+        card.className = 'starred-card';
+        card.onclick = () => { closeStarredModal(); scrollToMessage(m.id); };
+        const label = m.type === 'image' ? '📸 Photo' : (m.type === 'voice' ? '🎤 Voice note' : (m.type === 'video-note' ? '⭕ Video note' : decryptE2EE(m.text || '')));
+        card.innerHTML = `
+          <div class="starred-card-meta">
+            <span>${escapeHtml(getDisplayName(m.user))}</span>
+            <span>${new Date(m.time).toLocaleDateString()}</span>
+          </div>
+          <div class="starred-card-text">${escapeHtml(label)}</div>
+        `;
+        listEl.appendChild(card);
+      });
+    }
+  }
+
+  function closeStarredModal() {
+    const modal = document.getElementById('starredModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  // ── Telegram Circular Video Note Recorder ──
+  let videoNoteStream = null;
+  let videoNoteRecorder = null;
+  let videoNoteChunks = [];
+  let videoNoteTimerInterval = null;
+  let videoNoteStartTime = 0;
+
+  async function startVideoNote() {
+    try {
+      const modal = document.getElementById('videoNoteModal');
+      const preview = document.getElementById('videoNotePreview');
+      const timer = document.getElementById('videoNoteTimer');
+      if (!modal || !preview) return;
+
+      if (els.attachMenu) els.attachMenu.style.display = 'none';
+
+      videoNoteStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 480 }, aspectRatio: 1 },
+        audio: true
+      });
+      preview.srcObject = videoNoteStream;
+      modal.style.display = 'flex';
+
+      videoNoteChunks = [];
+      let mimeType = 'video/webm';
+      if (typeof MediaRecorder.isTypeSupported === 'function') {
+        if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) mimeType = 'video/webm;codecs=vp8,opus';
+        else if (MediaRecorder.isTypeSupported('video/mp4')) mimeType = 'video/mp4';
+      }
+      videoNoteRecorder = new MediaRecorder(videoNoteStream, { mimeType });
+      videoNoteRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) videoNoteChunks.push(e.data); };
+      videoNoteRecorder.onstop = async () => {
+        if (videoNoteStream) {
+          videoNoteStream.getTracks().forEach(t => t.stop());
+          videoNoteStream = null;
+        }
+        if (preview) preview.srcObject = null;
+        modal.style.display = 'none';
+        if (!videoNoteChunks.length) return;
+
+        const dur = Math.max(1, Math.round((Date.now() - videoNoteStartTime) / 1000));
+        const blob = new Blob(videoNoteChunks, { type: mimeType });
+        const reader = new FileReader();
+        reader.onload = async () => {
+          try {
+            showToast('Sending circular video note… 🚀');
+            const { url } = await uploadFile(reader.result, mimeType, 'video');
+            socket.emit('message', { type: 'video-note', url, duration: dur, replyTo: replyingTo });
+            cancelReply();
+            playSound('send');
+          } catch (err) {
+            showToast('Failed to send video note');
+          }
+        };
+        reader.readAsDataURL(blob);
+      };
+
+      videoNoteRecorder.start();
+      videoNoteStartTime = Date.now();
+      if (socket) socket.emit('presence-status', { status: 'recording-video' });
+
+      if (videoNoteTimerInterval) clearInterval(videoNoteTimerInterval);
+      videoNoteTimerInterval = setInterval(() => {
+        const sec = Math.floor((Date.now() - videoNoteStartTime) / 1000);
+        if (timer) timer.textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+        if (sec >= 60) stopAndSendVideoNote();
+      }, 500);
+    } catch (err) {
+      console.warn('Video note access error:', err);
+      showToast('Camera/Mic permission needed for video notes');
+    }
+  }
+
+  function stopAndSendVideoNote() {
+    if (videoNoteTimerInterval) { clearInterval(videoNoteTimerInterval); videoNoteTimerInterval = null; }
+    if (videoNoteRecorder && videoNoteRecorder.state === 'recording') {
+      videoNoteRecorder.stop();
+    }
+    if (socket) socket.emit('presence-status', { status: 'idle' });
+  }
+
+  function cancelVideoNote() {
+    if (videoNoteTimerInterval) { clearInterval(videoNoteTimerInterval); videoNoteTimerInterval = null; }
+    if (videoNoteStream) {
+      videoNoteStream.getTracks().forEach(t => t.stop());
+      videoNoteStream = null;
+    }
+    videoNoteChunks = [];
+    const modal = document.getElementById('videoNoteModal');
+    if (modal) modal.style.display = 'none';
+    if (socket) socket.emit('presence-status', { status: 'idle' });
+  }
+
+  function toggleVideoNoteAudio(wrap) {
+    const vid = wrap.querySelector('video');
+    const badge = wrap.querySelector('.video-circle-mute-badge');
+    if (!vid) return;
+    vid.muted = !vid.muted;
+    if (badge) badge.textContent = vid.muted ? '🔇' : '🔊';
   }
 
   // ═══════════════════ PUBLIC API ═══════════════════
@@ -4547,6 +4770,9 @@
     openProfile, closeProfile, selectAvatar, saveProfileStatus, saveProfileColor, saveNicknameFromProfile,
     toggleVoiceSpeed, openConnect4, closeConnect4, dropConnect4Token,
     sendQuickReply, captureDualCamera, uploadCameraFile, toggleQuickMenu,
+    // WhatsApp & Telegram Suite
+    triggerDoubleTapHeart, toggleStarMessage, openStarredModal, closeStarredModal,
+    startVideoNote, stopAndSendVideoNote, cancelVideoNote, toggleVideoNoteAudio,
     // Auth
     setAuthMode, selectLoginAvatar, quickReentry, showFullLoginForm, copyInviteLink, togglePasswordVisibility, logout,
     // Multi-chat DMs
