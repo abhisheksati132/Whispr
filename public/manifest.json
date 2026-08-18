@@ -14,6 +14,12 @@
     "standalone",
     "minimal-ui"
   ],
+  "tab_strip": {
+    "home_tab": "auto",
+    "new_tab_button": {
+      "url": "/"
+    }
+  },
   "background_color": "#FAF9F5",
   "theme_color": "#FAF9F5",
   "orientation": "portrait-primary",
@@ -133,10 +139,13 @@
   },
   "scope_extensions": [
     {
-      "origin": "chat-jh59.onrender.com"
+      "origin": "https://chat-jh59.onrender.com"
     },
     {
-      "origin": "*.onrender.com"
+      "origin": "https://*.onrender.com"
+    },
+    {
+      "origin": "chat-jh59.onrender.com"
     }
   ]
 }
