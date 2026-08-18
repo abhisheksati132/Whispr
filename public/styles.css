@@ -314,7 +314,9 @@ select option {
   width: 260px;
   min-width: 260px;
   background: var(--sidebar-bg);
-  border-right: 1px solid var(--border);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-right: 1px solid var(--border-soft);
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -581,10 +583,10 @@ select option {
 header {
   height: 60px;
   min-height: 60px;
-  background: var(--header-bg, rgba(10,15,30,0.85));
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--border);
+  background: var(--header-bg);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-bottom: 1px solid var(--border-soft);
   display: flex;
   align-items: center;
   padding: 0 16px;
@@ -913,9 +915,10 @@ header {
 /* ═══════════════════ 8. INPUT BAR ═══════════════════ */
 #inputBarContainer {
   padding: 12px 16px 16px;
-  background: var(--input-bg, rgba(10,15,30,0.85));
-  backdrop-filter: blur(20px);
-  border-top: 1px solid var(--border);
+  background: var(--input-bg);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-top: 1px solid var(--border-soft);
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -1756,6 +1759,8 @@ header {
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 4px 0 24px rgba(0,0,0,0.5);
     background: var(--sidebar-bg);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
     overflow-y: auto;
   }
   #sidebar.open .sidebar-drawer { transform: translateX(280px); }

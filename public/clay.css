@@ -1,57 +1,50 @@
 /* ═══════════════════════════════════════════════════════════════
-   🔮 LAVENDER MIST — CLAYMORPHISM DESIGN SYSTEM
+   🔮 LAVENDER GLASS — APPLE GLASSMORPHISM DESIGN SYSTEM
    hmmumm / bestie-chat
 
-   Palette: soft lavender-white · pure white · delicate amethyst · deep plum/charcoal
-   Aesthetic: fresh, dreamy, clean, modern
+   Palette: Translucent Lavender-Blacks & Amethyst Glass
+   Aesthetic: Ultra-premium, Frosted, Clean, Default Dark
    ═══════════════════════════════════════════════════════════════ */
 
 @import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap');
 
-/* ── Lavender Mist Design Tokens ── */
+/* ── Default Dark Glassmorphism Design Tokens ── */
 :root {
-  --mb-bg:        #f7f6fb;
-  --mb-bg2:       #efedf7;
-  --mb-sidebar:   #ffffff;
-  --mb-panel:     #ffffff;
-  --mb-surface:   #ffffff;
-  --mb-surface2:  #fcfbfe;
-  --mb-header-bg: rgba(255, 255, 255, 0.85);
-  --mb-input-bg:  rgba(255, 255, 255, 0.85);
+  --mb-bg:        #0a090f;
+  --mb-bg2:       #0f0e17;
+  --mb-sidebar:   rgba(9, 8, 14, 0.45);
+  --mb-panel:     rgba(24, 22, 34, 0.45);
+  --mb-surface:   rgba(24, 22, 34, 0.35);
+  --mb-surface2:  rgba(33, 30, 47, 0.35);
+  --mb-header-bg: rgba(15, 14, 23, 0.55);
+  --mb-input-bg:  rgba(15, 14, 23, 0.55);
 
-  --mb-accent:    #a855f7;
-  --mb-accent2:   #8b5cf6;
-  --mb-accent-deep:#6d28d9;
+  --mb-accent:    #c084fc;
+  --mb-accent2:   #a855f7;
+  --mb-accent-deep:#8b5cf6;
   
-  --mb-text:      #1e1b4b;
-  --mb-text2:     #4a3b5c;
-  --mb-muted:     #9a8c9e;
+  --mb-text:      #f5f3ff;
+  --mb-text2:     #cbd5e1;
+  --mb-muted:     #7c7189;
   --mb-cream:     #ffffff;
 
-  /* Claymorphism shadows for Light Mode */
+  /* Glassmorphism shadows & glows for Dark Mode */
   --mb-shadow-sm:
-    0 2px 0 rgba(139, 92, 246, 0.12),
-    0 4px 12px rgba(139, 92, 246, 0.08),
-    0 0 0 1px rgba(255,255,255,0.8) inset,
-    0 1px 0 rgba(255,255,255,1) inset;
+    0 4px 16px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
 
   --mb-shadow:
-    0 5px 0 rgba(139, 92, 246, 0.15),
-    0 10px 24px rgba(139, 92, 246, 0.1),
-    0 0 0 1px rgba(255,255,255,0.8) inset,
-    0 1px 0 rgba(255,255,255,1) inset;
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
 
   --mb-shadow-lg:
-    0 8px 0 rgba(139, 92, 246, 0.2),
-    0 16px 40px rgba(139, 92, 246, 0.15),
-    0 0 0 1px rgba(255,255,255,0.9) inset,
-    0 2px 0 rgba(255,255,255,1) inset;
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
 
   --mb-shadow-btn:
-    0 5px 0 #6d28d9,
-    0 10px 20px rgba(139, 92, 246, 0.25),
-    0 0 0 1px rgba(255,255,255,0.4) inset,
-    0 1px 0 rgba(255,255,255,0.6) inset;
+    0 4px 0 #7c3aed,
+    0 8px 20px rgba(168, 85, 247, 0.3),
+    0 0 0 1px rgba(255,255,255,0.2) inset;
 
   --font: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
 }
@@ -71,12 +64,12 @@ body {
   --muted:        var(--mb-muted);
   --accent:       var(--mb-accent);
   --accent2:      var(--mb-accent2);
-  --accent-glow:  rgba(168, 85, 247, 0.15);
-  --border:       rgba(139, 92, 246, 0.15);
-  --border-soft:  rgba(139, 92, 246, 0.25);
+  --accent-glow:  rgba(192, 132, 252, 0.15);
+  --border:       rgba(255, 255, 255, 0.06);
+  --border-soft:  rgba(255, 255, 255, 0.08);
   --bubble-me:    #a855f7;
   --bubble-me2:   #7c3aed;
-  --bubble-them:  #ffffff;
+  --bubble-them:  rgba(255, 255, 255, 0.1);
   --online:       #10b981;
   --shadow:       var(--mb-shadow);
   --shadow-sm:    var(--mb-shadow-sm);
@@ -96,18 +89,39 @@ html, body {
   font-family: var(--font) !important;
 }
 
-body.theme-dark {
-  --mb-bg:        #0f0e17;
-  --mb-bg2:       #181622;
-  --mb-sidebar:   #09080e;
-  --mb-panel:     #181622;
-  --mb-surface:   #181622;
-  --mb-surface2:  #211e2f;
-  --mb-header-bg: rgba(24, 22, 34, 0.85);
-  --mb-input-bg:  rgba(24, 22, 34, 0.85);
-  --mb-text:      #f5f3ff;
-  --mb-text2:     #d8b4fe;
-  --mb-muted:     #7c7189;
-  --mb-shadow:    0 4px 20px rgba(0,0,0,0.6);
-  --mb-shadow-sm: 0 2px 8px rgba(0,0,0,0.4);
+/* ── Light Mode Glassmorphism Override ── */
+body.theme-light {
+  --mb-bg:        #f7f6fb;
+  --mb-bg2:       #efedf7;
+  --mb-sidebar:   rgba(255, 255, 255, 0.45);
+  --mb-panel:     rgba(255, 255, 255, 0.55);
+  --mb-surface:   rgba(255, 255, 255, 0.45);
+  --mb-surface2:  rgba(252, 251, 254, 0.45);
+  --mb-header-bg: rgba(255, 255, 255, 0.65);
+  --mb-input-bg:  rgba(255, 255, 255, 0.65);
+
+  --mb-accent:    #8b5cf6;
+  --mb-accent2:   #7c3aed;
+  --mb-accent-deep:#6d28d9;
+
+  --mb-text:      #1e1b4b;
+  --mb-text2:     #4a3b5c;
+  --mb-muted:     #9a8c9e;
+
+  --mb-shadow-sm:
+    0 4px 16px rgba(139, 92, 246, 0.06),
+    0 0 0 1px rgba(0, 0, 0, 0.05) inset;
+
+  --mb-shadow:
+    0 8px 32px rgba(139, 92, 246, 0.08),
+    0 0 0 1px rgba(0, 0, 0, 0.05) inset;
+
+  --mb-shadow-lg:
+    0 16px 48px rgba(139, 92, 246, 0.12),
+    0 0 0 1px rgba(0, 0, 0, 0.06) inset;
+
+  /* Adjustments for light mode bubbles & borders */
+  --border:       rgba(0, 0, 0, 0.05);
+  --border-soft:  rgba(0, 0, 0, 0.06);
+  --bubble-them:  #ffffff;
 }
