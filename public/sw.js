@@ -65,3 +65,17 @@ self.addEventListener('notificationclick', (e) => {
     })
   );
 });
+
+// Background Sync
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'sync-messages') {
+    event.waitUntil(Promise.resolve());
+  }
+});
+
+// Periodic Background Sync
+self.addEventListener('periodicsync', (event) => {
+  if (event.tag === 'check-messages') {
+    event.waitUntil(Promise.resolve());
+  }
+});

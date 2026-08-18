@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>chat ✨</title>
   <meta name="description" content="Private real-time chat space." />
-  <link rel="manifest" href="/manifest.json?v=901" />
-  <link rel="icon" type="image/x-icon" href="/favicon.ico?v=901" />
-  <link rel="shortcut icon" type="image/png" href="/icon-192.png?v=901" />
-  <link rel="apple-touch-icon" href="/icon-192.png?v=901" />
+  <link rel="manifest" href="/manifest.json?v=902" />
+  <link rel="icon" type="image/x-icon" href="/favicon.ico?v=902" />
+  <link rel="shortcut icon" type="image/png" href="/icon-192.png?v=902" />
+  <link rel="apple-touch-icon" href="/icon-192.png?v=902" />
   <meta name="theme-color" content="#FAF9F5" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -16,8 +16,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles.css?v=12003" />
-  <link rel="stylesheet" href="/clay.css?v=8" />
+  <link rel="stylesheet" href="/styles.css?v=12004" />
+  <link rel="stylesheet" href="/clay.css?v=9" />
 </head>
 <body>
 
@@ -115,8 +115,6 @@
 
       <div class="sidebar-divider"></div>
 
-
-
       <!-- Streak -->
       <div id="streakBadge" class="sidebar-streak">🔥 Start a streak!</div>
 
@@ -124,47 +122,47 @@
       <div id="theirFeeling" class="sidebar-feeling"></div>
 
       <div class="sidebar-divider"></div>
-    </div>
 
-    <!-- Navigation -->
-    <nav class="sidebar-nav">
-      <button class="nav-item active" id="navItemChat" onclick="BestieChat.sidebarNavTo('chat')">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        <span>Chat</span>
-      </button>
-      <button class="nav-item" id="navItemSpace" onclick="BestieChat.sidebarNavTo('space')">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-        <span>Our Space</span>
-      </button>
-      <button class="nav-item" id="navItemGallery" onclick="BestieChat.openGallery()">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-        <span>Gallery</span>
-      </button>
-      <button class="nav-item" id="navItemGames" onclick="BestieChat.sidebarNavTo('games')">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="12" x2="18" y2="12"/><line x1="12" y1="6" x2="12" y2="18"/><rect x="2" y="2" width="20" height="20" rx="5"/></svg>
-        <span>Games</span>
-      </button>
-      <button class="nav-item" id="navItemSettings" onclick="BestieChat.sidebarNavTo('settings')">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-        <span>Settings</span>
-      </button>
-    </nav>
+      <!-- Navigation -->
+      <nav class="sidebar-nav">
+        <button class="nav-item active" id="navItemChat" onclick="BestieChat.sidebarNavTo('chat')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span>Chat</span>
+        </button>
+        <button class="nav-item" id="navItemSpace" onclick="BestieChat.sidebarNavTo('space')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          <span>Our Space</span>
+        </button>
+        <button class="nav-item" id="navItemGallery" onclick="BestieChat.openGallery()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <span>Gallery</span>
+        </button>
+        <button class="nav-item" id="navItemGames" onclick="BestieChat.sidebarNavTo('games')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="12" x2="18" y2="12"/><line x1="12" y1="6" x2="12" y2="18"/><rect x="2" y="2" width="20" height="20" rx="5"/></svg>
+          <span>Games</span>
+        </button>
+        <button class="nav-item" id="navItemSettings" onclick="BestieChat.sidebarNavTo('settings')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>Settings</span>
+        </button>
+      </nav>
 
-    <!-- Sidebar footer -->
-    <div class="sidebar-drawer-footer">
-      <div class="sidebar-footer">
-        <button class="sidebar-icon-btn" id="soundBtn" onclick="BestieChat.toggleSound()" title="Toggle sound">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-        </button>
-        <button class="sidebar-icon-btn" onclick="BestieChat.toggleTheme()" title="Toggle theme" id="themeToggle">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-        </button>
-        <button class="sidebar-icon-btn" onclick="BestieChat.leaveChat()" title="Refresh chat">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-        </button>
-        <button class="sidebar-icon-btn" onclick="BestieChat.logout()" title="Logout / Leave Space" style="color:#f87171;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-        </button>
+      <!-- Sidebar footer -->
+      <div class="sidebar-drawer-footer">
+        <div class="sidebar-footer">
+          <button class="sidebar-icon-btn" id="soundBtn" onclick="BestieChat.toggleSound()" title="Toggle sound">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+          </button>
+          <button class="sidebar-icon-btn" onclick="BestieChat.toggleTheme()" title="Toggle theme" id="themeToggle">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
+          <button class="sidebar-icon-btn" onclick="BestieChat.leaveChat()" title="Refresh chat">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          </button>
+          <button class="sidebar-icon-btn" onclick="BestieChat.logout()" title="Logout / Leave Space" style="color:#f87171;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          </button>
+        </div>
       </div>
     </div>
   </aside>
@@ -980,11 +978,11 @@
 <!-- Scripts -->
 <script src="/socket.io/socket.io.js"></script>
 <script src="/crypto-js.min.js"></script>
-<script src="/app.js?v=31"></script>
+<script src="/app.js?v=32"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js?v=11301').catch(console.error);
+      navigator.serviceWorker.register('/sw.js?v=11302').catch(console.error);
     });
   }
   function forceClearAppCache() {

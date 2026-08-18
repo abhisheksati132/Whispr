@@ -66,5 +66,37 @@
       "text": "text",
       "url": "url"
     }
-  }
+  },
+  "file_handlers": [
+    {
+      "action": "/",
+      "accept": {
+        "image/*": [".jpg", ".jpeg", ".png", ".webp", ".gif"]
+      }
+    }
+  ],
+  "launch_handler": {
+    "client_mode": "auto"
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+chat",
+      "url": "/?url=%s"
+    }
+  ],
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
+  "widgets": [],
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "note_taking": {
+    "new_note_url": "/"
+  },
+  "scope_extensions": [
+    {
+      "origin": "https://chat-jh59.onrender.com"
+    }
+  ]
 }
