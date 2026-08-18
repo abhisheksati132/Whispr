@@ -1,12 +1,18 @@
 {
+  "id": "/?source=pwa",
   "name": "chat",
   "short_name": "chat",
   "description": "Private real-time chat space.",
+  "lang": "en",
+  "dir": "ltr",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "background_color": "#FAF9F5",
   "theme_color": "#FAF9F5",
   "orientation": "portrait-primary",
+  "categories": ["social", "communication"],
   "icons": [
     {
       "src": "/icon-192.png",
