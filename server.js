@@ -65,8 +65,12 @@ app.use((_req, res, next) => {
   next();
 });
 app.use(express.json({ limit: '10mb' }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), { index: 'index.html' }));
 app.use('/uploads', express.static(mStore.getUploadsDir()));
+
+app.get('/', (_req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // ── Auth & Rooms Routes ───────────────────────────────────────────────────────
 require('./routes/auth')(app);
@@ -638,7 +642,7 @@ setInterval(() => mStore.cleanDisappearingMessages().catch(()=>{}), 60 * 1000);
 // ── Start ─────────────────────────────────────────────────────────────────────
 if (require.main === module) {
   const PORT = process.env.PORT || 3000;
-  server.listen(PORT, () => console.log(`✨ hmmumm running on port ${PORT}`));
+  server.listen(PORT, '0.0.0.0', () => console.log(`✨ hmmumm running on port ${PORT}`));
 }
 
 module.exports = { app, server };
