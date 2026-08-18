@@ -582,7 +582,18 @@
     const tick = () => {
       const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
       if (timerEl && timerEl.isConnected) {
-        timerEl.textContent = remaining > 0 ? `Vanishes in ${remaining}s` : 'Vanished 💨';
+        if (remaining > 0) {
+          timerEl.textContent = `Vanishes in ${remaining}s`;
+        } else {
+          timerEl.textContent = 'Vanished 💨';
+          const wrap = timerEl.closest('.msg-wrap');
+          const content = wrap ? wrap.querySelector('.secret-content') : null;
+          if (content) {
+            content.textContent = '🤫 [Message expired]';
+            content.style.opacity = '0.5';
+            content.style.filter = 'none';
+          }
+        }
       }
       if (remaining > 0) requestAnimationFrame(tick);
     };
@@ -619,13 +630,16 @@
   function renderGamePrompt(data) {
     const div = document.createElement('div');
     div.className = 'game-card';
-    let inner = `<div class="game-from">${escapeHtml(data.from)} started a game</div><div class="game-q">${escapeHtml(data.question)}</div>`;
-    if (data.options) {
-      inner += data.options.map((o) => `<div>• ${escapeHtml(o)}</div>`).join('');
+    let inner = `<div class="game-from">🎮 ${escapeHtml(data.from)} started a game</div><div class="game-q">${escapeHtml(data.question)}</div>`;
+    if (data.options && data.options.length) {
+      inner += `<div class="game-options-row" style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">`;
+      inner += data.options.map((o) => `<button class="smart-pill" style="text-align:left; width:100%;" onclick="BestieChat.sendQuickReply('${escapeHtml(o.replace(/'/g, "\\'"))}')">👉 ${escapeHtml(o)}</button>`).join('');
+      inner += `</div>`;
     }
     div.innerHTML = inner;
     els.messages.appendChild(div);
     scrollBottom();
+    playSound('receive');
   }
 
   // ═══════════════════ READ RECEIPTS ═══════════════════
@@ -2930,12 +2944,15 @@
       image: ''
     };
     sharedDiary.unshift(entry);
+    renderDiaryList(sharedDiary);
     socket.emit('update-diary', sharedDiary);
     input.value = '';
+    showToast('📖 Scrapbook memory added!');
   }
 
   function deleteDiaryEntry(index) {
     sharedDiary.splice(index, 1);
+    renderDiaryList(sharedDiary);
     socket.emit('update-diary', sharedDiary);
   }
 
@@ -2959,13 +2976,16 @@
     const dateEl = document.getElementById('calDateInput');
     if (!labelEl || !dateEl || !labelEl.value.trim() || !dateEl.value) return;
     sharedCalendar.push({ label: labelEl.value.trim(), date: dateEl.value });
+    renderCalendarList(sharedCalendar);
     socket.emit('update-calendar', sharedCalendar);
     labelEl.value = '';
     dateEl.value = '';
+    showToast('📅 Date saved to Calendar!');
   }
 
   function deleteCalendarEvent(index) {
     sharedCalendar.splice(index, 1);
+    renderCalendarList(sharedCalendar);
     socket.emit('update-calendar', sharedCalendar);
   }
 
@@ -2993,8 +3013,10 @@
       dateCompleted: null
     };
     sharedBucketList.unshift(item);
+    renderBucketList(sharedBucketList);
     socket.emit('update-bucketlist', sharedBucketList);
     input.value = '';
+    showToast('✨ Goal added to Bucket List!');
   }
 
   function toggleBucketItem(index) {
@@ -3002,11 +3024,14 @@
     if (!item) return;
     item.done = !item.done;
     item.dateCompleted = item.done ? new Date().toLocaleDateString() : null;
+    renderBucketList(sharedBucketList);
     socket.emit('update-bucketlist', sharedBucketList);
+    if (item.done) confetti();
   }
 
   function deleteBucketItem(index) {
     sharedBucketList.splice(index, 1);
+    renderBucketList(sharedBucketList);
     socket.emit('update-bucketlist', sharedBucketList);
   }
 
@@ -3041,13 +3066,18 @@
       sharedGlossary.unshift({ word, meaning });
     }
     
+    renderGlossaryList(sharedGlossary);
+    refreshMessagesLayout();
     socket.emit('update-glossary', sharedGlossary);
     wordEl.value = '';
     meaningEl.value = '';
+    showToast('💬 Inside Joke added to Wiki!');
   }
 
   function deleteGlossaryWord(index) {
     sharedGlossary.splice(index, 1);
+    renderGlossaryList(sharedGlossary);
+    refreshMessagesLayout();
     socket.emit('update-glossary', sharedGlossary);
   }
 
@@ -3593,28 +3623,87 @@
   }
 
   // ── Background Lo-Fi Player ──
+  let lofiAudioCtx = null;
+  let lofiOscillators = [];
+  let lofiGain = null;
   let lofiPlaying = false;
 
   function toggleLofi() {
     const audio = document.getElementById('lofiAudio');
     const btn = document.getElementById('lofiPlayBtn');
-    if (!audio || !btn) return;
     
     if (lofiPlaying) {
-      audio.pause();
-      btn.querySelector('span').textContent = 'Play Lo-Fi';
-      btn.querySelector('svg').innerHTML = '<polygon points="5 3 19 12 5 21 5 3"/>';
+      if (audio) audio.pause();
+      stopSynthesizedLofi();
+      lofiPlaying = false;
+      if (btn) {
+        const span = btn.querySelector('span');
+        const svg = btn.querySelector('svg');
+        if (span) span.textContent = 'Play Lo-Fi';
+        if (svg) svg.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"/>';
+      }
+      showToast('🔇 Lo-Fi paused');
     } else {
-      audio.play().catch(console.error);
-      btn.querySelector('span').textContent = 'Pause Lo-Fi';
-      btn.querySelector('svg').innerHTML = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+      lofiPlaying = true;
+      let streamStarted = false;
+      if (audio) {
+        audio.play().then(() => {
+          streamStarted = true;
+        }).catch(() => {
+          startSynthesizedLofi();
+        });
+      } else {
+        startSynthesizedLofi();
+      }
+      if (btn) {
+        const span = btn.querySelector('span');
+        const svg = btn.querySelector('svg');
+        if (span) span.textContent = 'Pause Lo-Fi';
+        if (svg) svg.innerHTML = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+      }
+      showToast('🎧 Cozy Lo-Fi playing');
     }
-    lofiPlaying = !lofiPlaying;
+  }
+
+  function startSynthesizedLofi() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      if (!lofiAudioCtx) lofiAudioCtx = new AudioCtx();
+      if (lofiAudioCtx.state === 'suspended') lofiAudioCtx.resume();
+      
+      stopSynthesizedLofi();
+      lofiGain = lofiAudioCtx.createGain();
+      lofiGain.gain.setValueAtTime(0.08, lofiAudioCtx.currentTime);
+      lofiGain.connect(lofiAudioCtx.destination);
+
+      const freqs = [130.81, 164.81, 196.00, 246.94, 329.63];
+      lofiOscillators = freqs.map(freq => {
+        const osc = lofiAudioCtx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, lofiAudioCtx.currentTime);
+        osc.connect(lofiGain);
+        osc.start();
+        return osc;
+      });
+    } catch (e) {
+      console.warn('Lofi synth error:', e);
+    }
+  }
+
+  function stopSynthesizedLofi() {
+    lofiOscillators.forEach(osc => {
+      try { osc.stop(); osc.disconnect(); } catch(e){}
+    });
+    lofiOscillators = [];
   }
 
   function setLofiVolume(vol) {
     const audio = document.getElementById('lofiAudio');
-    if (audio) audio.volume = vol;
+    if (audio) audio.volume = Number(vol);
+    if (lofiGain && lofiAudioCtx) {
+      lofiGain.gain.setValueAtTime(Number(vol) * 0.15, lofiAudioCtx.currentTime);
+    }
   }
 
   // ── Message Reactions bursts ──
@@ -4189,14 +4278,50 @@
     }
   }
 
+  function checkConnect4Win(board, color) {
+    for (let r = 0; r < 6; r++) {
+      for (let c = 0; c < 4; c++) {
+        if (board[r][c] === color && board[r][c+1] === color && board[r][c+2] === color && board[r][c+3] === color) return true;
+      }
+    }
+    for (let r = 0; r < 3; r++) {
+      for (let c = 0; c < 7; c++) {
+        if (board[r][c] === color && board[r+1][c] === color && board[r+2][c] === color && board[r+3][c] === color) return true;
+      }
+    }
+    for (let r = 0; r < 3; r++) {
+      for (let c = 0; c < 4; c++) {
+        if (board[r][c] === color && board[r+1][c+1] === color && board[r+2][c+2] === color && board[r+3][c+3] === color) return true;
+      }
+    }
+    for (let r = 3; r < 6; r++) {
+      for (let c = 0; c < 4; c++) {
+        if (board[r][c] === color && board[r-1][c+1] === color && board[r-2][c+2] === color && board[r-3][c+3] === color) return true;
+      }
+    }
+    return false;
+  }
+
   function dropConnect4Token(c, isLocal = true) {
+    showModal('connect4Modal');
     for (let r = 5; r >= 0; r--) {
       if (!c4BoardState[r][c]) {
         const activeColor = c4Turn;
         c4BoardState[r][c] = activeColor;
-        c4Turn = c4Turn === 'red' ? 'yellow' : 'red';
         renderConnect4Board();
+        
         const statusEl = document.getElementById('c4Status');
+        if (checkConnect4Win(c4BoardState, activeColor)) {
+          if (statusEl) statusEl.textContent = `🏆 ${activeColor === 'red' ? '🔴 Red' : '🟡 Yellow'} Wins!`;
+          confetti();
+          playSound('milestone');
+          if (isLocal) {
+            socket.emit('game-result', { winner: myName });
+          }
+          return;
+        }
+
+        c4Turn = c4Turn === 'red' ? 'yellow' : 'red';
         if (statusEl) statusEl.textContent = `Turn: ${c4Turn === 'red' ? '🔴 Red' : '🟡 Yellow'}`;
         if (isLocal && socket) {
           socket.emit('c4-move', { col: c, color: activeColor });

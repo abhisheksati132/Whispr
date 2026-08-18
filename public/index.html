@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>chat ✨</title>
   <meta name="description" content="Private real-time chat space." />
-  <link rel="manifest" href="/manifest.json?v=909" />
+  <link rel="manifest" href="/manifest.json?v=910" />
   <link rel="icon" type="image/x-icon" href="/favicon.ico?v=902" />
   <link rel="shortcut icon" type="image/png" href="/icon-192.png?v=902" />
   <link rel="apple-touch-icon" href="/icon-192.png?v=902" />
@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles.css?v=12007" />
+  <link rel="stylesheet" href="/styles.css?v=12008" />
   <link rel="stylesheet" href="/clay.css?v=9" />
 </head>
 <body>
@@ -721,6 +721,43 @@
         <input id="moodInput" type="text" placeholder="Set our vibe…" maxlength="100" />
       </div>
       <div class="extra-block">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <label style="margin:0;">Bonsai Tree 🌳</label>
+          <span id="bonsaiLevel" style="font-size:0.82rem; font-weight:700; color:var(--accent);">Bonsai Tree (Lvl 0)</span>
+        </div>
+        <div class="bonsai-container" style="display:flex; align-items:center; justify-content:space-between; background:var(--surface); border:1px solid var(--border-soft); border-radius:16px; padding:12px 16px;">
+          <div class="bonsai-visual" style="position:relative; width:80px; height:80px;">
+            <svg width="80" height="80" viewBox="0 0 100 100" fill="none">
+              <path d="M25 80 L75 80 L70 95 L30 95 Z" fill="#8b5a2b" stroke="rgba(255,255,255,0.15)" stroke-width="2"/>
+              <path id="bonsaiTrunk" d="M50 80 Q45 55 50 35 Q55 25 50 20" stroke="#5c3a21" stroke-width="6" stroke-linecap="round"/>
+              <circle id="leaf1" cx="50" cy="20" r="11" fill="#4ade80" opacity="0.9"/>
+              <circle id="leaf2" cx="36" cy="35" r="8" fill="#22c55e" opacity="0.85"/>
+              <circle id="leaf3" cx="64" cy="30" r="7" fill="#16a34a" opacity="0.85"/>
+            </svg>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
+            <span style="font-size:0.78rem; color:var(--muted);">Water daily to grow together</span>
+            <button id="waterBonsaiBtn" onclick="BestieChat.waterBonsai()" style="background:linear-gradient(135deg,#38bdf8,#818cf8); border:none; border-radius:20px; color:#fff; padding:6px 14px; font-weight:600; font-size:0.82rem; cursor:pointer; display:flex; align-items:center; gap:4px;">
+              💧 Water Tree
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="extra-block">
+        <label>Ambient Lo-Fi Player 🎵</label>
+        <div style="display:flex; align-items:center; justify-content:space-between; background:var(--surface); border:1px solid var(--border-soft); border-radius:16px; padding:10px 14px; gap:12px;">
+          <button id="lofiPlayBtn" onclick="BestieChat.toggleLofi()" style="background:var(--accent-glow); border:1px solid var(--accent); color:var(--accent); border-radius:20px; padding:6px 14px; font-weight:600; font-size:0.82rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <span>Play Lo-Fi</span>
+          </button>
+          <div style="display:flex; align-items:center; gap:6px; flex:1; max-width:180px;">
+            <span style="font-size:0.8rem; color:var(--muted);">🔈</span>
+            <input type="range" min="0" max="1" step="0.05" value="0.5" oninput="BestieChat.setLofiVolume(this.value)" style="width:100%; accent-color:var(--accent); cursor:pointer;" />
+          </div>
+        </div>
+        <audio id="lofiAudio" loop preload="none" src="https://stream.zeno.fm/f3wvbbqmdg8uv"></audio>
+      </div>
+      <div class="extra-block">
         <label>Inside Jokes 🤫</label>
         <textarea id="jokesInput" placeholder="Add inside jokes (one per line)..." rows="3"></textarea>
       </div>
@@ -802,6 +839,18 @@
             <div id="prefsProfileStatus" class="prefs-profile-bio">No status set</div>
           </div>
         </div>
+      </div>
+      <div class="extra-block">
+        <label>Accent Color ✨</label>
+        <select id="accentSelect" onchange="BestieChat.changeAccent(this.value)">
+          <option value="">Default Classic</option>
+          <option value="indigo">Indigo Glow</option>
+          <option value="rose">Rose Quartz</option>
+          <option value="emerald">Emerald Forest</option>
+          <option value="amber">Warm Amber</option>
+          <option value="cyan">Cyber Cyan</option>
+          <option value="sunset">Sunset Gradient</option>
+        </select>
       </div>
       <div class="extra-block">
         <label>Chat Wallpaper 🖼️</label>
@@ -1011,11 +1060,11 @@
 <!-- Scripts -->
 <script src="/socket.io/socket.io.js"></script>
 <script src="/crypto-js.min.js"></script>
-<script src="/app.js?v=35"></script>
+<script src="/app.js?v=36"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js?v=11306').catch(console.error);
+      navigator.serviceWorker.register('/sw.js?v=11307').catch(console.error);
     });
   }
   function forceClearAppCache() {
