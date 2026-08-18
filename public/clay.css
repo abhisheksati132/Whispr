@@ -1,55 +1,46 @@
 /* ═══════════════════════════════════════════════════════════════
-   🔮 LAVENDER GLASS — APPLE GLASSMORPHISM DESIGN SYSTEM
+   🖋️ CLAUDE UI DESIGN SYSTEM — WARM, CALM, INTELLIGENT
    chat
 
-   Palette: Translucent Lavender-Blacks & Amethyst Glass
-   Aesthetic: Ultra-premium, Frosted, Clean, Default Dark
+   Palette: Warm Cream (#FAF9F5) & Charcoal (#262624) + Terracotta (#D97757)
+   Typography: Source Serif 4 (Headings) + Inter (Body/UI)
+   Aesthetic: Editorial, Clean, Tactile, Flat 1px borders, No neon
    ═══════════════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap');
-
-/* ── Default Dark Glassmorphism Design Tokens ── */
 :root {
-  --mb-bg:        #0a090f;
-  --mb-bg2:       #0f0e17;
-  --mb-sidebar:   rgba(9, 8, 14, 0.45);
-  --mb-panel:     rgba(24, 22, 34, 0.45);
-  --mb-surface:   rgba(24, 22, 34, 0.35);
-  --mb-surface2:  rgba(33, 30, 47, 0.35);
-  --mb-header-bg: rgba(15, 14, 23, 0.55);
-  --mb-input-bg:  rgba(15, 14, 23, 0.55);
+  /* Light Mode (Claude Warm Paper Default) */
+  --mb-bg:          #FAF9F5;
+  --mb-bg2:         #F3F1EB;
+  --mb-sidebar:     #F5F4EE;
+  --mb-panel:       #FFFFFF;
+  --mb-surface:     #FFFFFF;
+  --mb-surface2:    #F5F3EC;
+  --mb-header-bg:   #FAF9F5;
+  --mb-input-bg:    #FFFFFF;
 
-  --mb-accent:    #c084fc;
-  --mb-accent2:   #a855f7;
-  --mb-accent-deep:#8b5cf6;
-  
-  --mb-text:      #f5f3ff;
-  --mb-text2:     #cbd5e1;
-  --mb-muted:     #7c7189;
-  --mb-cream:     #ffffff;
+  --mb-accent:      #D97757;
+  --mb-accent2:     #CC6D4E;
+  --mb-accent-deep: #B8593A;
+  --mb-accent-glow: rgba(217, 119, 87, 0.12);
 
-  /* Glassmorphism shadows & glows for Dark Mode */
-  --mb-shadow-sm:
-    0 4px 16px rgba(0, 0, 0, 0.3),
-    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+  --mb-text:        #1F1E1D;
+  --mb-text2:       #4A4742;
+  --mb-muted:       #78756F;
+  --mb-border:      #E5E3DE;
+  --mb-border-soft: #ECEAE4;
 
-  --mb-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+  --mb-bubble-me:   #F4ECE7;
+  --mb-bubble-them: #FFFFFF;
 
-  --mb-shadow-lg:
-    0 16px 48px rgba(0, 0, 0, 0.5),
-    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+  --mb-shadow-sm:   0 1px 2px rgba(31, 30, 29, 0.04);
+  --mb-shadow:      0 1px 3px rgba(31, 30, 29, 0.05), 0 1px 2px rgba(31, 30, 29, 0.03);
+  --mb-shadow-lg:   0 4px 12px rgba(31, 30, 29, 0.08);
 
-  --mb-shadow-btn:
-    0 4px 0 #7c3aed,
-    0 8px 20px rgba(168, 85, 247, 0.3),
-    0 0 0 1px rgba(255,255,255,0.2) inset;
-
-  --font: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font:           'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-serif:     'Source Serif 4', 'Georgia', 'Cambria', serif;
 }
 
-/* ══ Override global CSS vars ══ */
+/* ══ Global Design Token Overrides ══ */
 body {
   --bg:           var(--mb-bg);
   --bg2:          var(--mb-bg2);
@@ -64,18 +55,17 @@ body {
   --muted:        var(--mb-muted);
   --accent:       var(--mb-accent);
   --accent2:      var(--mb-accent2);
-  --accent-glow:  rgba(192, 132, 252, 0.15);
-  --border:       rgba(255, 255, 255, 0.06);
-  --border-soft:  rgba(255, 255, 255, 0.08);
-  --bubble-me:    #a855f7;
-  --bubble-me2:   #7c3aed;
-  --bubble-them:  rgba(255, 255, 255, 0.1);
-  --online:       #10b981;
+  --accent-glow:  var(--mb-accent-glow);
+  --border:       var(--mb-border);
+  --border-soft:  var(--mb-border-soft);
+  --bubble-me:    var(--mb-bubble-me);
+  --bubble-them:  var(--mb-bubble-them);
+  --online:       #388E3C;
   --shadow:       var(--mb-shadow);
   --shadow-sm:    var(--mb-shadow-sm);
-  --radius:       22px;
-  --radius-sm:    16px;
-  --radius-xs:    10px;
+  --radius:       12px;
+  --radius-sm:    8px;
+  --radius-xs:    6px;
   font-family: var(--font) !important;
 }
 
@@ -83,45 +73,39 @@ html, body {
   background: var(--mb-bg) !important;
   color: var(--mb-text) !important;
   font-family: var(--font) !important;
+  line-height: 1.6;
 }
 
-*, *::before, *::after {
-  font-family: var(--font) !important;
+h1, h2, h3, .brand-text, .brand-text-login, .login-title, .modal-header h3, .feelings-title {
+  font-family: var(--font-serif) !important;
 }
 
-/* ── Light Mode Glassmorphism Override ── */
-body.theme-light {
-  --mb-bg:        #f7f6fb;
-  --mb-bg2:       #efedf7;
-  --mb-sidebar:   rgba(255, 255, 255, 0.45);
-  --mb-panel:     rgba(255, 255, 255, 0.55);
-  --mb-surface:   rgba(255, 255, 255, 0.45);
-  --mb-surface2:  rgba(252, 251, 254, 0.45);
-  --mb-header-bg: rgba(255, 255, 255, 0.65);
-  --mb-input-bg:  rgba(255, 255, 255, 0.65);
+/* ── Dark Mode Claude Tokens ── */
+body.theme-dark {
+  --mb-bg:          #262624;
+  --mb-bg2:         #1F1F1D;
+  --mb-sidebar:     #21211F;
+  --mb-panel:       #2D2A26;
+  --mb-surface:     #2D2A26;
+  --mb-surface2:    #36332E;
+  --mb-header-bg:   #262624;
+  --mb-input-bg:    #2D2A26;
 
-  --mb-accent:    #8b5cf6;
-  --mb-accent2:   #7c3aed;
-  --mb-accent-deep:#6d28d9;
+  --mb-accent:      #D97757;
+  --mb-accent2:     #CC6D4E;
+  --mb-accent-deep: #B8593A;
+  --mb-accent-glow: rgba(217, 119, 87, 0.2);
 
-  --mb-text:      #1e1b4b;
-  --mb-text2:     #4a3b5c;
-  --mb-muted:     #9a8c9e;
+  --mb-text:        #ECEBE6;
+  --mb-text2:       #C5C3BB;
+  --mb-muted:       #949188;
+  --mb-border:      #3D3A35;
+  --mb-border-soft: #36332E;
 
-  --mb-shadow-sm:
-    0 4px 16px rgba(139, 92, 246, 0.06),
-    0 0 0 1px rgba(0, 0, 0, 0.05) inset;
+  --mb-bubble-me:   #3D322B;
+  --mb-bubble-them: #2D2A26;
 
-  --mb-shadow:
-    0 8px 32px rgba(139, 92, 246, 0.08),
-    0 0 0 1px rgba(0, 0, 0, 0.05) inset;
-
-  --mb-shadow-lg:
-    0 16px 48px rgba(139, 92, 246, 0.12),
-    0 0 0 1px rgba(0, 0, 0, 0.06) inset;
-
-  /* Adjustments for light mode bubbles & borders */
-  --border:       rgba(0, 0, 0, 0.05);
-  --border-soft:  rgba(0, 0, 0, 0.06);
-  --bubble-them:  #ffffff;
+  --mb-shadow-sm:   0 1px 2px rgba(0, 0, 0, 0.2);
+  --mb-shadow:      0 2px 6px rgba(0, 0, 0, 0.3);
+  --mb-shadow-lg:   0 6px 18px rgba(0, 0, 0, 0.4);
 }

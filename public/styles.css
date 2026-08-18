@@ -137,32 +137,26 @@ select option {
 
 .login-card {
   width: 100%;
-  background: var(--surface);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid var(--border-soft);
-  border-radius: 32px;
-  padding: 32px 24px;
-  box-shadow: var(--shadow-lg);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 36px 28px;
+  box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-.login-card:hover {
-  box-shadow: var(--shadow);
+  gap: 18px;
 }
 
 .login-field {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
 }
 .login-label {
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   color: var(--muted);
 }
 
@@ -177,35 +171,34 @@ select option {
 .login-avatar-btn {
   width: 32px;
   height: 32px;
-  border-radius: 50%;
-  background: var(--surface);
+  border-radius: var(--radius-sm);
+  background: var(--surface2);
   border: 1px solid var(--border-soft);
   font-size: 15px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform 0.15s, border-color 0.15s, background 0.15s;
+  transition: border-color var(--transition), background var(--transition);
   flex-shrink: 0;
 }
 .login-avatar-btn:hover, .login-avatar-btn.active {
-  transform: scale(1.15);
   border-color: var(--accent);
   background: var(--accent-glow);
 }
 
 .login-invite-btn {
   width: 100%;
-  padding: 8px 10px;
-  border-radius: 10px;
-  background: var(--surface);
-  border: 1px solid var(--border-soft);
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: 1px solid var(--border);
   color: var(--text2);
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 500;
   cursor: pointer;
   margin-top: 6px;
-  transition: background 0.2s, border-color 0.2s, color 0.2s;
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
 }
 .login-invite-btn:hover {
   background: var(--surface2);
@@ -222,36 +215,38 @@ select option {
   margin-bottom: 2px;
 }
 .login-logo {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: var(--surface);
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  background: var(--surface2);
+  border: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 26px;
+  font-size: 22px;
 }
 #login h1 {
-  font-size: 22px;
-  font-weight: 700;
+  font-size: 26px;
+  font-weight: 600;
   color: var(--text);
   margin: 0;
+  font-family: var(--font-serif);
 }
 .login-tagline {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   margin: 0;
 }
 
 #login input, #login select {
   width: 100%;
   background: var(--surface);
-  border: 1px solid var(--border-soft);
-  border-radius: 10px;
-  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
   color: var(--text);
-  font-size: 13.5px;
-  transition: var(--transition);
+  font-size: 14px;
+  transition: border-color var(--transition);
 }
 #login input:focus, #login select:focus {
   border-color: var(--accent);
@@ -259,7 +254,7 @@ select option {
 }
 
 #loginError {
-  color: var(--offline);
+  color: #C62828;
   font-size: 13px;
   min-height: 18px;
   text-align: center;
@@ -269,16 +264,16 @@ select option {
   width: 100%;
   background: var(--accent);
   color: white;
-  font-weight: 700;
-  border-radius: 16px;
-  padding: 16px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  padding: 12px 18px;
   border: none;
-  font-size: 16px;
-  box-shadow: var(--shadow-btn);
-  transition: transform var(--transition), box-shadow var(--transition);
+  font-size: 14.5px;
+  box-shadow: none;
+  cursor: pointer;
+  transition: background var(--transition);
 }
 #joinBtn:hover {
-  transform: translateY(-2px);
   background: var(--accent2);
 }
 
@@ -314,9 +309,7 @@ select option {
   width: 260px;
   min-width: 260px;
   background: var(--sidebar-bg);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border-right: 1px solid var(--border-soft);
+  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -581,12 +574,10 @@ select option {
 
 /* ═══════════════════ 6. HEADER ═══════════════════ */
 header {
-  height: 60px;
-  min-height: 60px;
+  height: 56px;
+  min-height: 56px;
   background: var(--header-bg);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border-bottom: 1px solid var(--border-soft);
+  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   padding: 0 16px;
@@ -761,45 +752,27 @@ header {
 
 .msg {
   padding: 10px 14px;
-  border-radius: 18px;
+  border-radius: var(--radius);
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.6;
   word-break: break-word;
   position: relative;
 }
 .msg.me {
-  background: linear-gradient(135deg, var(--bubble-me), var(--bubble-me2));
-  color: white;
-  border-radius: 18px 18px 4px 18px;
-  box-shadow: 0 2px 8px rgba(67,56,202,0.3);
+  background: var(--bubble-me);
+  color: var(--text);
+  border: 1px solid var(--border-soft);
+  border-radius: 12px 12px 2px 12px;
+  box-shadow: none;
   position: relative;
-}
-.msg.me::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  right: -5px;
-  width: 10px;
-  height: 10px;
-  background: var(--bubble-me2);
-  clip-path: polygon(0 0, 100% 100%, 0 100%);
 }
 .msg.them {
   background: var(--bubble-them);
   color: var(--text);
-  border-radius: 18px 18px 18px 4px;
-  border: 1px solid var(--border-soft);
+  border-radius: 12px 12px 12px 2px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
   position: relative;
-}
-.msg.them::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: -5px;
-  width: 10px;
-  height: 10px;
-  background: var(--bubble-them);
-  clip-path: polygon(100% 0, 0 100%, 100% 100%);
 }
 
 #newMsgFloat {
@@ -915,10 +888,8 @@ header {
 /* ═══════════════════ 8. INPUT BAR ═══════════════════ */
 #inputBarContainer {
   padding: 12px 16px 16px;
-  background: var(--input-bg);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border-top: 1px solid var(--border-soft);
+  background: var(--header-bg);
+  border-top: 1px solid var(--border);
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -938,32 +909,32 @@ header {
   align-items: center;
   gap: 8px;
   background: var(--surface);
-  border: 1px solid var(--border-soft);
-  border-radius: 24px;
-  padding: 6px 6px 6px 12px;
-  transition: border-color var(--transition), box-shadow var(--transition);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 8px 6px 12px;
+  transition: border-color var(--transition);
 }
 .input-pill:focus-within {
-  border-color: rgba(255, 255, 255, 0.22);
-  box-shadow: none !important;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-glow) !important;
 }
 
 .pill-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
   background: none;
   border: none;
   color: var(--muted);
-  font-size: 20px;
+  font-size: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: var(--transition);
+  transition: color var(--transition), background var(--transition);
 }
 .pill-btn:hover {
   color: var(--text);
-  background: rgba(255,255,255,0.05);
+  background: var(--surface2);
 }
 
 #msgInput {
@@ -981,25 +952,26 @@ header {
 }
 
 #sendBtn {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #4338ca, #818cf8);
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
   border: none;
   color: white;
-  font-size: 18px;
+  font-size: 17px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform var(--transition);
-  box-shadow: 0 2px 8px rgba(67,56,202,0.4);
+  transition: background var(--transition);
+  box-shadow: none;
   flex-shrink: 0;
+  cursor: pointer;
 }
 #sendBtn:hover {
-  transform: scale(1.05);
+  background: var(--accent2);
 }
 #sendBtn.recording {
-  background: linear-gradient(135deg, #dc2626, #f87171);
+  background: #C62828;
   animation: pulse 1.5s infinite;
 }
 
@@ -1249,13 +1221,13 @@ header {
 
 .modal-card {
   background: var(--panel);
-  border: 1px solid var(--border-soft);
-  border-radius: 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   width: 100%;
   max-width: 520px;
   max-height: 85vh;
   max-height: 85dvh;
-  box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+  box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
   overflow: hidden;

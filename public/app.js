@@ -3728,15 +3728,15 @@
       updateSidebarMyProfile();
       checkPinLock();
 
-      // Load saved theme (Dark mode is default)
-      const savedTheme = localStorage.getItem('bestieChatTheme') || 'dark';
-      if (savedTheme === 'light') {
-        document.body.classList.add('theme-light');
-        const toggleBtn = document.getElementById('themeToggle');
-        if (toggleBtn) toggleBtn.textContent = '🌙';
-      } else {
-        const toggleBtn = document.getElementById('themeToggle');
+      // Load saved theme (Claude warm light mode is default)
+      const savedTheme = localStorage.getItem('bestieChatTheme') || 'light';
+      const toggleBtn = document.getElementById('themeToggle');
+      if (savedTheme === 'dark') {
+        document.body.classList.add('theme-dark');
         if (toggleBtn) toggleBtn.textContent = '☀️';
+      } else {
+        document.body.classList.remove('theme-dark');
+        if (toggleBtn) toggleBtn.textContent = '🌙';
       }
 
       // Parse PWA Share Target URL params
@@ -3771,10 +3771,10 @@
   }
 
   function toggleTheme() {
-    const isLight = document.body.classList.toggle('theme-light');
-    localStorage.setItem('bestieChatTheme', isLight ? 'light' : 'dark');
+    const isDark = document.body.classList.toggle('theme-dark');
+    localStorage.setItem('bestieChatTheme', isDark ? 'dark' : 'light');
     const toggleBtn = document.getElementById('themeToggle');
-    if (toggleBtn) toggleBtn.textContent = isLight ? '🌙' : '☀️';
+    if (toggleBtn) toggleBtn.textContent = isDark ? '☀️' : '🌙';
   }
 
   function dismissDailyQuestion() {
