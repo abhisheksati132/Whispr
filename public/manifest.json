@@ -4,8 +4,8 @@
   "description": "Private real-time chat space.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0d0d1a",
-  "theme_color": "#8b5cf6",
+  "background_color": "#FAF9F5",
+  "theme_color": "#FAF9F5",
   "orientation": "portrait-primary",
   "icons": [
     {
