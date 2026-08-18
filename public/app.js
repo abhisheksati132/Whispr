@@ -2707,7 +2707,7 @@
 
   // ── Accent Theme Switcher ──
   function changeAccent(accent) {
-    const classes = document.body.className.split(' ').filter(c => !c.startsWith('theme-') && !c.startsWith('accent-'));
+    const classes = (document.body.className || '').split(' ').filter(c => !c.startsWith('theme-') && !c.startsWith('accent-'));
     if (accent) {
       if (accent.startsWith('gradient-')) {
         classes.push(`wallpaper-${accent}`);
@@ -4574,6 +4574,10 @@
     if (!panel) return;
     const isVisible = panel.style.display !== 'none';
     panel.style.display = isVisible ? 'none' : 'block';
+  }
+
+  function toggleQuickMenu() {
+    toggleModal('quickMenu');
   }
 
   // ═══════════════════ TELEGRAM & WHATSAPP SUITE ═══════════════════
