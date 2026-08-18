@@ -1007,59 +1007,100 @@
   }
 
   // ─── Join / Auth ─────────────────────────────────────────────────────────────
-  function joinChat() {
+  async function joinChat() {
     const nameEl = document.getElementById('nameInput');
-    const rawName = (nameEl ? nameEl.value.trim() : '') || localStorage.getItem('bestieChatName') || 'Bestie';
-    const cleanName = (rawName.toLowerCase().replace(/[^a-z0-9_]/g, '')) || 'bestie';
-    const room = 'our-private-space';
+    const passEl = document.getElementById('passwordInput');
+    const errEl  = document.getElementById('loginError');
+    if (errEl) errEl.textContent = '';
 
-    myName = cleanName;
-    myRoom = room;
+    const rawName = (nameEl ? nameEl.value.trim() : '');
+    const cleanName = (rawName.toLowerCase().replace(/[^a-z0-9_]/g, ''));
+    const rawPass = (passEl ? passEl.value : '');
 
-    localStorage.setItem('bestieChatName', cleanName);
-    localStorage.setItem('bestieChatRoom', room);
+    if (!cleanName || cleanName.length < 2) {
+      if (errEl) errEl.textContent = 'Please enter a valid username (at least 2 letters/numbers).';
+      if (nameEl) nameEl.focus();
+      return;
+    }
+    if (!rawPass || rawPass.length < 3) {
+      if (errEl) errEl.textContent = 'Please enter your password (at least 3 characters).';
+      if (passEl) passEl.focus();
+      return;
+    }
 
-    // Instantly hide login and show chat space
-    const loginDiv = document.getElementById('login');
-    const chatDiv  = document.getElementById('chat');
-    if (loginDiv) loginDiv.setAttribute('style', 'display:none !important');
-    if (chatDiv)  chatDiv.setAttribute('style', 'display:flex !important');
+    const joinBtn = document.getElementById('joinBtn');
+    if (joinBtn) {
+      joinBtn.disabled = true;
+      const textSpan = document.getElementById('joinBtnText');
+      if (textSpan) textSpan.textContent = 'Signing in...';
+    }
 
-    applyRoomTheme(room);
-    updateSidebarMyProfile();
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: cleanName, password: rawPass, avatar: myProfile.avatar || '✨' })
+      });
+      const data = await res.json();
 
-    initOfflineDB().then(() => {
-      if (els.messages) els.messages.innerHTML = '';
-      lastDateLabel = '';
-      loadCachedMessagesFromOfflineDB(room).then(msgs => {
+      if (!res.ok || data.error) {
+        if (errEl) errEl.textContent = data.error || 'Login failed. Please check password.';
+        if (joinBtn) {
+          joinBtn.disabled = false;
+          const textSpan = document.getElementById('joinBtnText');
+          if (textSpan) textSpan.textContent = 'Enter Space';
+        }
+        return;
+      }
+
+      authToken = data.token;
+      myName = data.username || cleanName;
+      myRoom = 'our-private-space';
+      if (data.avatar) myProfile.avatar = data.avatar;
+      if (data.nickname) myProfile.nickname = data.nickname;
+      if (data.statusBio) myProfile.statusBio = data.statusBio;
+
+      localStorage.setItem('bestieChatName', myName);
+      localStorage.setItem('bestieChatToken', authToken);
+      localStorage.setItem('bestieChatRoom', myRoom);
+      localStorage.setItem('bestieChatProfile', JSON.stringify(myProfile));
+
+      // Hide login and show chat space
+      const loginDiv = document.getElementById('login');
+      const chatDiv  = document.getElementById('chat');
+      if (loginDiv) loginDiv.setAttribute('style', 'display:none !important');
+      if (chatDiv)  chatDiv.setAttribute('style', 'display:flex !important');
+
+      applyRoomTheme(myRoom);
+      updateSidebarMyProfile();
+
+      await initOfflineDB();
+      loadCachedMessagesFromOfflineDB(myRoom).then(msgs => {
         if (allMessagesCached.length === 0 && msgs.length > 0) {
           allMessagesCached = msgs;
+          if (els.messages) els.messages.innerHTML = '';
+          lastDateLabel = '';
           msgs.forEach(m => renderMessage(m, true));
         }
       });
-    });
 
-    fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: cleanName, pin: '0000', avatar: myProfile.avatar || '✨' })
-    })
-    .then(r => r.json())
-    .then(data => {
-      if (data && data.token) {
-        authToken = data.token;
-        localStorage.setItem('bestieChatToken', authToken);
+      if (!socket || !socket.connected) initSocket();
+      else doSocketJoin();
+
+      setTimeout(loadChatList, 800);
+    } catch (err) {
+      console.error('Auth error:', err);
+      if (errEl) errEl.textContent = 'Connection error. Please try again.';
+      if (joinBtn) {
+        joinBtn.disabled = false;
+        const textSpan = document.getElementById('joinBtnText');
+        if (textSpan) textSpan.textContent = 'Enter Space';
       }
-    })
-    .catch(() => {});
-
-    if (!socket || !socket.connected) initSocket();
-    else doSocketJoin();
-
-    setTimeout(loadChatList, 800);
+    }
   }
 
   function leaveChat() {
+    localStorage.removeItem('bestieChatToken');
     window.location.reload();
   }
 
@@ -1067,23 +1108,25 @@
     if (!socket) return;
     socket.emit('join', {
       name: myName, room: myRoom,
-      nickname: els.nicknameInput ? els.nicknameInput.value.trim() : '',
+      nickname: (myProfile && myProfile.nickname) || '',
       password: els.passwordInput ? els.passwordInput.value : ''
     });
   }
 
   async function quickReentry() {
     const savedName = localStorage.getItem('bestieChatName');
+    const savedToken = localStorage.getItem('bestieChatToken');
     if (!savedName) { showFullLoginForm(); return; }
     
     try {
       myName = savedName;
+      authToken = savedToken || '';
       const profileStr = localStorage.getItem('bestieChatProfile');
       if (profileStr) {
         try { myProfile = { ...myProfile, ...JSON.parse(profileStr) }; } catch(e){}
       }
       
-      myRoom = localStorage.getItem('bestieChatRoom') || 'our-private-space';
+      myRoom = 'our-private-space';
       
       if (els.login) els.login.setAttribute('style', 'display:none !important');
       if (els.chat)  els.chat.setAttribute('style', 'display:flex !important');
@@ -1092,11 +1135,11 @@
       applyRoomTheme(myRoom);
 
       await initOfflineDB();
-      if (els.messages) els.messages.innerHTML = '';
-      lastDateLabel = '';
       loadCachedMessagesFromOfflineDB(myRoom).then(msgs => {
         if (allMessagesCached.length === 0 && msgs.length > 0) {
           allMessagesCached = msgs;
+          if (els.messages) els.messages.innerHTML = '';
+          lastDateLabel = '';
           msgs.forEach(m => renderMessage(m, true));
         }
       });
@@ -3607,9 +3650,7 @@
       }
 
       // Input events
-      if (els.nameInput) els.nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { const pinEl = document.getElementById('pinInput'); if (pinEl) pinEl.focus(); else joinChat(); } });
-      const pinInputEl = document.getElementById('pinInput');
-      if (pinInputEl) pinInputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') joinChat(); });
+      if (els.nameInput) els.nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { if (els.passwordInput) els.passwordInput.focus(); else joinChat(); } });
       if (els.passwordInput) els.passwordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') joinChat(); });
       if (els.msgInput) {
         els.msgInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) sendMessage(); });

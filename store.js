@@ -364,10 +364,11 @@ function getDailyQuestion() {
 }
 
 function cleanExpiredRooms() {
-  const EXPIRY_DAYS = parseInt(process.env.ROOM_EXPIRY_DAYS || '7', 10);
+  const EXPIRY_DAYS = parseInt(process.env.ROOM_EXPIRY_DAYS || '30', 10);
   const cutoff = Date.now() - EXPIRY_DAYS * 24 * 60 * 60 * 1000;
   let cleaned = 0;
   for (const [roomName, room] of Object.entries(data.rooms)) {
+    if (roomName === 'our-private-space' || roomName === 'default') continue;
     const lastMsgTime = room.messages.length > 0
       ? room.messages[room.messages.length - 1].time
       : 0;

@@ -59,21 +59,22 @@
 
 
         <!-- Username -->
-        <div class="login-field">
-          <label class="login-label" for="nameInput">Your Name</label>
-          <input id="nameInput" type="text" class="login-input" placeholder="e.g. Priya, Alex, Luna…" maxlength="20" autocomplete="username" autocapitalize="words" />
+        <div class="login-field" style="margin-bottom: 12px;">
+          <label class="login-label" for="nameInput" style="display:block; margin-bottom:6px; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted);">Username</label>
+          <input id="nameInput" type="text" class="login-input" placeholder="e.g. Priya, Alex, Luna…" maxlength="25" autocomplete="username" autocapitalize="none" style="width:100%; box-sizing:border-box;" />
         </div>
 
-        <div id="passwordField" class="login-field" style="display:none">
-          <label class="login-label" for="passwordInput">Room Password</label>
-          <input id="passwordInput" type="password" class="login-input" placeholder="Enter password…" autocomplete="current-password" />
+        <!-- Password -->
+        <div id="passwordField" class="login-field" style="margin-bottom: 16px;">
+          <label class="login-label" for="passwordInput" style="display:block; margin-bottom:6px; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted);">Password</label>
+          <input id="passwordInput" type="password" class="login-input" placeholder="Enter password…" autocomplete="current-password" style="width:100%; box-sizing:border-box;" />
         </div>
 
         <input id="nicknameInput" type="hidden" />
-        <div id="loginError" class="login-error"></div>
+        <div id="loginError" class="login-error" style="color:#D32F2F; font-size:13px; margin-bottom:10px; min-height:18px;"></div>
 
         <button id="joinBtn" type="button" class="login-btn" onclick="BestieChat.joinChat()">
-          <span id="joinBtnText">Enter Space 🚀</span>
+          <span id="joinBtnText">Enter Space</span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </button>
 
@@ -979,7 +980,7 @@
 <!-- Scripts -->
 <script src="/socket.io/socket.io.js"></script>
 <script src="/crypto-js.min.js"></script>
-<script src="/app.js?v=30"></script>
+<script src="/app.js?v=31"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
