@@ -385,6 +385,17 @@
       </div>
     </div>
 
+    <!-- Live Recording Waveform Banner -->
+    <div id="recordingWaveformBar" style="display:none; align-items:center; justify-content:space-between; padding:10px 16px; margin:0 16px 8px; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); border-radius:18px; backdrop-filter:blur(16px);">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span class="rec-dot" style="width:10px; height:10px; border-radius:50%; background:#ef4444; animation:recordingPulse 1s infinite alternate;"></span>
+        <span style="font-size:13px; font-weight:600; color:#ef4444;">Recording Voice Note…</span>
+        <span id="recordingTimer" style="font-size:12px; font-weight:700; color:var(--text);">0:00</span>
+      </div>
+      <canvas id="recordingCanvas" width="100" height="24" style="border-radius:6px;"></canvas>
+      <button type="button" onclick="BestieChat.cancelRecording()" style="background:none; border:none; color:var(--muted); font-size:13px; font-weight:600; cursor:pointer;">Cancel</button>
+    </div>
+
     <!-- Input Bar -->
     <div id="inputBarContainer">
       <div class="input-pill">
@@ -427,8 +438,15 @@
 <!-- Lightbox -->
 <div id="lightbox" style="display:none">
   <div class="lightbox-backdrop" onclick="BestieChat.closeLightbox()"></div>
-  <img id="lightboxImg" src="" alt="Full size photo" />
-  <button class="lightbox-close" onclick="BestieChat.closeLightbox()">✕</button>
+  <div class="lightbox-content">
+    <img id="lightboxImg" src="" alt="Full size photo" />
+    <div class="lightbox-toolbar">
+      <a id="lightboxDownloadBtn" href="#" download="chat-image.png" class="lightbox-btn" title="Download Photo">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </a>
+      <button type="button" class="lightbox-btn" onclick="BestieChat.closeLightbox()" title="Close">✕</button>
+    </div>
+  </div>
 </div>
 
 <!-- Doodle Modal -->

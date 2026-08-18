@@ -82,6 +82,87 @@ app.get('/api/health', (_req, res) => res.json({ status: 'ok', uptime: Math.floo
 app.get('/api/config', (_req, res) => res.json({ passwordRequired: Boolean(CHAT_PASSWORD), giphyKey: GIPHY_API_KEY }));
 app.get('/api/daily-question', (_req, res) => res.json({ question: mStore.getDailyQuestion() }));
 
+// ── OpenGraph Link Preview ───────────────────────────────────────────────────
+const linkPreviewCache = new Map();
+
+app.get('/api/link-preview', async (req, res) => {
+  try {
+    const rawUrl = req.query.url;
+    if (!rawUrl || typeof rawUrl !== 'string') return res.status(400).json({ error: 'url required' });
+    let targetUrl;
+    try {
+      targetUrl = new URL(rawUrl);
+      if (!['http:', 'https:'].includes(targetUrl.protocol)) {
+        return res.status(400).json({ error: 'Invalid protocol' });
+      }
+    } catch {
+      return res.status(400).json({ error: 'Malformed URL' });
+    }
+
+    const cacheKey = targetUrl.href;
+    if (linkPreviewCache.has(cacheKey)) {
+      return res.json(linkPreviewCache.get(cacheKey));
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4000);
+
+    const response = await fetch(targetUrl.href, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+      }
+    }).catch(() => null);
+    clearTimeout(timeout);
+
+    if (!response || !response.ok) {
+      return res.status(404).json({ error: 'Could not fetch page' });
+    }
+
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('text/html') && !contentType.includes('application/xhtml+xml')) {
+      return res.status(400).json({ error: 'Not an HTML page' });
+    }
+
+    const html = await response.text();
+    const getMeta = (prop) => {
+      const match = html.match(new RegExp(`<meta[^>]+(?:property|name)=["'](?:og:|twitter:)?${prop}["'][^>]+content=["']([^"']+)["']`, 'i')) ||
+                    html.match(new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:|twitter:)?${prop}["']`, 'i'));
+      return match ? match[1] : null;
+    };
+
+    const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+    const title = getMeta('title') || (titleMatch ? titleMatch[1].trim() : targetUrl.hostname);
+    const description = getMeta('description') || '';
+    let image = getMeta('image') || '';
+    if (image && image.startsWith('/')) {
+      image = new URL(image, targetUrl.origin).href;
+    }
+    const siteName = getMeta('site_name') || targetUrl.hostname.replace(/^www\./, '');
+    const favicon = `https://www.google.com/s2/favicons?domain=${targetUrl.hostname}&sz=64`;
+
+    const metaData = {
+      url: targetUrl.href,
+      title: title ? title.slice(0, 140) : targetUrl.hostname,
+      description: description ? description.slice(0, 220) : '',
+      image: image || '',
+      siteName: siteName || targetUrl.hostname,
+      favicon
+    };
+
+    if (linkPreviewCache.size > 200) {
+      const firstKey = linkPreviewCache.keys().next().value;
+      linkPreviewCache.delete(firstKey);
+    }
+    linkPreviewCache.set(cacheKey, metaData);
+
+    res.json(metaData);
+  } catch (err) {
+    res.status(500).json({ error: 'Preview failed' });
+  }
+});
+
 // ── Push endpoints ────────────────────────────────────────────────────────────
 app.get('/api/push-vapid-key', (_req, res) => res.json({ publicKey: vapidKeys.publicKey }));
 
@@ -385,6 +466,21 @@ io.on('connection', (socket) => {
       await mStore.deleteMessage(currentRoom, messageId);
       io.to(currentRoom).emit('message-deleted', { messageId });
     } catch (err) { console.error('delete-message error:', err); }
+  });
+
+  // ── Read & Delivery Receipts ──────────────────────────────────────────────
+  socket.on('mark-read', ({ messageIds } = {}) => {
+    try {
+      if (!currentRoom || !username || !Array.isArray(messageIds) || !messageIds.length) return;
+      socket.to(currentRoom).emit('messages-read', { messageIds, reader: username });
+    } catch (err) { console.error('mark-read error:', err); }
+  });
+
+  socket.on('mark-delivered', ({ messageId } = {}) => {
+    try {
+      if (!currentRoom || !username || !messageId) return;
+      socket.to(currentRoom).emit('message-delivered', { messageId, receiver: username });
+    } catch (err) { console.error('mark-delivered error:', err); }
   });
 
   // ── Pin / Unpin ───────────────────────────────────────────────────────────

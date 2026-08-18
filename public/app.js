@@ -267,7 +267,74 @@
       const mine = users.includes(myName);
       return `<span class="reaction-pill${mine ? ' mine' : ''}" onclick="BestieChat.react('${msg.id}','${emoji}')">${emoji} ${users.length}</span>`;
     }).join('');
+  // ── OpenGraph Link Preview Fetcher ──
+  const previewedLinks = new Set();
+  function fetchAndRenderLinkPreview(messageId, text) {
+    if (!text || previewedLinks.has(messageId)) return;
+    const urlMatch = text.match(/https?:\/\/[^\s<>'"]+/i);
+    if (!urlMatch) return;
+    const url = urlMatch[0];
+    previewedLinks.add(messageId);
+    
+    fetch(`/api/link-preview?url=${encodeURIComponent(url)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (!data || !data.title || data.error) return;
+        const wrap = document.querySelector(`.msg-wrap[data-id="${messageId}"]`);
+        if (!wrap) return;
+        if (wrap.querySelector('.link-preview-card')) return;
+
+        const card = document.createElement('a');
+        card.className = 'link-preview-card';
+        card.href = data.url;
+        card.target = '_blank';
+        card.rel = 'noopener noreferrer';
+
+        card.innerHTML = `
+          ${data.image ? `<div class="link-preview-img-wrap"><img src="${escapeHtml(data.image)}" alt="preview" loading="lazy" /></div>` : ''}
+          <div class="link-preview-info">
+            <div class="link-preview-site">
+              ${data.favicon ? `<img src="${escapeHtml(data.favicon)}" class="link-preview-fav" alt="" />` : ''}
+              <span>${escapeHtml(data.siteName || '')}</span>
+            </div>
+            <div class="link-preview-title">${escapeHtml(data.title)}</div>
+            ${data.description ? `<div class="link-preview-desc">${escapeHtml(data.description)}</div>` : ''}
+          </div>
+        `;
+
+        const msgBody = wrap.querySelector('.msg');
+        if (msgBody) {
+          msgBody.appendChild(card);
+          scrollBottom();
+        }
+      })
+      .catch(() => {});
   }
+
+  // ── Viewport IntersectionObserver for Read Receipts ──
+  let pendingReadIds = new Set();
+  let readDebounceTimer = null;
+  const msgObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        const id = entry.target.dataset.id;
+        if (id && entry.target.classList.contains('them')) {
+          pendingReadIds.add(id);
+          msgObserver.unobserve(entry.target);
+        }
+      }
+    });
+    if (pendingReadIds.size > 0) {
+      clearTimeout(readDebounceTimer);
+      readDebounceTimer = setTimeout(() => {
+        if (socket && socket.connected && pendingReadIds.size > 0) {
+          const ids = Array.from(pendingReadIds);
+          pendingReadIds.clear();
+          socket.emit('mark-read', { messageIds: ids });
+        }
+      }, 300);
+    }
+  }, { threshold: 0.5 });
 
   function renderMessage(msg, skipSound) {
     if (!msg || !msg.id) return;
@@ -308,7 +375,6 @@
         <img class="chat-img" src="${escapeHtml(msg.url)}" alt="shared image" onclick="BestieChat.openLightbox('${escapeHtml(msg.url)}')" loading="lazy" />
         ${editedTag}
       </div>`;
-      // Track for gallery
       if (!allImageMessages.find((m) => m.id === msg.id)) {
         allImageMessages.push({ id: msg.id, url: msg.url, user: msg.user, time: msg.time });
       }
@@ -330,6 +396,7 @@
             }).join('')}
           </div>
           <div class="audio-duration" id="wave-dur-${msg.id}">${dur}</div>
+          <button class="audio-speed-btn" onclick="BestieChat.cycleAudioSpeed('${msg.id}', this)" title="Playback Speed">1x</button>
           <button class="transcribe-btn" onclick="BestieChat.transcribeAudio('${msg.id}', '${escapeHtml(msg.url)}')" title="Transcribe to Text" style="background:none; border:none; color:var(--muted); cursor:pointer; padding:4px;">🗣️</button>
         </div>
         <div class="transcription-box" id="transcription-${msg.id}" style="display:none; font-size:0.82rem; color:var(--muted); margin-top:6px; font-style:italic;"></div>
@@ -375,43 +442,34 @@
     } else {
       const decText = decryptE2EE(msg.text);
       const highlightedText = highlightInsideJokes(decText);
-      
-      let previewHtml = '';
-      if (msg.linkPreview) {
-        const { title, description, image, url } = msg.linkPreview;
-        let hostname = '';
-        try {
-          if (url) hostname = new URL(url).hostname;
-        } catch (_) {}
-        previewHtml = `
-          <a class="link-preview-card" href="${escapeHtml(url || '')}" target="_blank" rel="noopener noreferrer">
-            ${image ? `<img class="link-preview-image" src="${escapeHtml(image)}" alt="preview image" loading="lazy" />` : ''}
-            <div class="link-preview-info">
-              <div class="link-preview-title">${escapeHtml(title || '')}</div>
-              ${description ? `<div class="link-preview-desc">${escapeHtml(description)}</div>` : ''}
-              <div class="link-preview-site">${escapeHtml(hostname)}</div>
-            </div>
-          </a>
-        `;
-      }
 
       body = `<div class="msg ${mine ? 'me' : 'them'}">
         ${metaLine}${replyQuote}
-        <div>${highlightedText}</div>
-        ${previewHtml}
+        <div class="msg-text">${highlightedText}</div>
         ${editedTag}
       </div>`;
+
+      // Auto-fetch OpenGraph preview if message contains URL
+      setTimeout(() => fetchAndRenderLinkPreview(msg.id, decText), 50);
     }
 
     // Read tick (for own messages)
-    const tickHtml = mine ? `<div class="read-tick delivered" id="tick-${msg.id}">✓</div>` : '';
+    const tickState = msg.read ? 'read' : (msg.delivered ? 'delivered' : 'sent');
+    const tickSymbol = (msg.read || msg.delivered) ? '✓✓' : '✓';
+    const tickHtml = mine ? `<div class="read-tick ${tickState}" id="tick-${msg.id}">${tickSymbol}</div>` : '';
 
     wrap.innerHTML = `
+      <div class="swipe-reply-icon">↩</div>
       ${body}
       <div class="react-bar">${renderReactionBar(msg.id)}</div>
       <div class="reactions" id="reactions-${msg.id}">${renderReactions(msg)}</div>
       ${tickHtml}
     `;
+
+    // Observe unread incoming messages
+    if (!mine) {
+      msgObserver.observe(wrap);
+    }
 
     // Poll vote listeners
     wrap.querySelectorAll('.poll-opt').forEach((btn) => {
@@ -1280,12 +1338,71 @@
     hideContextMenu();
   }
 
-  // ═══════════════════ VOICE RECORDING ═══════════════════
+  // ── Live Voice Visualizer & Recorder ──
+  let recAudioCtx = null;
+  let recAnalyser = null;
+  let recAnimId = null;
+  let recTimerInterval = null;
+  let recStream = null;
+
+  function cancelRecording() {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      recordChunks = [];
+      mediaRecorder.stop();
+    }
+    stopLiveVisualizer();
+    if (els.sendBtn) els.sendBtn.classList.remove('recording');
+    if (els.recordingWaveformBar) els.recordingWaveformBar.style.display = 'none';
+  }
+
+  function startLiveVisualizer(stream) {
+    try {
+      recStream = stream;
+      recAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      recAnalyser = recAudioCtx.createAnalyser();
+      recAnalyser.fftSize = 64;
+      const source = recAudioCtx.createMediaStreamSource(stream);
+      source.connect(recAnalyser);
+
+      const canvas = els.recordingCanvas;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const bufferLength = recAnalyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+
+      function draw() {
+        recAnimId = requestAnimationFrame(draw);
+        recAnalyser.getByteFrequencyData(dataArray);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const barWidth = (canvas.width / bufferLength) * 2;
+        let x = 0;
+        for (let i = 0; i < bufferLength; i++) {
+          const barHeight = Math.max(3, (dataArray[i] / 255) * canvas.height);
+          ctx.fillStyle = '#ef4444';
+          ctx.beginPath();
+          ctx.roundRect(x, (canvas.height - barHeight) / 2, barWidth - 1, barHeight, 2);
+          ctx.fill();
+          x += barWidth;
+        }
+      }
+      draw();
+    } catch (_) {}
+  }
+
+  function stopLiveVisualizer() {
+    if (recAnimId) cancelAnimationFrame(recAnimId);
+    if (recAudioCtx) { recAudioCtx.close().catch(()=>{}); recAudioCtx = null; }
+    if (recTimerInterval) { clearInterval(recTimerInterval); recTimerInterval = null; }
+  }
+
   async function toggleRecord() {
     const btn = els.sendBtn;
     if (mediaRecorder && mediaRecorder.state === 'recording') {
       mediaRecorder.stop();
       if (btn) btn.classList.remove('recording');
+      if (els.recordingWaveformBar) els.recordingWaveformBar.style.display = 'none';
+      stopLiveVisualizer();
       return;
     }
     try {
@@ -1301,9 +1418,27 @@
       }
       mediaRecorder = new MediaRecorder(stream, recorderOpts);
       recordStartTime = Date.now();
+      
+      if (els.recordingWaveformBar) {
+        els.recordingWaveformBar.style.display = 'flex';
+        if (els.recordingTimer) els.recordingTimer.textContent = '0:00';
+      }
+      startLiveVisualizer(stream);
+
+      recTimerInterval = setInterval(() => {
+        const sec = Math.floor((Date.now() - recordStartTime) / 1000);
+        if (els.recordingTimer) {
+          els.recordingTimer.textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+        }
+      }, 500);
+
       mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) recordChunks.push(e.data); };
       mediaRecorder.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
+        stopLiveVisualizer();
+        if (els.recordingWaveformBar) els.recordingWaveformBar.style.display = 'none';
+        if (!recordChunks.length) return;
+
         const duration = Math.max(1, Math.round((Date.now() - recordStartTime) / 1000));
         const mimeType = recorderOpts.mimeType || 'audio/webm';
         const blob = new Blob(recordChunks, { type: mimeType });
@@ -1318,6 +1453,7 @@
         };
         reader.readAsDataURL(blob);
       };
+
       mediaRecorder.start();
       if (btn) btn.classList.add('recording');
       setTimeout(() => {
@@ -1330,6 +1466,23 @@
       console.warn('Microphone access failed:', err);
       renderSystem('🔒 Microphone access needed for voice notes');
       showToast('🔒 Mic blocked! Click lock icon 🔒 next to URL in address bar to allow mic.');
+    }
+  }
+
+  function cycleAudioSpeed(msgId, btn) {
+    const player = btn.closest('.custom-audio-player');
+    if (!player) return;
+    const rates = [1, 1.5, 2];
+    const currentText = btn.textContent.trim();
+    let nextIdx = 0;
+    if (currentText === '1x') nextIdx = 1;
+    else if (currentText === '1.5x') nextIdx = 2;
+    else nextIdx = 0;
+
+    const rate = rates[nextIdx];
+    btn.textContent = `${rate}x`;
+    if (activeAudio) {
+      activeAudio.playbackRate = rate;
     }
   }
 
@@ -1593,11 +1746,16 @@
   }
 
   function openLightbox(url) {
+    if (!els.lightboxImg || !els.lightbox) return;
     els.lightboxImg.src = url;
-    els.lightbox.style.display = 'block';
+    if (els.lightboxDownloadBtn) els.lightboxDownloadBtn.href = url;
+    els.lightbox.style.display = 'flex';
   }
 
-  function closeLightbox() { els.lightbox.style.display = 'none'; els.lightboxImg.src = ''; }
+  function closeLightbox() {
+    if (els.lightbox) els.lightbox.style.display = 'none';
+    if (els.lightboxImg) els.lightboxImg.src = '';
+  }
 
   // ═══════════════════ SECRET MODE ═══════════════════
   function toggleSecretMode() {
@@ -1858,9 +2016,28 @@
                   (msg.text || 'New message'),
             icon: '/icon-192.png'
           });
+          socket.emit('mark-delivered', { messageId: msg.id });
         }
       } else {
         localStorage.setItem('bestieLastMsgDate', new Date().toISOString().slice(0, 10));
+      }
+    });
+
+    socket.on('messages-read', ({ messageIds }) => {
+      (messageIds || []).forEach(id => {
+        const tick = document.getElementById(`tick-${id}`);
+        if (tick) {
+          tick.textContent = '✓✓';
+          tick.className = 'read-tick read';
+        }
+      });
+    });
+
+    socket.on('message-delivered', ({ messageId }) => {
+      const tick = document.getElementById(`tick-${messageId}`);
+      if (tick && !tick.classList.contains('read')) {
+        tick.textContent = '✓✓';
+        tick.className = 'read-tick delivered';
       }
     });
 
@@ -4320,7 +4497,7 @@
     toggleSidebar, closeSidebar, sidebarNavTo, openGamesHub, closeGamesHub,
     switchExtrasTab, changeAccent, changeSoundPack, updateE2EEKey, toggleE2EE,
     updateSharedPad, toggleAppPin, verifyPinLock, checkPinLock, toggleAudioSpeed,
-    playWaveform, seekWaveform, transcribeAudio,
+    playWaveform, seekWaveform, transcribeAudio, cycleAudioSpeed, cancelRecording,
     addDiaryEntry, deleteDiaryEntry, addBucketItem, toggleBucketItem, deleteBucketItem,
     addCalendarEvent, deleteCalendarEvent,
     addGlossaryWord, deleteGlossaryWord,
