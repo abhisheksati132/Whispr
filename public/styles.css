@@ -693,27 +693,29 @@ header {
 
 /* ── Banners ── */
 #motdBanner {
-  padding: 10px 16px;
-  background: linear-gradient(135deg, rgba(129, 140, 248, 0.12), rgba(244, 114, 182, 0.12));
+  padding: 8px 14px;
+  background: var(--surface);
   border-bottom: 1px solid var(--border);
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 500;
   color: var(--accent);
   text-align: center;
-}
-#motdBanner:empty {
   display: none;
+}
+#motdBanner:not(:empty) {
+  display: block;
 }
 
 #dailyQuestion {
-  margin: 12px 16px 4px;
-  padding: 12px 16px;
+  margin: 8px 12px 4px;
+  padding: 10px 14px;
   background: var(--surface);
-  border: 1px solid var(--border-soft);
+  border: 1px solid var(--border);
   border-left: 3px solid var(--accent);
-  border-radius: 14px;
+  border-radius: var(--radius-sm);
   position: relative;
   font-size: 13px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.03);
 }
 .dq-label {
   font-size: 11px;
@@ -725,13 +727,14 @@ header {
 }
 .dq-dismiss {
   position: absolute;
-  top: 10px;
-  right: 12px;
+  top: 8px;
+  right: 10px;
   background: none;
   border: none;
   color: var(--muted);
   font-size: 14px;
   cursor: pointer;
+  padding: 2px 6px;
 }
 
 /* ═══════════════════ 7. MESSAGES AREA ═══════════════════ */
@@ -1839,45 +1842,128 @@ header {
   /* Mobile Header */
   header {
     padding: 0 8px;
-    gap: 8px;
+    gap: 4px;
+    height: 56px;
+    min-height: 56px;
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    background: var(--header-bg);
+    border-bottom: 1px solid var(--border);
   }
-  .header-bestie { min-width: 0; flex: 1; }
-  .header-bestie-name { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .header-bestie-status { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .header-actions { gap: 4px; flex-shrink: 0; }
-  .icon-btn { width: 40px; height: 40px; font-size: 18px; flex-shrink: 0; }
+  .header-bestie { 
+    min-width: 0; 
+    flex: 1; 
+    display: flex; 
+    align-items: center; 
+    gap: 8px; 
+    cursor: pointer; 
+  }
+  .header-bestie-name { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .header-bestie-status { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .header-actions { 
+    display: flex; 
+    align-items: center; 
+    gap: 2px; 
+    flex-shrink: 0; 
+  }
+  .header-actions .icon-btn { 
+    width: 36px; 
+    height: 36px; 
+    min-width: 36px; 
+    min-height: 36px; 
+    font-size: 17px; 
+    flex-shrink: 0; 
+    padding: 0; 
+  }
 
   /* Mobile Messages */
   #messages {
     flex: 1;
     min-height: 0;
-    padding: 10px 10px 8px;
+    padding: 8px 10px;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
   .msg-wrap { max-width: 90%; }
   .msg { padding: 9px 12px; font-size: 14px; }
 
+  /* Mobile Smart Replies */
+  #smartReplies {
+    display: flex;
+    gap: 6px;
+    padding: 4px 10px 6px;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    background: transparent;
+    flex-shrink: 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  #smartReplies::-webkit-scrollbar { display: none; }
+  .smart-pill {
+    padding: 5px 12px;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+
   /* Mobile Input Bar */
   #inputBarContainer {
     display: flex !important;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    box-sizing: border-box;
     position: relative;
     z-index: 100;
     flex-shrink: 0;
-    padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px)) !important;
+    padding: 6px 8px calc(8px + env(safe-area-inset-bottom, 8px)) 8px !important;
     background: var(--header-bg);
     border-top: 1px solid var(--border);
   }
   .input-pill {
-    padding: 4px 4px 4px 10px;
-    gap: 6px;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 3px 6px 3px 10px;
+    box-sizing: border-box;
   }
   #msgInput {
-    font-size: 16px !important;
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 15px !important;
+    color: var(--text);
+    padding: 6px 2px;
   }
-  .pill-btn { width: 36px; height: 36px; font-size: 20px; flex-shrink: 0; }
-  #sendBtn { width: 40px; height: 40px; font-size: 18px; flex-shrink: 0; }
+  .pill-btn { 
+    width: 32px; 
+    height: 32px; 
+    min-width: 32px; 
+    min-height: 32px; 
+    font-size: 18px; 
+    flex-shrink: 0; 
+    padding: 0; 
+  }
+  #sendBtn { 
+    width: 38px; 
+    height: 38px; 
+    min-width: 38px; 
+    min-height: 38px; 
+    font-size: 17px; 
+    flex-shrink: 0; 
+    padding: 0; 
+  }
 
   /* Mobile Modals (Bottom Sheets) */
   @keyframes slideUpMobile {

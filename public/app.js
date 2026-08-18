@@ -163,16 +163,7 @@
 
   // ═══════════════════ AMBIENT ═══════════════════
   function initAmbience() {
-    const symbols = ['✨', '💕', '⭐', '🌸', '💫'];
-    for (let i = 0; i < 12; i++) {
-      const p = document.createElement('div');
-      p.className = 'particle';
-      p.textContent = symbols[i % symbols.length];
-      p.style.left = `${Math.random() * 100}%`;
-      p.style.animationDuration = `${12 + Math.random() * 18}s`;
-      p.style.animationDelay    = `${Math.random() * 10}s`;
-      els.ambience.appendChild(p);
-    }
+    // Keep clean, elegant workspace background without emoji clutter
   }
 
   function confetti() {
