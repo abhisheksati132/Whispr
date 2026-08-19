@@ -350,23 +350,34 @@
          </div>`
       : '';
 
-    const metaLine = `<div class="meta"><span class="nick-dot" style="background:${profile.color || '#888'}"></span>${mine ? 'You' : escapeHtml(display)} · ${time}</div>`;
     const editedTag = msg.editedAt ? `<div class="edited-tag">edited</div>` : '';
+    const isRead = msg.readByUsers && msg.readByUsers.length > 0 && !msg.readByUsers.every(u => u === myName);
+    const isDelivered = msg.deliveredTo && msg.deliveredTo.length > 0 && !msg.deliveredTo.every(u => u === myName);
+    const tickState = isRead ? 'read' : (isDelivered ? 'delivered' : 'sent');
+    const tickSvg = isRead
+      ? `<svg viewBox="0 0 16 15" width="14" height="13" fill="none"><path d="M15.01 3.316l-7.92 8.56a.91.91 0 01-.67.3.91.91 0 01-.67-.3L2.3 8.35a.96.96 0 010-1.34.93.93 0 011.33 0l2.79 2.99 7.26-7.85a.93.93 0 011.33 0 .96.96 0 010 1.166z" fill="currentColor"/><path d="M10.87 3.316l-7.92 8.56a.91.91 0 01-.67.3.91.91 0 01-.67-.3L.16 10.35a.96.96 0 010-1.34.93.93 0 011.33 0l1.19 1.28 7.26-7.85a.93.93 0 011.33 0 .96.96 0 010 1.166z" fill="currentColor"/></svg>`
+      : (isDelivered
+        ? `<svg viewBox="0 0 16 15" width="14" height="13" fill="none"><path d="M15.01 3.316l-7.92 8.56a.91.91 0 01-.67.3.91.91 0 01-.67-.3L2.3 8.35a.96.96 0 010-1.34.93.93 0 011.33 0l2.79 2.99 7.26-7.85a.93.93 0 011.33 0 .96.96 0 010 1.166z" fill="currentColor"/><path d="M10.87 3.316l-7.92 8.56a.91.91 0 01-.67.3.91.91 0 01-.67-.3L.16 10.35a.96.96 0 010-1.34.93.93 0 011.33 0l1.19 1.28 7.26-7.85a.93.93 0 011.33 0 .96.96 0 010 1.166z" fill="currentColor"/></svg>`
+        : `<svg viewBox="0 0 16 15" width="14" height="13" fill="none"><path d="M12.01 3.316l-7.92 8.56a.91.91 0 01-.67.3.91.91 0 01-.67-.3L.3 8.35a.96.96 0 010-1.34.93.93 0 011.33 0l2.79 2.99 7.26-7.85a.93.93 0 011.33 0 .96.96 0 010 1.166z" fill="currentColor"/></svg>`);
+    const starHtml = (msg.starredBy && msg.starredBy.includes(myName)) ? `<span class="msg-star-badge" title="Starred">⭐</span>` : '';
+    const tickHtml = mine ? `<span class="msg-status-ticks ${tickState}" id="tick-${msg.id}">${tickSvg}</span>` : '';
+    const bubbleMeta = `<span class="bubble-meta">${starHtml}<span class="bubble-time">${time}</span>${tickHtml}</span>`;
 
     let body = '';
 
     if (msg.deleted) {
-      body = `<div class="msg deleted ${mine ? 'me' : 'them'}">🗑️ Message deleted</div>`;
+      body = `<div class="msg deleted ${mine ? 'me' : 'them'}">🗑️ Message deleted ${bubbleMeta}</div>`;
 
     } else if (msg.type === 'hug') {
-      body = `<div class="msg hug ${mine ? 'me' : 'them'}">${profile.avatar || '💌'} ${escapeHtml(display)} sent a hug 💌</div>`;
+      body = `<div class="msg hug ${mine ? 'me' : 'them'}">${profile.avatar || '💌'} ${escapeHtml(display)} sent a hug 💌 ${bubbleMeta}</div>`;
 
     } else if (msg.type === 'image') {
       body = `<div class="msg ${mine ? 'me' : 'them'}">
-        ${metaLine}${replyQuote}
+        ${replyQuote}
         ${msg.text ? `<div>${escapeHtml(msg.text)}</div>` : ''}
         <img class="chat-img" src="${escapeHtml(msg.url)}" alt="shared image" onclick="BestieChat.openLightbox('${escapeHtml(msg.url)}')" loading="lazy" />
         ${editedTag}
+        ${bubbleMeta}
       </div>`;
       if (!allImageMessages.find((m) => m.id === msg.id)) {
         allImageMessages.push({ id: msg.id, url: msg.url, user: msg.user, time: msg.time });
@@ -375,8 +386,7 @@
     } else if (msg.type === 'voice') {
       const dur = msg.duration ? `${Math.floor(msg.duration / 60)}:${String(msg.duration % 60).padStart(2, '0')}` : '';
       body = `<div class="msg ${mine ? 'me' : 'them'}">
-        ${metaLine}${replyQuote}
-        🎤 Voice note
+        ${replyQuote}
         <div class="custom-audio-player" data-url="${escapeHtml(msg.url)}" data-id="${msg.id}">
           <button class="wave-play-btn" onclick="BestieChat.playWaveform('${msg.id}', this)">
             <svg class="play-svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
@@ -394,23 +404,25 @@
         </div>
         <div class="transcription-box" id="transcription-${msg.id}" style="display:none; font-size:0.82rem; color:var(--muted); margin-top:6px; font-style:italic;"></div>
         ${editedTag}
+        ${bubbleMeta}
       </div>`;
 
     } else if (msg.type === 'video-note') {
       body = `<div class="msg ${mine ? 'me' : 'them'}">
-        ${metaLine}${replyQuote}
+        ${replyQuote}
         <div class="video-circle-wrap" onclick="BestieChat.toggleVideoNoteAudio(this)">
           <video src="${escapeHtml(msg.url)}" autoplay loop muted playsinline></video>
           <div class="video-circle-mute-badge">🔇</div>
         </div>
         ${editedTag}
+        ${bubbleMeta}
       </div>`;
 
     } else if (msg.type === 'music') {
       const platform = getMusicPlatform(msg.url || '');
       const decMusicText = decryptE2EE(msg.text || msg.url);
       body = `<div class="msg ${mine ? 'me' : 'them'}">
-        ${metaLine}${replyQuote}
+        ${replyQuote}
         <a class="music-card" href="${escapeHtml(msg.url)}" target="_blank" rel="noopener noreferrer">
           <div class="music-icon" style="background:${platform.color}">${platform.icon}</div>
           <div class="music-info">
@@ -419,14 +431,15 @@
           </div>
         </a>
         ${editedTag}
+        ${bubbleMeta}
       </div>`;
 
     } else if (msg.type === 'secret') {
       const decSecret = decryptE2EE(msg.text);
       body = `<div class="msg secret ${mine ? 'me' : 'them'}">
-        ${metaLine}
         <div class="secret-content" onclick="this.classList.toggle('revealed')">🤫 ${escapeHtml(decSecret)}</div>
         <div class="secret-timer" id="stimer-${msg.id}">Vanishes in 30s</div>
+        ${bubbleMeta}
       </div>`;
       setTimeout(() => startSecretCountdown(msg.id, msg.time), 0);
 
@@ -437,19 +450,19 @@
 
       if (isUnlocked) {
         body = `<div class="msg ${mine ? 'me' : 'them'} time-capsule-unlocked">
-          ${metaLine}
           <div style="font-size:11px; font-weight:700; color:#d97706; margin-bottom:4px;">🎁 TIME CAPSULE UNLOCKED!</div>
           <div class="msg-text">${escapeHtml(decCapsule)}</div>
           ${editedTag}
+          ${bubbleMeta}
         </div>`;
       } else {
         body = `<div class="msg ${mine ? 'me' : 'them'}">
-          ${metaLine}
           <div class="time-capsule-card">
             <div class="time-capsule-icon">🎁</div>
             <div class="time-capsule-title">Time Capsule Locked</div>
             <div class="time-capsule-timer" id="capsule-timer-${msg.id}">Opens: ${escapeHtml(unlockDateStr)}</div>
           </div>
+          ${bubbleMeta}
         </div>`;
         setTimeout(() => startTimeCapsuleCountdown(msg.id, msg.unlockAt), 0);
       }
@@ -460,10 +473,10 @@
         return `<button class="poll-opt${voted ? ' voted' : ''}" data-option="${escapeHtml(o)}">${escapeHtml(o)}</button>`;
       }).join('');
       body = `<div class="msg ${mine ? 'me' : 'them'}">
-        ${metaLine}
         📊 ${escapeHtml(msg.text)}
         <div class="poll-options">${opts}</div>
         ${editedTag}
+        ${bubbleMeta}
       </div>`;
 
     } else {
@@ -471,33 +484,21 @@
       const highlightedText = highlightInsideJokes(decText);
 
       body = `<div class="msg ${mine ? 'me' : 'them'}">
-        ${metaLine}${replyQuote}
-        <div class="msg-text">${highlightedText}</div>
+        ${replyQuote}
+        <span class="msg-text">${highlightedText}</span>
         ${editedTag}
+        ${bubbleMeta}
       </div>`;
 
       // Auto-fetch OpenGraph preview if message contains URL
       setTimeout(() => fetchAndRenderLinkPreview(msg.id, decText), 50);
     }
 
-    // Double-ticks and Star badge
-    const isRead = msg.readByUsers && msg.readByUsers.length > 0 && !msg.readByUsers.every(u => u === myName);
-    const isDelivered = msg.deliveredTo && msg.deliveredTo.length > 0 && !msg.deliveredTo.every(u => u === myName);
-    const tickState = isRead ? 'read' : (isDelivered ? 'delivered' : 'sent');
-    const tickSvg = isRead
-      ? `<svg viewBox="0 0 16 15" width="15" height="14" fill="none"><path d="M15.01 3.316l-7.92 8.56a.91.91 0 01-.67.3.91.91 0 01-.67-.3L2.3 8.35a.96.96 0 010-1.34.93.93 0 011.33 0l2.79 2.99 7.26-7.85a.93.93 0 011.33 0 .96.96 0 010 1.166z" fill="currentColor"/><path d="M10.87 3.316l-7.92 8.56a.91.91 0 01-.67.3.91.91 0 01-.67-.3L.16 10.35a.96.96 0 010-1.34.93.93 0 011.33 0l1.19 1.28 7.26-7.85a.93.93 0 011.33 0 .96.96 0 010 1.166z" fill="currentColor"/></svg>`
-      : (isDelivered
-        ? `<svg viewBox="0 0 16 15" width="15" height="14" fill="none"><path d="M15.01 3.316l-7.92 8.56a.91.91 0 01-.67.3.91.91 0 01-.67-.3L2.3 8.35a.96.96 0 010-1.34.93.93 0 011.33 0l2.79 2.99 7.26-7.85a.93.93 0 011.33 0 .96.96 0 010 1.166z" fill="currentColor"/><path d="M10.87 3.316l-7.92 8.56a.91.91 0 01-.67.3.91.91 0 01-.67-.3L.16 10.35a.96.96 0 010-1.34.93.93 0 011.33 0l1.19 1.28 7.26-7.85a.93.93 0 011.33 0 .96.96 0 010 1.166z" fill="currentColor"/></svg>`
-        : `<svg viewBox="0 0 16 15" width="15" height="14" fill="none"><path d="M12.01 3.316l-7.92 8.56a.91.91 0 01-.67.3.91.91 0 01-.67-.3L.3 8.35a.96.96 0 010-1.34.93.93 0 011.33 0l2.79 2.99 7.26-7.85a.93.93 0 011.33 0 .96.96 0 010 1.166z" fill="currentColor"/></svg>`);
-    const starHtml = (msg.starredBy && msg.starredBy.includes(myName)) ? `<span class="msg-star-badge" title="Starred">⭐</span>` : '';
-    const tickHtml = mine ? `<span class="msg-status-ticks ${tickState}" id="tick-${msg.id}">${tickSvg}</span>` : '';
-
     wrap.innerHTML = `
       <div class="swipe-reply-hint">↩</div>
       ${body}
       <div class="react-bar">${renderReactionBar(msg.id)}</div>
       <div class="reactions" id="reactions-${msg.id}">${renderReactions(msg)}</div>
-      <div style="display:flex; justify-content:flex-end; align-items:center; margin-top:2px;">${starHtml}${tickHtml}</div>
     `;
 
     // Observe unread incoming messages
@@ -759,31 +760,35 @@
     contextTarget = msg.id;
     const mine = msg.user === myName;
     const isPinned = pinnedMsg && pinnedMsg.id === msg.id;
+    const isStarred = msg.starredBy && msg.starredBy.includes(myName);
+    const safeUser = escapeHtml((msg.user || '').replace(/'/g, "&#39;"));
+    const safeText = escapeHtml((msg.text || '').replace(/'/g, "&#39;"));
 
-    let html = '';
+    let html = `
+      <div class="ctx-reactions-row">
+        <button class="ctx-react-btn" onclick="BestieChat.quickReact('${msg.id}', '❤️'); BestieChat.hideContextMenu();">❤️</button>
+        <button class="ctx-react-btn" onclick="BestieChat.quickReact('${msg.id}', '👍'); BestieChat.hideContextMenu();">👍</button>
+        <button class="ctx-react-btn" onclick="BestieChat.quickReact('${msg.id}', '🔥'); BestieChat.hideContextMenu();">🔥</button>
+        <button class="ctx-react-btn" onclick="BestieChat.quickReact('${msg.id}', '😂'); BestieChat.hideContextMenu();">😂</button>
+        <button class="ctx-react-btn" onclick="BestieChat.quickReact('${msg.id}', '🥰'); BestieChat.hideContextMenu();">🥰</button>
+        <button class="ctx-react-btn" onclick="BestieChat.quickReact('${msg.id}', '🎉'); BestieChat.hideContextMenu();">🎉</button>
+      </div>
+    `;
+
     if (!msg.deleted) {
-      const safeUser = escapeHtml((msg.user || '').replace(/'/g, "&#39;"));
-      const safeText = escapeHtml((msg.text || '').replace(/'/g, "&#39;"));
-      html += `<button onclick="BestieChat.replyToMessage('${msg.id}','${safeUser}','${safeText}','${msg.type||'text'}')">💬 Reply</button>`;
-      if (mine && (msg.type === 'text' || !msg.type)) {
-        html += `<button onclick="BestieChat.startEditMessage('${msg.id}','${escapeHtml((msg.text||'').replace(/'/g,"&#39;"))}')">✏️ Edit</button>`;
+      html += `<button class="ctx-item" onclick="BestieChat.replyToMessage('${msg.id}','${safeUser}','${safeText}','${msg.type||'text'}'); BestieChat.hideContextMenu();">↩ Reply</button>`;
+      if (msg.text) {
+        html += `<button class="ctx-item" onclick="BestieChat.copyText('${safeText}'); BestieChat.hideContextMenu();">📋 Copy Text</button>`;
       }
+      if (mine && (msg.type === 'text' || !msg.type)) {
+        html += `<button class="ctx-item" onclick="BestieChat.startEditMessage('${msg.id}','${safeText}'); BestieChat.hideContextMenu();">✏️ Edit</button>`;
+      }
+      html += `<button class="ctx-item" onclick="BestieChat.${isPinned ? 'unpinMessage()' : `pinMessageById('${msg.id}')`}; BestieChat.hideContextMenu();">📌 ${isPinned ? 'Unpin' : 'Pin'}</button>`;
+      html += `<button class="ctx-item" onclick="BestieChat.toggleStarMessage('${msg.id}', ${!isStarred}); BestieChat.hideContextMenu();">⭐ ${isStarred ? 'Unstar' : 'Star'}</button>`;
       if (mine) {
         html += `<div class="ctx-divider"></div>`;
-        html += `<button class="danger" onclick="BestieChat.deleteMessage('${msg.id}')">🗑️ Delete</button>`;
+        html += `<button class="ctx-item danger" onclick="BestieChat.deleteMessage('${msg.id}'); BestieChat.hideContextMenu();">🗑️ Delete</button>`;
       }
-      html += `<div class="ctx-divider"></div>`;
-      if (isPinned) {
-        html += `<button onclick="BestieChat.unpinMessage()">📌 Unpin</button>`;
-      } else {
-        html += `<button onclick="BestieChat.pinMessageById('${msg.id}')">📌 Pin</button>`;
-      }
-      if (msg.text) {
-        html += `<button onclick="BestieChat.copyText('${escapeHtml((msg.text||'').replace(/'/g,"&#39;"))}')">📋 Copy</button>`;
-      }
-      const isStarred = msg.starredBy && msg.starredBy.includes(myName);
-      html += `<div class="ctx-divider"></div>`;
-      html += `<button onclick="BestieChat.toggleStarMessage('${msg.id}', ${!isStarred})">${isStarred ? '🌟 Unstar' : '⭐ Star'}</button>`;
     }
 
     els.contextMenu.innerHTML = html;
@@ -792,27 +797,16 @@
     const x = e.clientX || (e.changedTouches && e.changedTouches[0] && e.changedTouches[0].clientX) || window.innerWidth / 2;
     const y = e.clientY || (e.changedTouches && e.changedTouches[0] && e.changedTouches[0].clientY) || window.innerHeight / 2;
 
-    const menuW = 175;
-    const menuH = els.contextMenu.scrollHeight || 200;
-    const menuLeft = Math.min(x, window.innerWidth  - menuW - 10);
-    const menuTop = Math.min(y, window.innerHeight - menuH - 10);
+    const menuW = 200;
+    const menuH = els.contextMenu.scrollHeight || 240;
+    const menuLeft = Math.max(10, Math.min(x - 50, window.innerWidth  - menuW - 12));
+    const menuTop  = Math.max(10, Math.min(y - 80, window.innerHeight - menuH - 12));
     els.contextMenu.style.left = `${menuLeft}px`;
     els.contextMenu.style.top  = `${menuTop}px`;
-
-    // Position & show Quick Reaction Picker
-    const picker = document.getElementById('reactionPicker');
-    if (picker && !msg.deleted) {
-      picker.classList.add('open');
-      const pickerW = 320;
-      const pickerLeft = Math.max(10, Math.min(x - pickerW / 2, window.innerWidth - pickerW - 10));
-      const pickerTop = Math.max(10, menuTop - 55);
-      picker.style.left = `${pickerLeft}px`;
-      picker.style.top = `${pickerTop}px`;
-    }
   }
 
   function hideContextMenu() {
-    els.contextMenu.classList.remove('open');
+    if (els.contextMenu) els.contextMenu.classList.remove('open');
     const picker = document.getElementById('reactionPicker');
     if (picker) picker.classList.remove('open');
   }
@@ -3060,19 +3054,50 @@
   }
 
   // ═══════════════════ UI HELPERS ═══════════════════
+  let inputSendMode = 'voice'; // 'voice' or 'video'
+
   function toggleSendMicIcons() {
-    const hasText = els.msgInput.value.trim().length > 0;
+    const hasText = els.msgInput && els.msgInput.value.trim().length > 0;
     const sendIcon = els.sendIcon;
     const micIcon = els.micIcon;
+    const videoCamIcon = document.getElementById('videoCamIcon');
+    
     if (sendIcon && micIcon) {
       if (hasText || editingMessageId) {
         sendIcon.style.display = 'block';
         micIcon.style.display = 'none';
+        if (videoCamIcon) videoCamIcon.style.display = 'none';
       } else {
         sendIcon.style.display = 'none';
-        micIcon.style.display = 'block';
+        if (inputSendMode === 'video') {
+          micIcon.style.display = 'none';
+          if (videoCamIcon) videoCamIcon.style.display = 'block';
+        } else {
+          micIcon.style.display = 'block';
+          if (videoCamIcon) videoCamIcon.style.display = 'none';
+        }
       }
     }
+  }
+
+  function handleSendBtnClick() {
+    const hasText = els.msgInput && els.msgInput.value.trim().length > 0;
+    if (hasText || editingMessageId) {
+      sendMessage();
+      return;
+    }
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      toggleRecord();
+      return;
+    }
+    if (inputSendMode === 'voice') {
+      inputSendMode = 'video';
+      showToast('⭕ Switched to Video Note (tap to switch / hold to record)');
+    } else {
+      inputSendMode = 'voice';
+      showToast('🎙️ Switched to Voice Note (tap to switch / hold to record)');
+    }
+    toggleSendMicIcons();
   }
 
   function toggleAttachMenu() {
@@ -5337,6 +5362,7 @@
     // WhatsApp & Telegram Suite
     triggerDoubleTapHeart, toggleStarMessage, openStarredModal, closeStarredModal,
     startVideoNote, stopAndSendVideoNote, cancelVideoNote, toggleVideoNoteAudio,
+    handleSendBtnClick, hideContextMenu,
     // Auth
     setAuthMode, selectLoginAvatar, quickReentry, showFullLoginForm, copyInviteLink, togglePasswordVisibility, logout,
     // Multi-chat DMs

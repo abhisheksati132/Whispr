@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>chat ✨</title>
   <meta name="description" content="Private real-time chat space." />
-  <link rel="manifest" href="/manifest.json?v=912" />
+  <link rel="manifest" href="/manifest.json?v=913" />
   <link rel="icon" type="image/x-icon" href="/favicon.ico?v=902" />
   <link rel="shortcut icon" type="image/png" href="/icon-192.png?v=902" />
   <link rel="apple-touch-icon" href="/icon-192.png?v=902" />
@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles.css?v=12011" />
+  <link rel="stylesheet" href="/styles.css?v=12012" />
   <link rel="stylesheet" href="/clay.css?v=9" />
 </head>
 <body>
@@ -443,9 +443,10 @@
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         </button>
       </div>
-      <button id="sendBtn" onclick="BestieChat.sendMessage()" title="Send / Record voice">
+      <button id="sendBtn" onclick="BestieChat.handleSendBtnClick()" title="Send / Record Voice or Video Note">
         <svg id="sendIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         <svg id="micIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+        <svg id="videoCamIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>
       </button>
     </div>
 
@@ -1140,11 +1141,11 @@
 <!-- Scripts -->
 <script src="/socket.io/socket.io.js"></script>
 <script src="/crypto-js.min.js"></script>
-<script src="/app.js?v=38"></script>
+<script src="/app.js?v=39"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js?v=11309').catch(console.error);
+      navigator.serviceWorker.register('/sw.js?v=11311').catch(console.error);
     });
   }
   function forceClearAppCache() {

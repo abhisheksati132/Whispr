@@ -747,29 +747,33 @@ header {
   gap: 2px;
 }
 
+/* ═══════════════════ TELEGRAM-STYLE MESSAGE BUBBLES & GEOMETRY ═══════════════════ */
 .date-divider {
-  text-align: center;
-  font-size: 11px;
-  color: var(--muted);
-  margin: 16px 0 8px;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.date-divider::before, .date-divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--border-soft);
-  margin: 0 12px;
+  align-self: center;
+  margin: 12px auto 8px;
+  padding: 4px 14px;
+  background: rgba(20, 26, 40, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text2);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  letter-spacing: 0.02em;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  position: sticky;
+  top: 8px;
+  z-index: 10;
+  width: fit-content;
 }
 
 .msg-wrap {
   display: flex;
-  max-width: 72%;
-  margin-bottom: 2px;
+  max-width: 78%;
+  margin-bottom: 4px;
   position: relative;
+  transition: transform 0.12s ease-out;
 }
 .msg-wrap.me {
   margin-left: auto;
@@ -779,29 +783,143 @@ header {
   margin-right: auto;
 }
 
+.swipe-reply-hint {
+  position: absolute;
+  left: -38px;
+  top: 50%;
+  transform: translateY(-50%) scale(0.5);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  opacity: 0;
+  transition: opacity 0.15s, transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: none;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+.msg-wrap.swiping-active .swipe-reply-hint {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+}
+
 .msg {
-  padding: 10px 14px;
-  border-radius: var(--radius);
-  font-size: 14px;
-  line-height: 1.6;
+  padding: 8px 12px 6px 12px;
+  border-radius: 16px;
+  font-size: 14.5px;
+  line-height: 1.45;
   word-break: break-word;
   position: relative;
+  max-width: 100%;
 }
 .msg.me {
   background: var(--bubble-me);
-  color: var(--text);
-  border: 1px solid var(--border-soft);
-  border-radius: 12px 12px 2px 12px;
-  box-shadow: none;
-  position: relative;
+  color: #ffffff;
+  border-radius: 16px 16px 4px 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 .msg.them {
   background: var(--bubble-them);
   color: var(--text);
-  border-radius: 12px 12px 12px 2px;
+  border-radius: 16px 16px 16px 4px;
   border: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
-  position: relative;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.bubble-meta {
+  float: right;
+  margin-left: 8px;
+  margin-top: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7rem;
+  line-height: 1;
+  opacity: 0.65;
+  user-select: none;
+}
+.bubble-time {
+  font-size: 0.68rem;
+}
+.msg-status-ticks {
+  display: inline-flex;
+  align-items: center;
+}
+.msg-status-ticks.read {
+  color: #38bdf8;
+}
+
+/* ═══════════════════ TELEGRAM-STYLE CONTEXT MENU ═══════════════════ */
+#contextMenu {
+  position: fixed;
+  z-index: 2500;
+  background: rgba(18, 24, 38, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 8px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  display: none;
+  flex-direction: column;
+  min-width: 190px;
+  animation: contextMenuPop 0.18s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes contextMenuPop {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+#contextMenu.open { display: flex; }
+.ctx-reactions-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 4px 2px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 4px;
+}
+.ctx-react-btn {
+  background: none;
+  border: none;
+  font-size: 1.35rem;
+  padding: 4px;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: transform 0.15s ease;
+}
+.ctx-react-btn:hover {
+  transform: scale(1.3);
+}
+#contextMenu button.ctx-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+#contextMenu button.ctx-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+#contextMenu button.ctx-item.danger {
+  color: #f87171;
+}
+.ctx-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 4px 0;
 }
 
 #newMsgFloat {
