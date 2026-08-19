@@ -5234,17 +5234,25 @@
 
   function jumpToDate(dateStr) {
     if (!dateStr || !els.messages) return;
-    const targetDate = new Date(dateStr).toDateString();
+    const parts = dateStr.split('-');
+    if (parts.length < 3) return;
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+    const d = parseInt(parts[2], 10);
+
     const msgs = els.messages.querySelectorAll('.msg-wrap');
     for (const msgEl of msgs) {
       const id = msgEl.dataset.id;
-      const m = allMessagesCached.find((msg) => msg.id === id);
-      if (m && new Date(m.time).toDateString() === targetDate) {
-        msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        msgEl.classList.add('pinned-msg-highlight');
-        setTimeout(() => msgEl.classList.remove('pinned-msg-highlight'), 1600);
-        showToast(`📅 Jumped to ${dateStr}`);
-        return;
+      const item = allMessagesCached.find((msg) => msg.id === id);
+      if (item && item.time) {
+        const dt = new Date(item.time);
+        if (dt.getFullYear() === y && (dt.getMonth() + 1) === m && dt.getDate() === d) {
+          msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          msgEl.classList.add('pinned-msg-highlight');
+          setTimeout(() => msgEl.classList.remove('pinned-msg-highlight'), 1600);
+          showToast(`📅 Jumped to ${dateStr}`);
+          return;
+        }
       }
     }
     showToast(`No messages found on ${dateStr}`);
