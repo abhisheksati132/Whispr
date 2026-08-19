@@ -3445,46 +3445,101 @@
   // ═══════════════════ CHAT WALLPAPER ═══════════════════
   function changeWallpaper(type, customUrl) {
     const messagesEl = document.getElementById('messages') || els.messages;
-    const chatMainEl = document.getElementById('chatMain');
-    if (!messagesEl) return;
-    
-    const selectEl = document.getElementById('wallpaperSelect') || els.wallpaperSelect;
-    const customInputEl = document.getElementById('wallpaperUrlInput') || els.wallpaperUrlInput;
+    const selectEl = document.getElementById('wallpaperSelect');
+    const customInputEl = document.getElementById('wallpaperUrlInput');
     const selected = type !== undefined ? type : (selectEl ? selectEl.value : '');
 
     if (selectEl && selected !== undefined) selectEl.value = selected;
     if (customInputEl) customInputEl.style.display = selected === 'custom' ? 'block' : 'none';
 
-    // Clear all inline wallpaper styles
+    if (!messagesEl) return;
+
     messagesEl.style.backgroundImage = '';
     messagesEl.style.backgroundColor = '';
     messagesEl.style.background = '';
 
     if (selected === 'custom') {
-      const url = customUrl || (customInputEl ? customInputEl.value : '') || '';
+      const url = customUrl || (customInputEl ? customInputEl.value.trim() : '');
       if (url) {
         messagesEl.style.backgroundImage = `url('${url}')`;
         messagesEl.style.backgroundSize = 'cover';
         messagesEl.style.backgroundPosition = 'center';
+        messagesEl.style.backgroundRepeat = 'no-repeat';
         localStorage.setItem('bestieChatWallpaper', 'custom');
         localStorage.setItem('bestieChatWallpaperUrl', url);
+        showToast('Custom wallpaper applied! 🖼️');
       }
     } else if (selected === 'gradient-lavender') {
       messagesEl.style.background = 'linear-gradient(135deg, #efedf7 0%, #f7f6fb 50%, #e2dff0 100%)';
       localStorage.setItem('bestieChatWallpaper', selected);
+      showToast('Lavender Mist wallpaper applied! 🖼️');
     } else if (selected === 'gradient-frost-violet') {
       messagesEl.style.background = 'linear-gradient(135deg, #f3eff9 0%, #ffffff 50%, #ebdffd 100%)';
       localStorage.setItem('bestieChatWallpaper', selected);
+      showToast('Frost Violet wallpaper applied! 🖼️');
     } else if (selected === 'gradient-pearl-rose') {
       messagesEl.style.background = 'linear-gradient(135deg, #fff2f5 0%, #ffffff 50%, #f5eefc 100%)';
       localStorage.setItem('bestieChatWallpaper', selected);
-    } else if (selected && selected.startsWith('#') && !['#0a0f1e', '#1c1124', '#0c1d1a', '#f4f9f6', '#eaf2ed', '#f8fcf9'].includes(selected.toLowerCase())) {
+      showToast('Pearl Rose wallpaper applied! 🖼️');
+    } else if (selected && selected.startsWith('#')) {
       messagesEl.style.backgroundColor = selected;
       localStorage.setItem('bestieChatWallpaper', selected);
+      showToast('Solid color wallpaper applied! 🖼️');
     } else {
       localStorage.removeItem('bestieChatWallpaper');
       localStorage.removeItem('bestieChatWallpaperUrl');
+      if (type !== undefined) showToast('Default wallpaper restored');
     }
+  }
+
+  // ═══════════════════ BESTIE PROFILE VIEWER ═══════════════════
+  function openBestieProfile(targetUser) {
+    const friendName = targetUser || bestieName || 'Bestie';
+    const profile = getProfile(friendName);
+
+    const titleEl = document.getElementById('bestieProfileCardTitle');
+    const avatarEl = document.getElementById('bestieProfileAvatarDisplay');
+    const nameEl = document.getElementById('bestieProfileNameDisplay');
+    const statusEl = document.getElementById('bestieProfileStatusDisplay');
+    const feelingRow = document.getElementById('bestieProfileFeelingRow');
+    const feelingText = document.getElementById('bestieProfileFeelingText');
+    const dotEl = document.getElementById('bestieProfileOnlineDot');
+    const msgsEl = document.getElementById('bestieStatMsgs');
+    const streakEl = document.getElementById('bestieStatStreak');
+
+    if (titleEl) titleEl.textContent = `${friendName}'s Profile 👤`;
+    if (avatarEl) avatarEl.textContent = profile.avatar || '✨';
+    if (nameEl) nameEl.textContent = friendName;
+    if (statusEl) statusEl.textContent = profile.statusBio ? `"${profile.statusBio}"` : '"No bio set yet ✨"';
+    
+    const theirFeel = feelings[friendName];
+    if (feelingRow && feelingText) {
+      if (theirFeel && theirFeel.label) {
+        feelingRow.style.display = 'flex';
+        feelingText.textContent = `${theirFeel.emoji || ''} ${theirFeel.label}`;
+      } else {
+        feelingRow.style.display = 'none';
+      }
+    }
+
+    if (dotEl) {
+      const isOnline = Boolean(presenceUsers && presenceUsers.find(u => u.name === friendName));
+      dotEl.style.background = isOnline ? '#388E3C' : '#8e8e93';
+    }
+
+    if (msgsEl) {
+      const count = allMessagesCached.filter(m => m.user === friendName).length;
+      msgsEl.textContent = count;
+    }
+    if (streakEl) {
+      streakEl.textContent = `🔥 ${currentStreakDays || 0}`;
+    }
+
+    showModal('bestieProfileModal');
+  }
+
+  function closeBestieProfile() {
+    hideModal('bestieProfileModal');
   }
 
   // ═══════════════════ UI HELPERS ═══════════════════
@@ -3567,17 +3622,41 @@
   }
 
   // ── Accent Theme Switcher ──
-  function changeAccent(accent) {
-    const classes = (document.body.className || '').split(' ').filter(c => !c.startsWith('theme-') && !c.startsWith('accent-'));
-    if (accent) {
-      if (accent.startsWith('gradient-')) {
-        classes.push(`wallpaper-${accent}`);
-      } else {
-        classes.push(`theme-${accent}`);
-      }
+  const ACCENT_PRESETS = {
+    indigo:   { accent: '#6366f1', accent2: '#818cf8', glow: 'rgba(99, 102, 241, 0.22)' },
+    rose:     { accent: '#f43f5e', accent2: '#fb7185', glow: 'rgba(244, 63, 94, 0.22)' },
+    emerald:  { accent: '#10b981', accent2: '#34d399', glow: 'rgba(16, 185, 129, 0.22)' },
+    amber:    { accent: '#f59e0b', accent2: '#fbbf24', glow: 'rgba(245, 158, 11, 0.22)' },
+    cyan:     { accent: '#06b6d4', accent2: '#22d3ee', glow: 'rgba(6, 182, 212, 0.22)' },
+    sunset:   { accent: '#f97316', accent2: '#ec4899', glow: 'rgba(249, 115, 22, 0.22)' },
+    purple:   { accent: '#8b5cf6', accent2: '#a78bfa', glow: 'rgba(139, 92, 246, 0.22)' }
+  };
+
+  function changeAccent(accentKey) {
+    const root = document.documentElement;
+    const select = document.getElementById('accentSelect');
+    if (select && accentKey !== undefined) select.value = accentKey || '';
+
+    if (accentKey && ACCENT_PRESETS[accentKey]) {
+      const p = ACCENT_PRESETS[accentKey];
+      root.style.setProperty('--accent', p.accent);
+      root.style.setProperty('--accent2', p.accent2);
+      root.style.setProperty('--accent-glow', p.glow);
+      root.style.setProperty('--mb-accent', p.accent);
+      root.style.setProperty('--mb-accent2', p.accent2);
+      root.style.setProperty('--mb-accent-glow', p.glow);
+      localStorage.setItem('bestieChatAccent', accentKey);
+      showToast(`Accent updated to ${accentKey.toUpperCase()} ✨`);
+    } else {
+      root.style.removeProperty('--accent');
+      root.style.removeProperty('--accent2');
+      root.style.removeProperty('--accent-glow');
+      root.style.removeProperty('--mb-accent');
+      root.style.removeProperty('--mb-accent2');
+      root.style.removeProperty('--mb-accent-glow');
+      localStorage.removeItem('bestieChatAccent');
+      if (accentKey === '') showToast('Reset to default classic accent');
     }
-    document.body.className = classes.join(' ').trim();
-    localStorage.setItem('bestieChatAccent', accent);
   }
 
   // ── Shared Notepad Sync ──
@@ -5860,7 +5939,7 @@
     toggleTheme, selectTheme, applyAppTheme, dismissDailyQuestion, quickReact,
     togglePushNotifications,
     confirmClearHistory, exportChat, setRoomPassword, setDisappearingTimer, jumpToDate,
-    openProfile, closeProfile, selectAvatar, saveProfileStatus, saveProfileColor, saveNicknameFromProfile,
+    openProfile, closeProfile, openBestieProfile, closeBestieProfile, selectAvatar, saveProfileStatus, saveProfileColor, saveNicknameFromProfile,
     toggleVoiceSpeed, openConnect4, closeConnect4, dropConnect4Token,
     sendQuickReply, captureDualCamera, uploadCameraFile, toggleQuickMenu,
     // WhatsApp & Telegram Suite
