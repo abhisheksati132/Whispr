@@ -116,10 +116,9 @@
     } catch (e) {}
   }
   function flushOutboxQueue() {
+    if (!socket || !socket.connected) return;
     loadOutboxQueue();
     if (!outboxQueue || !outboxQueue.length) return;
-    if (!socket) initSocket();
-    if (!socket) return;
     const queue = [...outboxQueue];
     queue.forEach(item => {
       if (item) socket.emit('message', item);
@@ -1513,9 +1512,10 @@
     outboxQueue.push(payload);
     saveOutboxQueue();
 
-    if (!socket) initSocket();
-    if (socket) {
+    if (socket && socket.connected) {
       socket.emit('message', payload);
+    } else {
+      if (!socket) initSocket();
     }
   }
 
