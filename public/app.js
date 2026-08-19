@@ -304,7 +304,24 @@
     els.messages.appendChild(div);
   }
 
-  function scrollBottom() { els.messages.scrollTop = els.messages.scrollHeight; }
+  function triggerHaptic(ms = 10) {
+    if ('vibrate' in navigator) {
+      try { navigator.vibrate(ms); } catch (_) {}
+    }
+  }
+
+  let _scrollRaf = null;
+  function scrollBottom(smooth = false) {
+    if (_scrollRaf) cancelAnimationFrame(_scrollRaf);
+    _scrollRaf = requestAnimationFrame(() => {
+      if (!els.messages) return;
+      if (smooth) {
+        els.messages.scrollTo({ top: els.messages.scrollHeight, behavior: 'smooth' });
+      } else {
+        els.messages.scrollTop = els.messages.scrollHeight;
+      }
+    });
+  }
 
   function isMusicUrl(text) { return MUSIC_DOMAINS.test((text || '').trim()); }
 
@@ -355,10 +372,10 @@
         card.rel = 'noopener noreferrer';
 
         card.innerHTML = `
-          ${data.image ? `<div class="link-preview-img-wrap"><img src="${escapeHtml(data.image)}" alt="preview" loading="lazy" /></div>` : ''}
+          ${data.image ? `<div class="link-preview-img-wrap"><img src="${escapeHtml(data.image)}" alt="preview" loading="lazy" decoding="async" /></div>` : ''}
           <div class="link-preview-info">
             <div class="link-preview-site">
-              ${data.favicon ? `<img src="${escapeHtml(data.favicon)}" class="link-preview-fav" alt="" />` : ''}
+              ${data.favicon ? `<img src="${escapeHtml(data.favicon)}" class="link-preview-fav" alt="" loading="lazy" decoding="async" />` : ''}
               <span>${escapeHtml(data.siteName || '')}</span>
             </div>
             <div class="link-preview-title">${escapeHtml(data.title)}</div>
@@ -469,7 +486,7 @@
         body = `<div class="msg ${mine ? 'me' : 'them'}">
           ${replyQuote}
           ${msg.text ? `<div>${escapeHtml(msg.text)}</div>` : ''}
-          <img class="chat-img" src="${escapeHtml(msg.url)}" alt="shared image" onclick="BestieChat.openLightbox('${escapeHtml(msg.url)}')" loading="lazy" />
+          <img class="chat-img" src="${escapeHtml(msg.url)}" alt="shared image" onclick="BestieChat.openLightbox('${escapeHtml(msg.url)}')" loading="lazy" decoding="async" />
           ${editedTag}
           ${bubbleMeta}
         </div>`;
@@ -485,7 +502,7 @@
         ${replyQuote}
         ${msg.text ? `<div>${escapeHtml(msg.text)}</div>` : ''}
         <div class="media-collage-grid ${gridClass}">
-          ${items.map(item => `<img class="collage-item" src="${escapeHtml(item.url)}" alt="photo" onclick="BestieChat.openLightbox('${escapeHtml(item.url)}')" loading="lazy" />`).join('')}
+          ${items.map(item => `<img class="collage-item" src="${escapeHtml(item.url)}" alt="photo" onclick="BestieChat.openLightbox('${escapeHtml(item.url)}')" loading="lazy" decoding="async" />`).join('')}
         </div>
         ${editedTag}
         ${bubbleMeta}
@@ -669,28 +686,45 @@
     let _swipeStartX = 0;
     let _swipeStartY = 0;
     let _swiping = false;
+    let _swipeTriggered = false;
+
     wrap.addEventListener('touchstart', (e) => {
       _swipeStartX = e.touches[0].clientX;
       _swipeStartY = e.touches[0].clientY;
       _swiping = false;
+      _swipeTriggered = false;
+      wrap.style.transition = 'none';
     }, { passive: true });
+
     wrap.addEventListener('touchmove', (e) => {
       const dx = e.touches[0].clientX - _swipeStartX;
       const dy = Math.abs(e.touches[0].clientY - _swipeStartY);
-      if (dx > 25 && dy < 35) {
+      if (dx > 15 && dy < 30) {
         _swiping = true;
         wrap.classList.add('swiping-active');
-        wrap.style.transform = `translateX(${Math.min(dx, 65)}px)`;
+        const springOffset = Math.min(68, dx * 0.62);
+        wrap.style.transform = `translateX(${springOffset}px)`;
+        if (springOffset > 42 && !_swipeTriggered) {
+          _swipeTriggered = true;
+          wrap.classList.add('swipe-ready');
+          triggerHaptic(12);
+        } else if (springOffset <= 42 && _swipeTriggered) {
+          _swipeTriggered = false;
+          wrap.classList.remove('swipe-ready');
+        }
       }
     }, { passive: true });
+
     wrap.addEventListener('touchend', () => {
-      wrap.classList.remove('swiping-active');
+      wrap.style.transition = 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)';
       wrap.style.transform = '';
-      if (_swiping) {
-        if ('vibrate' in navigator) { try { navigator.vibrate(25); } catch(e){} }
+      wrap.classList.remove('swiping-active', 'swipe-ready');
+      if (_swiping && _swipeTriggered) {
+        triggerHaptic(20);
         replyToMessage(msg.id, escapeHtml(msg.user || ''), escapeHtml(msg.text || ''), msg.type || 'text');
-        _swiping = false;
       }
+      _swiping = false;
+      _swipeTriggered = false;
     });
 
     // Tap to show react bar on touch
@@ -1429,6 +1463,8 @@
     const clientMsgId = 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     payload.clientMsgId = clientMsgId;
 
+    triggerHaptic(10);
+
     // Optimistic local rendering with clock icon (🕒)
     const localMsg = {
       id: clientMsgId,
@@ -1820,13 +1856,17 @@
   // ═══════════════════ REACTIONS ═══════════════════
   function react(messageId, emoji) {
     if (!joined) return;
+    triggerHaptic(8);
     const el   = document.getElementById(`reactions-${messageId}`);
     const pill = el && [...el.querySelectorAll('.reaction-pill')].find((p) => p.textContent.startsWith(emoji));
     const already = pill && pill.classList.contains('mine');
     socket.emit('react', { messageId, emoji, add: !already });
   }
 
-  function votePoll(messageId, option) { socket.emit('poll-vote', { messageId, option }); }
+  function votePoll(messageId, option) { 
+    triggerHaptic(8);
+    socket.emit('poll-vote', { messageId, option }); 
+  }
 
   // ═══════════════════ EMOJI / GAMES / GIF ═══════════════════
   function toggleEmojiPicker() {

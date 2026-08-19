@@ -1,7 +1,15 @@
-// Cache Version - force complete cache wipe
-const CACHE = 'bestie-v11301-flush';
+// Cache Version
+const CACHE = 'bestie-v12015-speed';
+const IMMUTABLE_ASSETS = [
+  '/icon-192.png',
+  '/favicon.ico',
+  '/crypto-js.min.js'
+];
 
 self.addEventListener('install', (e) => {
+  e.waitUntil(
+    caches.open(CACHE).then((c) => c.addAll(IMMUTABLE_ASSETS)).catch(() => {})
+  );
   self.skipWaiting();
 });
 
@@ -13,13 +21,33 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// Network-First Strategy for all assets
+// Stale-while-revalidate for fonts/images, Network-First for HTML/CSS/JS
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   if (!e.request.url.startsWith('http')) return;
   if (e.request.url.includes('socket.io/?')) return;
   if (e.request.url.includes('/api/')) return;
   
+  const isStaticMedia = e.request.url.match(/\.(png|jpg|jpeg|gif|webp|svg|ico|woff2|woff|ttf|mp3|wav|ogg)$/i);
+
+  if (isStaticMedia) {
+    // Cache-first with background revalidate for static media
+    e.respondWith(
+      caches.match(e.request).then((cached) => {
+        const fetchPromise = fetch(e.request).then((networkRes) => {
+          if (networkRes && networkRes.status === 200 && networkRes.type !== 'opaque') {
+            const clone = networkRes.clone();
+            caches.open(CACHE).then((c) => c.put(e.request, clone).catch(() => {}));
+          }
+          return networkRes;
+        }).catch(() => cached);
+        return cached || fetchPromise;
+      })
+    );
+    return;
+  }
+
+  // Network-first for everything else
   e.respondWith(
     fetch(e.request).then((response) => {
       if (response && response.status === 200 && response.type !== 'opaque') {

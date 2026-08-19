@@ -29,7 +29,7 @@
   --font-serif:   'Source Serif 4', 'Georgia', 'Cambria', serif;
 }
 
-/* ═══════════════════ 1. BASE RESET ═══════════════════ */
+/* ═══════════════════ 1. BASE RESET & PERFORMANCE ═══════════════════ */
 *, *::before, *::after { 
   box-sizing: border-box; 
   margin: 0; 
@@ -47,19 +47,40 @@ html, body {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#chat, #chatMain, #sidebar, .sidebar-drawer, #messages, .modal-card, #callOverlay, #pipCallContainer, #activeCallControls {
+  transform: translate3d(0, 0, 0);
+  -webkit-transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+#messages {
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+button, a, input, textarea, select, .pill-btn, .icon-btn, .smart-pill, .nav-item, .reaction-btn, .msg-wrap, .call-btn, .call-circle-btn, .attach-item, .sidebar-profile-card {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 button { 
   font-family: var(--font); 
   cursor: pointer; 
-  outline: none;
-  border: none;
-  background: none;
-  transition: all var(--transition);
+  outline: none; 
+  border: none; 
+  background: none; 
+  transition: all var(--transition); 
+  user-select: none;
 }
 
 button:active, .nav-item:active, .pill-btn:active, .icon-btn:active, .smart-pill:active, .reaction-pill:active, .avatar-opt:active {
-  transform: scale(0.97);
+  transform: scale(0.96);
 }
 
 button:disabled, button[disabled], input:disabled, select:disabled {
