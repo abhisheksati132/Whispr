@@ -26,8 +26,14 @@ const JWT_SECRET    = process.env.JWT_SECRET || 'fallback-secret-change-me';
       console.log('\n=============================================');
       console.log('🔄 Attempting to connect to MongoDB...');
       console.log('🔗 URI provided: ', uri.substring(0, 20) + '... (hidden for security)');
-      await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
-      console.log('✅ MongoDB connected successfully!');
+      await mongoose.connect(uri, {
+        serverSelectionTimeoutMS: 5000,
+        dbName: process.env.MONGODB_DB_NAME || 'bestiedb'
+      });
+      const db = mongoose.connection.db;
+      const msgCount = await mongoose.model('Message').countDocuments().catch(() => 0);
+      const userCount = await mongoose.model('User').countDocuments().catch(() => 0);
+      console.log(`✅ MongoDB connected successfully! [DB: "${db.databaseName}", Total Messages: ${msgCount}, Registered Users: ${userCount}]`);
       console.log('=============================================\n');
     } catch (err) {
       console.error('\n=============================================');

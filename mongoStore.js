@@ -417,8 +417,12 @@ async function getPushSubs() {
 // ── Cleanup ───────────────────────────────────────────────────────────────────
 async function cleanExpiredRooms() {
   if (!isConnected()) return;
-  const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
-  const old = await Room.find({ lastActivity: { $lt: cutoff }, type: 'public' }).select('name').lean();
+  const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
+  const old = await Room.find({
+    lastActivity: { $lt: cutoff },
+    type: 'temp',
+    name: { $nin: ['our-private-space', 'default'] }
+  }).select('name').lean();
   for (const r of old) {
     await Message.deleteMany({ room: r.name });
     await Room.deleteOne({ name: r.name });
