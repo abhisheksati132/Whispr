@@ -19,6 +19,7 @@ const roomSchema = new mongoose.Schema({
   glossary:         { type: mongoose.Schema.Types.Mixed, default: [] },
   bonsai:           { type: mongoose.Schema.Types.Mixed, default: { growth: 0, lastWatered: null } },
   gameScores:       { type: mongoose.Schema.Types.Mixed, default: { wins: {}, losses: {} } },
+  dailyQuestionState: { type: mongoose.Schema.Types.Mixed, default: {} },
   sharedPad:        { type: String, default: '' },
   lastActivity:     { type: Number, default: () => Date.now() },
   createdAt:        { type: Number, default: () => Date.now() }

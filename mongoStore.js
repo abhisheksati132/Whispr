@@ -10,6 +10,7 @@ const User    = require('./models/User');
 const Message = require('./models/Message');
 const Room    = require('./models/Room');
 const PushSub = require('./models/PushSub');
+const Media   = require('./models/Media');
 
 // ── In-memory caches (Fallback when no MongoDB) ──────────────────────────────
 const profileCache  = new Map(); // username → profile obj
@@ -374,11 +375,25 @@ function getUploadsDir() {
   if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
   return UPLOADS_DIR;
 }
-function saveUpload(buffer, ext) {
+function saveUpload(buffer, ext, mime = 'application/octet-stream') {
   const dir = getUploadsDir();
   const filename = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}.${ext}`;
-  fs.writeFileSync(path.join(dir, filename), buffer);
+  try {
+    fs.writeFileSync(path.join(dir, filename), buffer);
+  } catch (_) {}
+  if (isConnected()) {
+    Media.create({ filename, data: buffer, mime, size: buffer.length }).catch(err => {
+      console.error('Failed to save media to MongoDB:', err.message);
+    });
+  }
   return `/uploads/${filename}`;
+}
+
+async function getMedia(filename) {
+  if (isConnected()) {
+    return Media.findOne({ filename }).lean();
+  }
+  return null;
 }
 
 // ── Push subscriptions ───────────────────────────────────────────────────────
@@ -483,13 +498,88 @@ async function getStarredMessages(roomName, username) {
 }
 
 async function getDailyQuestionState(roomName, username) {
-  const localStore = require('./store');
-  return localStore.getDailyQuestionState(roomName, username);
+  if (!isConnected()) {
+    const localStore = require('./store');
+    return localStore.getDailyQuestionState(roomName, username);
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  const meta = await getRoomMeta(roomName);
+  const dq = meta.dailyQuestionState;
+  if (!dq || dq.date !== today) {
+    return {
+      date: today,
+      question: getDailyQuestion(),
+      answers: {},
+      revealed: false,
+      answeredUsers: []
+    };
+  }
+  const hasMyAnswer = dq.answers && dq.answers[username];
+  const isRevealed = dq.revealed || (dq.answers && Object.keys(dq.answers).length >= 2);
+  if (!isRevealed && !hasMyAnswer) {
+    return {
+      date: dq.date,
+      question: dq.question,
+      answers: {},
+      revealed: false,
+      answeredUsers: Object.keys(dq.answers || {})
+    };
+  }
+  if (!isRevealed && hasMyAnswer) {
+    return {
+      date: dq.date,
+      question: dq.question,
+      answers: { [username]: dq.answers[username] },
+      revealed: false,
+      answeredUsers: Object.keys(dq.answers || {})
+    };
+  }
+  return {
+    date: dq.date,
+    question: dq.question,
+    answers: dq.answers || {},
+    revealed: true,
+    answeredUsers: Object.keys(dq.answers || {})
+  };
 }
 
 async function saveDailyQuestionAnswer(roomName, username, answer) {
-  const localStore = require('./store');
-  return localStore.saveDailyQuestionAnswer(roomName, username, answer);
+  if (!isConnected()) {
+    const localStore = require('./store');
+    return localStore.saveDailyQuestionAnswer(roomName, username, answer);
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  const meta = await getRoomMeta(roomName);
+  let dq = meta.dailyQuestionState;
+  if (!dq || dq.date !== today) {
+    dq = {
+      date: today,
+      question: getDailyQuestion(),
+      answers: {},
+      revealed: false
+    };
+  }
+  if (!dq.answers) dq.answers = {};
+  dq.answers[username] = {
+    text: String(answer || '').trim().slice(0, 500),
+    time: Date.now()
+  };
+  const answeredUsers = Object.keys(dq.answers);
+  if (answeredUsers.length >= 2) {
+    dq.revealed = true;
+    if (!meta.diary) meta.diary = [];
+    const combinedDiaryEntry = {
+      date: today,
+      text: `✨ Daily Q: "${dq.question}"\n` + answeredUsers.map(u => `• ${u}: "${dq.answers[u].text}"`).join('\n'),
+      image: ''
+    };
+    if (!meta.diary.some(d => d.text && d.text.includes(dq.question))) {
+      meta.diary.unshift(combinedDiaryEntry);
+    }
+  }
+  meta.dailyQuestionState = dq;
+  await updateRoomMeta(roomName, { dailyQuestionState: dq, diary: meta.diary });
+  return getDailyQuestionState(roomName, username);
 }
 
 function persist() {} // no-op, MongoDB auto-persists
@@ -504,7 +594,7 @@ module.exports = {
   setFeeling, getFeelings,
   updateGameScore,
   getDailyQuestion, getDailyQuestionState, saveDailyQuestionAnswer, getMotd,
-  getUploadsDir, saveUpload,
+  getUploadsDir, saveUpload, getMedia,
   cleanExpiredRooms, cleanDisappearingMessages, persist,
   savePushSub, deletePushSub, getPushSubs,
   markMessageDelivered, markMessageRead, starMessage, getStarredMessages

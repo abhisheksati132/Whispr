@@ -66,6 +66,25 @@ app.use((_req, res, next) => {
 });
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public'), { index: 'index.html' }));
+app.get('/uploads/:filename', async (req, res) => {
+  const filename = path.basename(req.params.filename);
+  const filePath = path.join(mStore.getUploadsDir(), filename);
+  if (fs.existsSync(filePath)) {
+    return res.sendFile(filePath);
+  }
+  try {
+    const media = await mStore.getMedia(filename);
+    if (media && media.data) {
+      res.setHeader('Content-Type', media.mime || 'application/octet-stream');
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      try { fs.writeFileSync(filePath, media.data); } catch (_) {}
+      return res.send(media.data);
+    }
+  } catch (e) {
+    console.error('Error fetching media from MongoDB:', e);
+  }
+  res.status(404).send('File not found');
+});
 app.use('/uploads', express.static(mStore.getUploadsDir()));
 
 app.get('/', (_req, res) => {
