@@ -239,17 +239,38 @@ app.get('/api/link-preview', async (req, res) => {
 // ── File upload ───────────────────────────────────────────────────────────────
 app.post('/api/upload', (req, res) => {
   try {
-    const { data, mime, kind } = req.body;
+    const { data, mime, kind, name } = req.body;
     if (!data || !mime) return res.status(400).json({ error: 'Missing data' });
-    const allowed = ['image/jpeg','image/png','image/gif','image/webp','audio/webm','audio/ogg'];
+    const allowed = [
+      'image/jpeg','image/png','image/gif','image/webp',
+      'audio/webm','audio/ogg','audio/mp3','audio/wav','audio/mpeg',
+      'video/mp4','video/webm','video/quicktime',
+      'application/pdf','application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/zip','application/x-zip-compressed',
+      'text/plain','text/csv'
+    ];
     if (!allowed.includes(mime)) return res.status(400).json({ error: 'Unsupported type' });
-    const ext = mime.split('/')[1].replace('jpeg','jpg');
+    const mimeExtMap = {
+      'image/jpeg': 'jpg', 'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp',
+      'audio/webm': 'webm', 'audio/ogg': 'ogg', 'audio/mp3': 'mp3', 'audio/wav': 'wav', 'audio/mpeg': 'mp3',
+      'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov',
+      'application/pdf': 'pdf', 'application/msword': 'doc',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+      'application/vnd.ms-excel': 'xls',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+      'application/zip': 'zip', 'application/x-zip-compressed': 'zip',
+      'text/plain': 'txt', 'text/csv': 'csv'
+    };
+    const ext = mimeExtMap[mime] || (mime.split('/')[1] ? mime.split('/')[1].replace('jpeg','jpg') : 'bin');
     const base64Data = (data.includes(',') ? data.split(',')[1] : data).trim();
     if (!/^[A-Za-z0-9+/=]+$/.test(base64Data)) return res.status(400).json({ error: 'Invalid base64' });
     const buffer = Buffer.from(base64Data, 'base64');
-    if (buffer.length > 8 * 1024 * 1024) return res.status(413).json({ error: 'File too large' });
+    if (buffer.length > 15 * 1024 * 1024) return res.status(413).json({ error: 'File too large (max 15MB)' });
     const url = mStore.saveUpload(buffer, ext);
-    res.json({ url, kind });
+    res.json({ url, kind, name: name || 'file', size: buffer.length });
   } catch (err) { res.status(500).json({ error: 'Upload failed' }); }
 });
 
@@ -489,8 +510,10 @@ io.on('connection', (socket) => {
     } else if (payload && typeof payload === 'object') {
       const type = payload.type || 'text';
       if (type === 'hug') msgData = { user: username, text: 'sent a hug 💌', type: 'hug' };
-      else if (type === 'image') { if (!payload.url) return; msgData = { user: username, text: payload.text||'', url: payload.url, type:'image' }; }
-      else if (type === 'voice') { if (!payload.url) return; msgData = { user: username, text:'', url: payload.url, duration: payload.duration||0, type:'voice' }; }
+      else if (type === 'image') { if (!payload.url) return; msgData = { user: username, text: payload.text||'', url: payload.url, type:'image', viewOnce: Boolean(payload.viewOnce) }; }
+      else if (type === 'media-group') { if (!payload.items || !payload.items.length) return; msgData = { user: username, text: payload.text||'', items: payload.items, type:'media-group' }; }
+      else if (type === 'document') { if (!payload.url) return; msgData = { user: username, url: payload.url, docName: payload.docName||'Document', docSize: payload.docSize||0, type:'document' }; }
+      else if (type === 'voice') { if (!payload.url) return; msgData = { user: username, text:'', url: payload.url, duration: payload.duration||0, type:'voice', viewOnce: Boolean(payload.viewOnce) }; }
       else if (type === 'video-note') { if (!payload.url) return; msgData = { user: username, text:'', url: payload.url, duration: payload.duration||0, type:'video-note' }; }
       else if (type === 'time-capsule') {
         msgData = {
@@ -507,12 +530,16 @@ io.on('connection', (socket) => {
         msgData = { user: username, text, type:'text', ...(payload.replyTo ? { replyTo: payload.replyTo } : {}) };
       }
       if (payload.replyTo && msgData && !msgData.replyTo) msgData.replyTo = payload.replyTo;
+      if (payload.clientMsgId) msgData.clientMsgId = payload.clientMsgId;
     } else return;
 
     try {
       const { message, milestone } = await mStore.addMessage(currentRoom, msgData);
       mStore.setLastSeen(username);
       io.to(currentRoom).emit('message', message);
+      if (payload && payload.clientMsgId) {
+        socket.emit('message-ack', { clientMsgId: payload.clientMsgId, id: message.id });
+      }
       const profile = await mStore.getProfile(username);
       sendPushToRoom(currentRoom, username, `${profile.nickname||username} 💌`, msgData.text || 'sent a message');
 
@@ -531,6 +558,15 @@ io.on('connection', (socket) => {
 
       if (milestone) io.to(currentRoom).emit('milestone', { count: milestone, text: MILESTONE_TEXTS[milestone] || `🎉 ${milestone} messages!` });
     } catch (err) { console.error('message error:', err); }
+  });
+
+  // ── View-Once Media Opened ───────────────────────────────────────────────
+  socket.on('view-once-opened', async ({ messageId } = {}) => {
+    try {
+      if (!currentRoom || !username || !messageId) return;
+      await mStore.markViewOnceOpened(currentRoom, messageId);
+      io.to(currentRoom).emit('view-once-opened', { messageId, openedBy: username });
+    } catch (err) { console.error('view-once-opened error:', err); }
   });
 
   // ── Granular Presence (typing, recording audio/video, sending media) ──────

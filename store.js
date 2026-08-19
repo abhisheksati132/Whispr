@@ -185,6 +185,16 @@ function deleteMessage(room, msgId) {
   return msg;
 }
 
+function markViewOnceOpened(room, messageId) {
+  const state = getRoom(room);
+  const msg = state.messages.find((m) => m.id === messageId);
+  if (!msg) return null;
+  msg.opened = true;
+  msg.url = '';
+  persist();
+  return msg;
+}
+
 function checkMilestone(state) {
   for (const n of MILESTONES) {
     if (state.messageCount >= n && !state.milestonesHit.includes(n)) {
@@ -557,6 +567,7 @@ module.exports = {
   addMessage,
   editMessage,
   deleteMessage,
+  markViewOnceOpened,
   updateMessageReaction,
   updateRoomMeta,
   pinMessage,

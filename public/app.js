@@ -92,6 +92,77 @@
   let sharedGlossary = [];
   let sharedBonsai = { growth: 0, lastWatered: null };
 
+  // ═══════════════════ OFFLINE OUTBOX & UTILS ═══════════════════
+  let outboxQueue = [];
+
+  function loadOutboxQueue() {
+    try {
+      const raw = localStorage.getItem('bestieOutboxQueue');
+      if (raw) outboxQueue = JSON.parse(raw);
+    } catch (e) {}
+  }
+  function saveOutboxQueue() {
+    try {
+      localStorage.setItem('bestieOutboxQueue', JSON.stringify(outboxQueue));
+    } catch (e) {}
+  }
+  function flushOutboxQueue() {
+    if (!socket || !socket.connected || !joined) return;
+    if (!outboxQueue.length) return;
+    const queue = [...outboxQueue];
+    queue.forEach(item => {
+      socket.emit('message', item);
+    });
+  }
+
+  function formatBytes(bytes) {
+    if (!bytes || bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  }
+
+  async function compressImage(file, maxWidth = 1280, maxHeight = 1280, quality = 0.8) {
+    return new Promise((resolve) => {
+      if (file.type === 'image/gif' || file.type === 'image/svg+xml') {
+        const reader = new FileReader();
+        reader.onload = () => resolve({ dataUrl: reader.result, mime: file.type });
+        reader.readAsDataURL(file);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          let w = img.width;
+          let h = img.height;
+          if (w > maxWidth || h > maxHeight) {
+            if (w > h) {
+              h = Math.round((h * maxWidth) / w);
+              w = maxWidth;
+            } else {
+              w = Math.round((w * maxHeight) / h);
+              h = maxHeight;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          const dataUrl = canvas.toDataURL('image/jpeg', quality);
+          resolve({ dataUrl, mime: 'image/jpeg' });
+        };
+        img.onerror = () => {
+          resolve({ dataUrl: e.target.result, mime: file.type || 'image/jpeg' });
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
   // WebRTC State variables
   let webrtcConn = null;
   let localStreamStream = null;
@@ -339,7 +410,7 @@
     const time    = new Date(msg.time || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     const wrap = document.createElement('div');
-    wrap.className  = `msg-wrap ${mine ? 'me' : 'them'}`;
+    wrap.className  = `msg-wrap ${mine ? 'me' : 'them'}${msg.isPending ? ' is-pending' : ''}`;
     wrap.dataset.id = msg.id;
 
     // Reply quote snippet
@@ -360,7 +431,7 @@
         ? `<svg viewBox="0 0 16 15" width="14" height="13" fill="none"><path d="M15.01 3.316l-7.92 8.56a.91.91 0 01-.67.3.91.91 0 01-.67-.3L2.3 8.35a.96.96 0 010-1.34.93.93 0 011.33 0l2.79 2.99 7.26-7.85a.93.93 0 011.33 0 .96.96 0 010 1.166z" fill="currentColor"/><path d="M10.87 3.316l-7.92 8.56a.91.91 0 01-.67.3.91.91 0 01-.67-.3L.16 10.35a.96.96 0 010-1.34.93.93 0 011.33 0l1.19 1.28 7.26-7.85a.93.93 0 011.33 0 .96.96 0 010 1.166z" fill="currentColor"/></svg>`
         : `<svg viewBox="0 0 16 15" width="14" height="13" fill="none"><path d="M12.01 3.316l-7.92 8.56a.91.91 0 01-.67.3.91.91 0 01-.67-.3L.3 8.35a.96.96 0 010-1.34.93.93 0 011.33 0l2.79 2.99 7.26-7.85a.93.93 0 011.33 0 .96.96 0 010 1.166z" fill="currentColor"/></svg>`);
     const starHtml = (msg.starredBy && msg.starredBy.includes(myName)) ? `<span class="msg-star-badge" title="Starred">⭐</span>` : '';
-    const tickHtml = mine ? `<span class="msg-status-ticks ${tickState}" id="tick-${msg.id}">${tickSvg}</span>` : '';
+    const tickHtml = mine ? (msg.isPending ? `<span class="msg-status-ticks pending" id="tick-${msg.id}">🕒</span>` : `<span class="msg-status-ticks ${tickState}" id="tick-${msg.id}">${tickSvg}</span>`) : '';
     const bubbleMeta = `<span class="bubble-meta">${starHtml}<span class="bubble-time">${time}</span>${tickHtml}</span>`;
 
     let body = '';
@@ -372,16 +443,68 @@
       body = `<div class="msg hug ${mine ? 'me' : 'them'}">${profile.avatar || '💌'} ${escapeHtml(display)} sent a hug 💌 ${bubbleMeta}</div>`;
 
     } else if (msg.type === 'image') {
+      if (msg.viewOnce) {
+        if (msg.opened) {
+          body = `<div class="msg ${mine ? 'me' : 'them'}">
+            ${replyQuote}
+            <div class="view-once-capsule opened">
+              <span class="view-once-num">1</span>
+              <span>Photo (Opened)</span>
+            </div>
+            ${editedTag}
+            ${bubbleMeta}
+          </div>`;
+        } else {
+          body = `<div class="msg ${mine ? 'me' : 'them'}">
+            ${replyQuote}
+            <div class="view-once-capsule" onclick="BestieChat.openViewOnceMedia('${msg.id}', '${escapeHtml(msg.url)}')">
+              <span class="view-once-num">1</span>
+              <span>Photo (View once)</span>
+            </div>
+            ${editedTag}
+            ${bubbleMeta}
+          </div>`;
+        }
+      } else {
+        body = `<div class="msg ${mine ? 'me' : 'them'}">
+          ${replyQuote}
+          ${msg.text ? `<div>${escapeHtml(msg.text)}</div>` : ''}
+          <img class="chat-img" src="${escapeHtml(msg.url)}" alt="shared image" onclick="BestieChat.openLightbox('${escapeHtml(msg.url)}')" loading="lazy" />
+          ${editedTag}
+          ${bubbleMeta}
+        </div>`;
+        if (!allImageMessages.find((m) => m.id === msg.id)) {
+          allImageMessages.push({ id: msg.id, url: msg.url, user: msg.user, time: msg.time });
+        }
+      }
+
+    } else if (msg.type === 'media-group') {
+      const items = msg.items || [];
+      const gridClass = `grid-${Math.min(4, Math.max(1, items.length))}`;
       body = `<div class="msg ${mine ? 'me' : 'them'}">
         ${replyQuote}
         ${msg.text ? `<div>${escapeHtml(msg.text)}</div>` : ''}
-        <img class="chat-img" src="${escapeHtml(msg.url)}" alt="shared image" onclick="BestieChat.openLightbox('${escapeHtml(msg.url)}')" loading="lazy" />
+        <div class="media-collage-grid ${gridClass}">
+          ${items.map(item => `<img class="collage-item" src="${escapeHtml(item.url)}" alt="photo" onclick="BestieChat.openLightbox('${escapeHtml(item.url)}')" loading="lazy" />`).join('')}
+        </div>
         ${editedTag}
         ${bubbleMeta}
       </div>`;
-      if (!allImageMessages.find((m) => m.id === msg.id)) {
-        allImageMessages.push({ id: msg.id, url: msg.url, user: msg.user, time: msg.time });
-      }
+
+    } else if (msg.type === 'document') {
+      body = `<div class="msg ${mine ? 'me' : 'them'}">
+        ${replyQuote}
+        <a class="doc-msg-card" href="${escapeHtml(msg.url)}" download="${escapeHtml(msg.docName || 'document')}" target="_blank" rel="noopener noreferrer">
+          <div class="doc-msg-icon">📄</div>
+          <div class="doc-msg-info">
+            <div class="doc-msg-name">${escapeHtml(msg.docName || 'Document')}</div>
+            <div class="doc-msg-size">${formatBytes(msg.docSize || 0)}</div>
+          </div>
+          <div class="doc-msg-dl">⬇️</div>
+        </a>
+        ${editedTag}
+        ${bubbleMeta}
+      </div>`;
 
     } else if (msg.type === 'voice') {
       const dur = msg.duration ? `${Math.floor(msg.duration / 60)}:${String(msg.duration % 60).padStart(2, '0')}` : '';
@@ -1327,6 +1450,57 @@
       return;
     }
 
+  function sendMessagePayload(payload) {
+    const clientMsgId = 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    payload.clientMsgId = clientMsgId;
+
+    // Optimistic local rendering with clock icon (🕒)
+    const localMsg = {
+      id: clientMsgId,
+      clientMsgId,
+      user: myName,
+      time: Date.now(),
+      reactions: {},
+      isPending: true,
+      ...payload
+    };
+
+    renderMessage(localMsg);
+    scrollBottom();
+    playSound('send');
+
+    outboxQueue.push(payload);
+    saveOutboxQueue();
+
+    if (socket && socket.connected) {
+      socket.emit('message', payload);
+    }
+  }
+
+  function sendMessage() {
+    const rawText = els.msgInput.value.trim();
+    if (!rawText) {
+      toggleRecord();
+      return;
+    }
+    if (!joined) return;
+
+    const url = findUrl(rawText);
+    const text = encryptE2EE(rawText);
+
+    // Editing mode
+    if (editingMessageId) {
+      const encEdit = encryptE2EE(rawText);
+      socket.emit('edit-message', { messageId: editingMessageId, text: encEdit });
+      els.msgInput.value     = '';
+      autoExpandMsgInput();
+      localStorage.removeItem(`bestieDraft_${myRoom}`);
+      editingMessageId       = null;
+      cancelReply();
+      toggleSendMicIcons();
+      return;
+    }
+
     const sendPayload = (preview) => {
       const payload = { text, replyTo: replyingTo };
       if (preview) payload.linkPreview = preview;
@@ -1337,13 +1511,12 @@
         payload.url = rawText;
       }
       
-      socket.emit('message', payload);
+      sendMessagePayload(payload);
       els.msgInput.value = '';
       autoExpandMsgInput();
       localStorage.removeItem(`bestieDraft_${myRoom}`);
       cancelReply();
       toggleSendMicIcons();
-      playSound('send');
       localStorage.setItem('bestieLastMsgDate', new Date().toISOString().slice(0, 10));
     };
 
@@ -1364,60 +1537,80 @@
     localStorage.setItem('bestieLastMsgDate', new Date().toISOString().slice(0, 10));
   }
 
-  async function sendPhoto(file) {
-    if (!file || !joined) return;
-    if (!file.type.startsWith('image/')) return;
+  async function sendPhoto(filesInput) {
+    if (!filesInput || !joined) return;
+    const files = Array.isArray(filesInput) ? filesInput : (filesInput.length !== undefined ? Array.from(filesInput) : [filesInput]);
+    if (!files.length) return;
 
-    const img = new Image();
-    const reader = new FileReader();
-    
-    reader.onload = (e) => {
-      img.src = e.target.result;
-    };
-    
-    img.onload = () => {
-      const maxW = 1200;
-      let w = img.width;
-      let h = img.height;
-      
-      if (w > maxW) {
-        h = Math.round((h * maxW) / w);
-        w = maxW;
+    if (files.length === 1) {
+      const file = files[0];
+      if (!file.type.startsWith('image/')) return;
+      showToast('Compressing & sending photo… 📸');
+      try {
+        const { dataUrl, mime } = await compressImage(file);
+        const { url } = await uploadFile(dataUrl, mime, 'image');
+        sendMessagePayload({ type: 'image', url, replyTo: replyingTo });
+        cancelReply();
+      } catch (err) {
+        showToast('Could not upload photo');
       }
-      
-      const canvas = document.createElement('canvas');
-      canvas.width = w;
-      canvas.height = h;
-      
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, w, h);
-      
-      canvas.toBlob(async (blob) => {
-        if (!blob) {
-          renderSystem('Could not process photo');
-          return;
-        }
-        
-        const blobReader = new FileReader();
-        blobReader.onload = async () => {
-          try {
-            const { url } = await uploadFile(blobReader.result, 'image/jpeg', 'image');
-            socket.emit('message', { type: 'image', url, replyTo: replyingTo });
-            cancelReply();
-            playSound('send');
-          } catch {
-            renderSystem('Could not upload photo');
-          }
-        };
-        blobReader.readAsDataURL(blob);
-      }, 'image/jpeg', 0.82);
+    } else {
+      showToast(`Sending ${files.length} photos collage… 📸`);
+      try {
+        const uploadPromises = files.slice(0, 4).map(async (f) => {
+          const { dataUrl, mime } = await compressImage(f);
+          const { url } = await uploadFile(dataUrl, mime, 'image');
+          return { url, name: f.name };
+        });
+        const items = await Promise.all(uploadPromises);
+        sendMessagePayload({ type: 'media-group', items, replyTo: replyingTo });
+        cancelReply();
+      } catch (err) {
+        showToast('Could not upload photo group');
+      }
+    }
+  }
+
+  async function uploadDocumentFile(input) {
+    const file = input && input.files && input.files[0];
+    if (!file || !joined) return;
+    input.value = '';
+    if (els.attachMenu) els.attachMenu.style.display = 'none';
+
+    if (file.size > 15 * 1024 * 1024) {
+      showToast('File too large (Max 15MB)');
+      return;
+    }
+    showToast(`Uploading ${file.name}… 📄`);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const mime = file.type || 'application/octet-stream';
+        const { url } = await uploadFile(reader.result, mime, 'document', file.name);
+        sendMessagePayload({
+          type: 'document',
+          url,
+          docName: file.name,
+          docSize: file.size,
+          replyTo: replyingTo
+        });
+        cancelReply();
+      } catch (err) {
+        showToast('Could not upload document');
+      }
     };
-    
-    img.onerror = () => {
-      renderSystem('Could not load photo file');
-    };
-    
     reader.readAsDataURL(file);
+  }
+
+  function openViewOnceMedia(messageId, url) {
+    if (!url) {
+      showToast('This view-once media was already opened');
+      return;
+    }
+    openLightbox(url);
+    if (socket) {
+      socket.emit('view-once-opened', { messageId });
+    }
   }
 
   // ═══════════════════ REPLY ═══════════════════
@@ -1963,7 +2156,7 @@
 
     let items = [];
     if (type === 'photos') {
-      items = allMessagesCached.filter(m => !m.deleted && (m.type === 'image' || (m.url && m.url.match(/\.(jpg|jpeg|png|webp|gif)/i))));
+      items = allMessagesCached.filter(m => !m.deleted && (m.type === 'image' || m.type === 'media-group' || (m.url && m.url.match(/\.(jpg|jpeg|png|webp|gif)/i))));
       if (!items.length) {
         if (empty) empty.style.display = 'block';
         return;
@@ -1972,8 +2165,34 @@
       grid.style.display = 'grid';
       grid.style.gridTemplateColumns = 'repeat(3, 1fr)';
       grid.style.gap = '8px';
+      
+      const photoUrls = [];
+      items.forEach(m => {
+        if (m.type === 'media-group' && Array.isArray(m.items)) {
+          m.items.forEach(it => { if (it.url) photoUrls.push(it.url); });
+        } else if (m.url) {
+          photoUrls.push(m.url);
+        }
+      });
+      grid.innerHTML = photoUrls.map(url => `
+        <img src="${escapeHtml(url)}" loading="lazy" alt="photo" style="width:100%; aspect-ratio:1; object-fit:cover; border-radius:12px; cursor:pointer;" onclick="BestieChat.openLightbox('${escapeHtml(url)}')" />
+      `).join('');
+    } else if (type === 'docs') {
+      items = allMessagesCached.filter(m => !m.deleted && (m.type === 'document' || (m.url && m.url.match(/\.(pdf|doc|docx|xls|xlsx|txt|csv|zip)/i))));
+      if (!items.length) { if (empty) empty.style.display = 'block'; return; }
+      if (empty) empty.style.display = 'none';
+      grid.style.display = 'flex';
+      grid.style.flexDirection = 'column';
+      grid.style.gap = '8px';
       grid.innerHTML = items.map(m => `
-        <img src="${escapeHtml(m.url)}" loading="lazy" alt="photo" style="width:100%; aspect-ratio:1; object-fit:cover; border-radius:12px; cursor:pointer;" onclick="BestieChat.openLightbox('${escapeHtml(m.url)}')" />
+        <a class="doc-msg-card" href="${escapeHtml(m.url)}" download="${escapeHtml(m.docName || 'document')}" target="_blank" rel="noopener noreferrer" style="width:100%; max-width:none; background:var(--surface);">
+          <div class="doc-msg-icon">📄</div>
+          <div class="doc-msg-info">
+            <div class="doc-msg-name">${escapeHtml(m.docName || 'Document')}</div>
+            <div class="doc-msg-size">${formatBytes(m.docSize || 0)} · ${new Date(m.time).toLocaleDateString()}</div>
+          </div>
+          <div class="doc-msg-dl">⬇️</div>
+        </a>
       `).join('');
     } else if (type === 'voice') {
       items = allMessagesCached.filter(m => !m.deleted && m.type === 'voice');
@@ -2363,6 +2582,26 @@
     });
 
     socket.on('message', (msg) => {
+      if (msg.clientMsgId) {
+        const pendingWrap = document.querySelector(`.msg-wrap[data-id="${msg.clientMsgId}"]`);
+        if (pendingWrap) {
+          pendingWrap.dataset.id = msg.id;
+          pendingWrap.classList.remove('is-pending');
+          const pendingTick = pendingWrap.querySelector('.msg-status-ticks');
+          if (pendingTick) {
+            pendingTick.id = `tick-${msg.id}`;
+            pendingTick.className = 'msg-status-ticks sent';
+            pendingTick.innerHTML = `<svg viewBox="0 0 16 15" width="14" height="13" fill="none"><path d="M12.01 3.316l-7.92 8.56a.91.91 0 01-.67.3.91.91 0 01-.67-.3L.3 8.35a.96.96 0 010-1.34.93.93 0 011.33 0l2.79 2.99 7.26-7.85a.93.93 0 011.33 0 .96.96 0 010 1.166z" fill="currentColor"/></svg>`;
+          }
+          outboxQueue = outboxQueue.filter(item => item.clientMsgId !== msg.clientMsgId);
+          saveOutboxQueue();
+          allMessagesCached.push(msg);
+          saveMessageToOfflineDB(msg);
+          renderHeatmap();
+          return;
+        }
+      }
+
       allMessagesCached.push(msg);
       saveMessageToOfflineDB(msg);
       renderMessage(msg);
@@ -2374,6 +2613,8 @@
           sendDesktopNotification(getDisplayName(msg.user), {
             body: msg.type === 'hug'   ? 'sent you a hug 💌'   :
                   msg.type === 'image' ? 'sent a photo 📸'      :
+                  msg.type === 'media-group' ? 'sent photos 📸' :
+                  msg.type === 'document' ? `sent a document: ${msg.docName || ''} 📄` :
                   msg.type === 'voice' ? 'sent a voice note 🎤' :
                   (msg.text || 'New message'),
             icon: '/icon-192.png'
@@ -2383,6 +2624,35 @@
       } else {
         localStorage.setItem('bestieLastMsgDate', new Date().toISOString().slice(0, 10));
       }
+    });
+
+    socket.on('message-ack', ({ clientMsgId, id }) => {
+      if (clientMsgId) {
+        const pendingWrap = document.querySelector(`.msg-wrap[data-id="${clientMsgId}"]`);
+        if (pendingWrap) {
+          pendingWrap.dataset.id = id;
+          pendingWrap.classList.remove('is-pending');
+          const pendingTick = pendingWrap.querySelector('.msg-status-ticks');
+          if (pendingTick) {
+            pendingTick.id = `tick-${id}`;
+            pendingTick.className = 'msg-status-ticks sent';
+            pendingTick.innerHTML = `<svg viewBox="0 0 16 15" width="14" height="13" fill="none"><path d="M12.01 3.316l-7.92 8.56a.91.91 0 01-.67.3.91.91 0 01-.67-.3L.3 8.35a.96.96 0 010-1.34.93.93 0 011.33 0l2.79 2.99 7.26-7.85a.93.93 0 011.33 0 .96.96 0 010 1.166z" fill="currentColor"/></svg>`;
+          }
+        }
+        outboxQueue = outboxQueue.filter(item => item.clientMsgId !== clientMsgId);
+        saveOutboxQueue();
+      }
+    });
+
+    socket.on('view-once-opened', ({ messageId }) => {
+      const capsule = document.querySelector(`.msg-wrap[data-id="${messageId}"] .view-once-capsule`);
+      if (capsule) {
+        capsule.classList.add('opened');
+        capsule.onclick = null;
+        capsule.innerHTML = `<span class="view-once-num">1</span><span>Photo (Opened)</span>`;
+      }
+      const m = allMessagesCached.find(item => item.id === messageId);
+      if (m) { m.opened = true; m.url = ''; }
     });
 
     socket.on('messages-read', ({ messageIds }) => {
@@ -4262,7 +4532,7 @@
       if (els.nicknameInputChat) els.nicknameInputChat.addEventListener('input', saveNickname);
 
       if (els.photoInput) els.photoInput.addEventListener('change', (e) => {
-        if (e.target.files[0]) sendPhoto(e.target.files[0]);
+        if (e.target.files && e.target.files.length) sendPhoto(e.target.files);
         e.target.value = '';
       });
 
@@ -5421,7 +5691,7 @@
     // WhatsApp & Telegram Suite
     triggerDoubleTapHeart, toggleStarMessage, openStarredModal, closeStarredModal,
     startVideoNote, stopAndSendVideoNote, cancelVideoNote, toggleVideoNoteAudio,
-    handleSendBtnClick, hideContextMenu,
+    handleSendBtnClick, hideContextMenu, uploadDocumentFile, openViewOnceMedia,
     // Auth
     setAuthMode, selectLoginAvatar, quickReentry, showFullLoginForm, copyInviteLink, togglePasswordVisibility, logout,
     // Multi-chat DMs

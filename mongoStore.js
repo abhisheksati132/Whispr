@@ -150,6 +150,20 @@ async function editMessage(roomName, messageId, text) {
   ).lean();
 }
 
+async function markViewOnceOpened(roomName, messageId) {
+  if (!isConnected()) {
+    const msgs = memMessages.get(roomName) || [];
+    const msg = msgs.find(m => m.id === messageId);
+    if (msg) { msg.opened = true; msg.url = ''; }
+    return msg;
+  }
+  return Message.findOneAndUpdate(
+    { id: messageId, room: roomName },
+    { $set: { opened: true, url: '' } },
+    { new: true }
+  ).lean();
+}
+
 async function deleteMessage(roomName, messageId) {
   if (!isConnected()) {
     const msgs = memMessages.get(roomName) || [];
@@ -483,7 +497,7 @@ function persist() {} // no-op, MongoDB auto-persists
 module.exports = {
   FEELINGS,
   getRoomMeta, updateRoomMeta,
-  getMessages, addMessage, editMessage, deleteMessage, clearHistory,
+  getMessages, addMessage, editMessage, deleteMessage, markViewOnceOpened, clearHistory,
   pinMessage, findMessage, updateReadReceipt, updateMessageReaction,
   getProfile, updateProfile,
   setLastSeen, getLastSeen, recordActivity,
