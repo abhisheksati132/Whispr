@@ -693,13 +693,12 @@ header {
 
 /* ── Banners ── */
 #motdBanner {
-  padding: 8px 14px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  font-size: 12.5px;
+  padding: 6px 14px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--accent);
   text-align: center;
+  margin: 6px 16px 2px;
   display: none;
 }
 #motdBanner:not(:empty) {
@@ -2886,13 +2885,14 @@ body.night-glow header, body.night-glow #inputBarContainer { box-shadow: 0 0 30p
 
 /* ── Answer-to-Unlock Daily Question Card ── */
 .dq-card {
-  margin: 10px 16px 6px;
+  margin: 14px 16px 8px !important;
   padding: 14px 16px;
   background: linear-gradient(135deg, rgba(234, 179, 8, 0.08), rgba(217, 119, 87, 0.08));
   border: 1px solid rgba(234, 179, 8, 0.25);
   border-radius: 18px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
   animation: msgSlideUp 0.35s ease both;
+  transition: opacity 0.35s ease, transform 0.35s ease;
 }
 .dq-header {
   display: flex;

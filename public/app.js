@@ -2280,9 +2280,17 @@
       joined = true;
       myProfile = payload.profile || {};
       allImageMessages = [];
-      if (els.login) els.login.style.display = 'none';
-      if (els.chat) els.chat.style.display  = 'flex';
-      if (els.motdBanner) els.motdBanner.textContent = `✨ ${payload.motd || ''}`;
+      if (els.login) els.login.setAttribute('style', 'display:none !important;');
+      if (els.chat) els.chat.setAttribute('style', 'display:flex !important;');
+      if (els.motdBanner) {
+        if (payload.motd && payload.motd.trim()) {
+          els.motdBanner.textContent = `✨ ${payload.motd.trim()}`;
+          els.motdBanner.style.display = 'block';
+        } else {
+          els.motdBanner.textContent = '';
+          els.motdBanner.style.display = 'none';
+        }
+      }
       if (els.moodInput) els.moodInput.value  = payload.mood  || '';
       if (els.jokesInput) els.jokesInput.value = (payload.jokes || []).join('\n');
       if (payload.countdown) {
@@ -4389,14 +4397,29 @@
     if (toggleBtn) toggleBtn.textContent = isDark ? '☀️' : '🌙';
   }
 
-  function dismissDailyQuestion() {
-    const banner = document.getElementById('dailyQuestion');
-    if (banner) banner.style.display = 'none';
-    const today = new Date().toISOString().slice(0, 10);
-    localStorage.setItem('dismissedDailyQuestionDate', today);
-  }
-
   let currentDailyQuestionState = null;
+  let dailyQuestionAutoDismissTimer = null;
+
+  function dismissDailyQuestion(manual = true) {
+    if (dailyQuestionAutoDismissTimer) {
+      clearTimeout(dailyQuestionAutoDismissTimer);
+      dailyQuestionAutoDismissTimer = null;
+    }
+    const card = document.getElementById('dailyQuestion');
+    if (card) {
+      card.style.opacity = '0';
+      card.style.transform = 'translateY(-8px)';
+      setTimeout(() => {
+        card.style.display = 'none';
+        card.style.opacity = '';
+        card.style.transform = '';
+      }, 350);
+    }
+    if (manual) {
+      const today = new Date().toISOString().slice(0, 10);
+      localStorage.setItem('dismissedDailyQuestionDate', today);
+    }
+  }
 
   function renderDailyQuestionCard(state) {
     if (!state) return;
@@ -4407,10 +4430,22 @@
     const waitingArea = document.getElementById('dqWaitingArea');
     const revealedArea = document.getElementById('dqRevealedArea');
     const answersList = document.getElementById('dqAnswersList');
+    const input = document.getElementById('dqAnswerInput');
     if (!card || !textEl) return;
+
+    const today = new Date().toISOString().slice(0, 10);
+    const dismissedDate = localStorage.getItem('dismissedDailyQuestionDate');
+
+    // If manually dismissed today and not freshly revealed, keep hidden
+    if (dismissedDate === today && !state.revealed) {
+      card.style.display = 'none';
+      return;
+    }
 
     textEl.textContent = state.question || 'What made you smile today?';
     card.style.display = 'block';
+    card.style.opacity = '1';
+    card.style.transform = 'none';
 
     const myAnswerObj = state.answers && state.answers[myName];
     const isAnsweredByMe = Boolean(myAnswerObj && !myAnswerObj.locked);
@@ -4437,6 +4472,30 @@
       if (waitingArea) waitingArea.style.display = 'none';
       if (revealedArea) revealedArea.style.display = 'none';
       if (inputArea) inputArea.style.display = 'flex';
+
+      // Auto-vanish if not used within 25 seconds
+      if (dailyQuestionAutoDismissTimer) clearTimeout(dailyQuestionAutoDismissTimer);
+      dailyQuestionAutoDismissTimer = setTimeout(() => {
+        if (input && !input.value.trim() && document.activeElement !== input) {
+          dismissDailyQuestion(false);
+        }
+      }, 25000);
+
+      // Cancel auto-dismiss when typing or focusing
+      if (input) {
+        input.onfocus = () => {
+          if (dailyQuestionAutoDismissTimer) {
+            clearTimeout(dailyQuestionAutoDismissTimer);
+            dailyQuestionAutoDismissTimer = null;
+          }
+        };
+        input.oninput = () => {
+          if (dailyQuestionAutoDismissTimer) {
+            clearTimeout(dailyQuestionAutoDismissTimer);
+            dailyQuestionAutoDismissTimer = null;
+          }
+        };
+      }
     }
   }
 
