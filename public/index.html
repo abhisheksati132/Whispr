@@ -16,8 +16,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles.css?v=12020" />
-  <link rel="stylesheet" href="/clay.css?v=12" />
+  <link rel="stylesheet" href="/styles.css?v=12022" />
+  <link rel="stylesheet" href="/clay.css?v=14" />
 </head>
 <body>
 
@@ -61,7 +61,7 @@
         <!-- Username -->
         <div class="login-field" style="margin-bottom: 12px;">
           <label class="login-label" for="nameInput" style="display:block; margin-bottom:6px; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted);">Username</label>
-          <input id="nameInput" type="text" class="login-input" placeholder="e.g. Priya, Alex, Luna…" maxlength="25" autocomplete="username" autocapitalize="none" style="width:100%; box-sizing:border-box;" />
+          <input id="nameInput" type="text" class="login-input" placeholder="e.g. Bestie..." maxlength="25" autocomplete="username" autocapitalize="none" style="width:100%; box-sizing:border-box;" />
         </div>
 
         <!-- Password -->
@@ -220,7 +220,7 @@
       
       <!-- Unanswered state -->
       <div id="dqInputArea" class="dq-input-area" style="display:none;">
-        <input id="dqAnswerInput" type="text" placeholder="Type your answer to unlock bestie's..." maxlength="300" onkeydown="if(event.key==='Enter') BestieChat.submitDailyAnswer()" />
+        <input id="dqAnswerInput" type="text" placeholder="Type answer to unlock…" maxlength="300" onkeydown="if(event.key==='Enter') BestieChat.submitDailyAnswer()" />
         <button id="dqSubmitBtn" onclick="BestieChat.submitDailyAnswer()">Unlock ✨</button>
       </div>
 
@@ -1259,11 +1259,11 @@
 <!-- Scripts -->
 <script src="/socket.io/socket.io.js"></script>
 <script src="/crypto-js.min.js"></script>
-<script src="/app.js?v=50"></script>
+<script src="/app.js?v=52"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js?v=12016').catch(console.error);
+      navigator.serviceWorker.register('/sw.js?v=12022').catch(console.error);
     });
   }
   function forceClearAppCache() {

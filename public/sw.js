@@ -1,5 +1,5 @@
 // Cache Version
-const CACHE = 'bestie-v12015-speed';
+const CACHE = 'bestie-v12022-speed';
 const IMMUTABLE_ASSETS = [
   '/icon-192.png',
   '/favicon.ico',

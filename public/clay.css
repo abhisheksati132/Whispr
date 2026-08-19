@@ -118,32 +118,34 @@ body.theme-dark {
 
 /* ── Apple iMessage (iOS) Theme ── */
 body.theme-ios {
-  --mb-bg:          #000000;
-  --mb-bg2:         #1C1C1E;
-  --mb-sidebar:     #161618;
-  --mb-panel:       #1C1C1E;
-  --mb-surface:     #2C2C2E;
-  --mb-surface2:    #3A3A3C;
-  --mb-header-bg:   rgba(22, 22, 24, 0.85);
-  --mb-input-bg:    #1C1C1E;
+  --mb-bg:          #F2F2F7;
+  --mb-bg2:         #E5E5EA;
+  --mb-sidebar:     #EFEFF4;
+  --mb-panel:       #FFFFFF;
+  --mb-surface:     #FFFFFF;
+  --mb-surface2:    #F2F2F7;
+  --mb-header-bg:   rgba(255, 255, 255, 0.88);
+  --mb-input-bg:    #FFFFFF;
 
   --mb-accent:      #007AFF;
   --mb-accent2:     #34C759;
   --mb-accent-deep: #0051A8;
-  --mb-accent-glow: rgba(0, 122, 255, 0.25);
+  --mb-accent-glow: rgba(0, 122, 255, 0.22);
 
-  --mb-text:        #FFFFFF;
-  --mb-text2:       #EBEBF5;
+  --mb-text:        #000000;
+  --mb-text2:       #3C3C43;
   --mb-muted:       #8E8E93;
-  --mb-border:      #38383A;
-  --mb-border-soft: #2C2C2E;
+  --mb-border:      #C6C6C8;
+  --mb-border-soft: #D1D1D6;
 
-  --mb-bubble-me:   #007AFF;
-  --mb-bubble-them: #26252A;
+  --mb-bubble-me:       #007AFF;
+  --mb-bubble-me-text:  #FFFFFF;
+  --mb-bubble-them:     #E9E9EB;
+  --mb-bubble-them-text:#000000;
 
-  --mb-shadow-sm:   0 1px 2px rgba(0, 0, 0, 0.3);
-  --mb-shadow:      0 2px 8px rgba(0, 0, 0, 0.4);
-  --mb-shadow-lg:   0 8px 24px rgba(0, 0, 0, 0.5);
+  --mb-shadow-sm:   0 1px 2px rgba(0, 0, 0, 0.06);
+  --mb-shadow:      0 2px 8px rgba(0, 0, 0, 0.08);
+  --mb-shadow-lg:   0 8px 24px rgba(0, 0, 0, 0.12);
 
   --font:           -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", sans-serif;
   --font-serif:     -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
@@ -153,13 +155,13 @@ body.theme-ios .msg.me {
   background: linear-gradient(180deg, #0B84FE 0%, #007AFF 100%) !important;
   color: #FFFFFF !important;
   border-radius: 20px 20px 4px 20px !important;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
   border: none !important;
 }
 
 body.theme-ios .msg.them {
-  background: #26252A !important;
-  color: #FFFFFF !important;
+  background: #E9E9EB !important;
+  color: #000000 !important;
   border-radius: 20px 20px 20px 4px !important;
   border: none !important;
 }
@@ -171,7 +173,9 @@ body.theme-ios #sendBtn {
 
 body.theme-ios .input-pill {
   border-radius: 22px !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  background: #FFFFFF !important;
+  border: 1px solid #C6C6C8 !important;
+  color: #000000 !important;
 }
 
 body.theme-ios .sidebar-streak {

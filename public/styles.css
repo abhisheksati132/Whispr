@@ -2393,24 +2393,50 @@ header {
 /* ═══════════════════ 19. TOAST NOTIFICATIONS ═══════════════════ */
 #toastContainer {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  bottom: 84px;
+  right: 20px;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  z-index: 1000;
+  z-index: 9999;
+  pointer-events: none;
+  max-width: calc(100vw - 40px);
 }
 .toast {
-  background: var(--panel);
-  border: 1px solid var(--border-soft);
-  border-radius: 12px;
-  padding: 12px 16px;
-  box-shadow: var(--shadow);
-  font-size: 14px;
-  animation: slideUp 0.3s ease;
+  background: #1F1E1D !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  border-radius: 20px;
+  padding: 10px 18px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+  animation: toastIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .toast.hiding {
-  animation: slideDown 0.3s ease forwards;
+  animation: toastOut 0.22s ease forwards;
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0)     scale(1); }
+}
+
+@keyframes toastOut {
+  from { opacity: 1; transform: translateY(0)     scale(1); }
+  to   { opacity: 0; transform: translateY(-8px) scale(0.96); }
 }
 
 /* ═══════════════════ 20. ANIMATIONS ═══════════════════ */
@@ -3696,15 +3722,18 @@ body.night-glow header, body.night-glow #inputBarContainer { box-shadow: 0 0 30p
    ========================================================================== */
 
 /* ── Answer-to-Unlock Daily Question Card ── */
-.dq-card {
-  margin: 14px 16px 8px !important;
-  padding: 14px 16px;
+.dq-card, #dailyQuestion {
+  margin: 10px 12px 6px !important;
+  padding: 12px 14px;
   background: linear-gradient(135deg, rgba(234, 179, 8, 0.08), rgba(217, 119, 87, 0.08));
   border: 1px solid rgba(234, 179, 8, 0.25);
-  border-radius: 18px;
+  border-radius: 16px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
   animation: msgSlideUp 0.35s ease both;
   transition: opacity 0.35s ease, transform 0.35s ease;
+  box-sizing: border-box;
+  max-width: calc(100% - 24px);
+  width: auto;
 }
 .dq-header {
   display: flex;
@@ -3720,41 +3749,49 @@ body.night-glow header, body.night-glow #inputBarContainer { box-shadow: 0 0 30p
   text-transform: uppercase;
 }
 .dq-prompt {
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
   color: var(--text);
-  line-height: 1.45;
-  margin-bottom: 10px;
+  line-height: 1.4;
+  margin-bottom: 8px;
+  word-break: break-word;
 }
 .dq-input-area {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
+  width: 100%;
+  box-sizing: border-box;
 }
 .dq-input-area input {
-  flex: 1;
+  flex: 1 1 0%;
+  min-width: 0;
+  width: 0;
   background: var(--surface);
   border: 1px solid var(--border-soft);
-  border-radius: 20px;
-  padding: 8px 14px;
+  border-radius: 18px;
+  padding: 8px 12px;
   font-size: 13px;
   color: var(--text);
   outline: none;
+  box-sizing: border-box;
   transition: border-color 0.2s;
 }
 .dq-input-area input:focus {
   border-color: var(--accent);
 }
 .dq-input-area button {
+  flex: 0 0 auto;
   background: linear-gradient(135deg, #eab308, #d97757);
   color: #fff;
   border: none;
-  border-radius: 20px;
-  padding: 8px 16px;
+  border-radius: 18px;
+  padding: 8px 14px;
   font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
+  box-sizing: border-box;
   transition: transform 0.15s;
 }
 .dq-input-area button:hover {
