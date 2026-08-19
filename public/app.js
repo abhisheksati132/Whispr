@@ -36,9 +36,12 @@
   const MUSIC_DOMAINS = /^https?:\/\/(open\.spotify\.com|music\.apple\.com|soundcloud\.com|www\.youtube\.com|youtu\.be|spotify\.link)/i;
 
   // ═══════════════════ STATE ═══════════════════
-  let socket, myName = '', myRoom = '', joined = false, lastDateLabel = '';
-  let myProfile = {}, profiles = {}, unreadCount = 0;
+  let myName = localStorage.getItem('bestieChatName') || '';
+  let myRoom = localStorage.getItem('bestieChatRoom') || 'our-private-space';
   let authToken = localStorage.getItem('bestieChatToken') || '';
+  let joined = Boolean(myName && authToken);
+  let socket, lastDateLabel = '';
+  let myProfile = {}, profiles = {}, unreadCount = 0;
   let authMode = 'login'; // 'login' | 'register'
   let offlineDB = null; // IndexedDB for offline message queue
   let mediaRecorder = null, recordChunks = [], recordStartTime = 0;
@@ -1478,6 +1481,8 @@
   function sendMessagePayload(payload) {
     const clientMsgId = 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     payload.clientMsgId = clientMsgId;
+    payload.user = myName || localStorage.getItem('bestieChatName') || 'Bestie';
+    payload.room = myRoom || localStorage.getItem('bestieChatRoom') || 'our-private-space';
 
     triggerHaptic(10);
 
@@ -1485,7 +1490,7 @@
     const localMsg = {
       id: clientMsgId,
       clientMsgId,
-      user: myName,
+      user: payload.user,
       time: Date.now(),
       reactions: {},
       isPending: true,
@@ -1501,6 +1506,8 @@
 
     if (socket && socket.connected) {
       socket.emit('message', payload);
+    } else {
+      if (!socket) initSocket();
     }
   }
 
@@ -1510,7 +1517,12 @@
       toggleRecord();
       return;
     }
-    if (!joined) return;
+    if (!myName) myName = localStorage.getItem('bestieChatName') || 'Bestie';
+    if (!myRoom) myRoom = localStorage.getItem('bestieChatRoom') || 'our-private-space';
+    if (!socket || !socket.connected) {
+      initSocket();
+      doSocketJoin();
+    }
 
     const url = findUrl(rawText);
     const text = encryptE2EE(rawText);
