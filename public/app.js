@@ -4774,16 +4774,9 @@
       updateSidebarMyProfile();
       checkPinLock();
 
-      // Load saved theme (Claude warm light mode is default)
+      // Load saved theme
       const savedTheme = localStorage.getItem('bestieChatTheme') || 'light';
-      const toggleBtn = document.getElementById('themeToggle');
-      if (savedTheme === 'dark') {
-        document.body.classList.add('theme-dark');
-        if (toggleBtn) toggleBtn.textContent = '☀️';
-      } else {
-        document.body.classList.remove('theme-dark');
-        if (toggleBtn) toggleBtn.textContent = '🌙';
-      }
+      applyAppTheme(savedTheme);
 
       // Parse PWA Share Target URL params
       const params = new URLSearchParams(window.location.search);
@@ -4816,11 +4809,37 @@
     }, 3000);
   }
 
-  function toggleTheme() {
-    const isDark = document.body.classList.toggle('theme-dark');
-    localStorage.setItem('bestieChatTheme', isDark ? 'dark' : 'light');
+  function applyAppTheme(themeName) {
+    document.body.classList.remove('theme-dark', 'theme-ios');
+    if (themeName === 'ios') {
+      document.body.classList.add('theme-ios');
+      if (els.msgInput) els.msgInput.placeholder = 'iMessage…';
+    } else if (themeName === 'dark') {
+      document.body.classList.add('theme-dark');
+      if (els.msgInput) els.msgInput.placeholder = 'Message…';
+    } else {
+      if (els.msgInput) els.msgInput.placeholder = 'Message…';
+    }
+    localStorage.setItem('bestieChatTheme', themeName);
+    const select = document.getElementById('themeSelect');
+    if (select) select.value = themeName;
     const toggleBtn = document.getElementById('themeToggle');
-    if (toggleBtn) toggleBtn.textContent = isDark ? '☀️' : '🌙';
+    if (toggleBtn) {
+      toggleBtn.textContent = themeName === 'ios' ? '📱' : (themeName === 'dark' ? '☀️' : '🌙');
+    }
+  }
+
+  function selectTheme(themeName) {
+    applyAppTheme(themeName);
+    showToast(`Switched to ${themeName === 'ios' ? 'Apple iMessage (iOS)' : themeName.toUpperCase()} theme ✨`);
+  }
+
+  function toggleTheme() {
+    const current = localStorage.getItem('bestieChatTheme') || 'light';
+    const themes = ['light', 'dark', 'ios'];
+    const nextIdx = (themes.indexOf(current) + 1) % themes.length;
+    applyAppTheme(themes[nextIdx]);
+    showToast(`Theme: ${themes[nextIdx] === 'ios' ? 'Apple iMessage 📱' : (themes[nextIdx] === 'dark' ? 'Dark Mode 🌙' : 'Warm Paper ☀️')}`);
   }
 
   let currentDailyQuestionState = null;
@@ -5838,7 +5857,7 @@
     openTTT, closeTTT, makeTTTMove, resetTTT,
     openHapticSync, closeHapticSync, startHapticPulse, stopHapticPulse,
     sendNudge, toggleLofi, setLofiVolume,
-    toggleTheme, dismissDailyQuestion, quickReact,
+    toggleTheme, selectTheme, applyAppTheme, dismissDailyQuestion, quickReact,
     togglePushNotifications,
     confirmClearHistory, exportChat, setRoomPassword, setDisappearingTimer, jumpToDate,
     openProfile, closeProfile, selectAvatar, saveProfileStatus, saveProfileColor, saveNicknameFromProfile,
