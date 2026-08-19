@@ -941,11 +941,11 @@ header {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 6px 8px 6px 12px;
-  transition: border-color var(--transition);
 }
 .input-pill:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-glow) !important;
+  border-color: var(--border);
+  box-shadow: none !important;
+  outline: none !important;
 }
 
 .pill-btn {
@@ -968,13 +968,20 @@ header {
 
 #msgInput {
   flex: 1;
-  background: none;
-  border: none;
+  background: transparent;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
   color: var(--text);
   font-size: 14px;
   padding: 6px 0;
   max-height: 120px;
   resize: none;
+}
+#msgInput:focus, #msgInput:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
 }
 #msgInput::placeholder {
   color: var(--muted);
