@@ -5859,8 +5859,6 @@
         };
         reader.readAsDataURL(blob);
       };
-        reader.readAsDataURL(blob);
-      };
 
       videoNoteRecorder.start();
       videoNoteStartTime = Date.now();
