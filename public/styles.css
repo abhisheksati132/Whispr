@@ -2734,7 +2734,31 @@ header {
 .score-wins { color: var(--online); font-weight: 600;}
 
 /* Confetti */
-.confetti-piece { position: fixed; z-index: 9999; pointer-events: none;}
+.confetti-piece {
+  position: fixed;
+  top: -24px;
+  z-index: 9999;
+  pointer-events: none;
+  border-radius: 2px;
+  animation: confettiFall 2.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  will-change: transform, opacity;
+}
+
+@keyframes confettiFall {
+  0% {
+    top: -24px;
+    transform: translateX(0) rotateZ(0deg) rotateY(0deg);
+    opacity: 1;
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    top: 105vh;
+    transform: translateX(var(--drift, 40px)) rotateZ(720deg) rotateY(360deg);
+    opacity: 0;
+  }
+}
 
 /* Secret Message */
 .msg.secret { background: linear-gradient(135deg, rgba(129,140,248,0.2), rgba(244,114,182,0.2)); border: 1px dashed var(--accent); }
