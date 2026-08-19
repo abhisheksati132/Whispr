@@ -557,7 +557,21 @@ io.on('connection', (socket) => {
     } else return;
 
     try {
-      const { message, milestone } = await mStore.addMessage(currentRoom, msgData);
+      let message, milestone;
+      try {
+        const res = await mStore.addMessage(currentRoom, msgData);
+        message = res.message;
+        milestone = res.milestone;
+      } catch (err) {
+        console.error('mStore.addMessage error, using fallback:', err.message);
+        message = {
+          id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : ('msg_' + Date.now()),
+          ...msgData,
+          time: Date.now(),
+          reactions: {},
+          room: currentRoom
+        };
+      }
       mStore.setLastSeen(username);
       io.to(currentRoom).emit('message', message);
       if (payload && payload.clientMsgId) {

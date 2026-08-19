@@ -995,8 +995,6 @@
         hStatusEl.className = 'header-bestie-status';
       }
     }
-    if (els.msgInput) els.msgInput.disabled = !online;
-    if (els.sendBtn) els.sendBtn.disabled  = !online;
     document.body.classList.toggle('reconnecting', !online);
   }
 
@@ -1388,6 +1386,7 @@
       }
       
       myRoom = 'our-private-space';
+      joined = true;
       
       if (els.login) els.login.setAttribute('style', 'display:none !important');
       if (els.chat)  els.chat.setAttribute('style', 'display:flex !important');
@@ -1486,6 +1485,8 @@
   }
 
   function sendMessagePayload(payload) {
+    if (!payload) return;
+    joined = true;
     const clientMsgId = 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     payload.clientMsgId = clientMsgId;
     payload.user = myName || localStorage.getItem('bestieChatName') || 'Bestie';
@@ -5411,7 +5412,7 @@
   }
 
   function sendQuickReply(text) {
-    if (!text || !joined) return;
+    if (!text) return;
     if (els.msgInput) {
       els.msgInput.value = text;
       sendMessage();
