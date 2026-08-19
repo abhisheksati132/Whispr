@@ -976,6 +976,15 @@
     if (els.bestieStatus) {
       els.bestieStatus.textContent = online ? 'Connected' : 'Reconnecting…';
     }
+    const hStatusEl = document.getElementById('headerBestieStatus');
+    if (hStatusEl) {
+      if (online) {
+        updateBestieHeaderState();
+      } else {
+        hStatusEl.textContent = 'Connecting…';
+        hStatusEl.className = 'header-bestie-status';
+      }
+    }
     if (els.msgInput) els.msgInput.disabled = !online;
     if (els.sendBtn) els.sendBtn.disabled  = !online;
     document.body.classList.toggle('reconnecting', !online);
@@ -1344,8 +1353,12 @@
 
   function doSocketJoin() {
     if (!socket) return;
+    const nameToJoin = myName || localStorage.getItem('bestieChatName') || 'Bestie';
+    const roomToJoin = myRoom || localStorage.getItem('bestieChatRoom') || 'our-private-space';
+    myName = nameToJoin;
+    myRoom = roomToJoin;
     socket.emit('join', {
-      name: myName, room: myRoom,
+      name: nameToJoin, room: roomToJoin,
       nickname: (myProfile && myProfile.nickname) || '',
       password: els.passwordInput ? els.passwordInput.value : ''
     });
@@ -2515,6 +2528,11 @@
       if (banner) banner.style.display = 'none';
       flushOfflineQueue();
       if (joined || (myName && myRoom)) doSocketJoin();
+    });
+
+    socket.on('connect_error', (err) => {
+      console.warn('Socket connect_error:', err && err.message);
+      setConnected(false);
     });
 
     socket.on('disconnect', () => {
@@ -4867,7 +4885,10 @@
       initSocket();
       toggleSendMicIcons();
       const savedName = localStorage.getItem('bestieChatName') || '';
-      if (savedName) {
+      const savedToken = localStorage.getItem('bestieChatToken') || '';
+      if (savedName && savedToken) {
+        quickReentry();
+      } else if (savedName) {
         const reentryContainer = document.getElementById('quickReentryContainer');
         const reentryText = document.getElementById('quickReentryText');
         const loginForm = document.getElementById('loginForm');
