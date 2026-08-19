@@ -5169,11 +5169,11 @@
       const text = m.type === 'hug' ? 'sent a hug 💌' : m.type === 'image' ? `[Photo: ${m.url}]` : m.type === 'voice' ? `[Voice note: ${m.url}]` : decryptE2EE(m.text || '');
       return `[${date}] ${user}: ${text}`;
     });
-    const header = `=======================================\n  BESTIE CHAT TRANSCRIPT EXPORT  \n=======================================\nExport Date: ${new Date().toLocaleString()}\nTotal Messages: ${allMessagesCached.length}\n---------------------------------------\n\n`;
+    const header = `=======================================\n  CHAT TRANSCRIPT EXPORT  \n=======================================\nExport Date: ${new Date().toLocaleString()}\nTotal Messages: ${allMessagesCached.length}\n---------------------------------------\n\n`;
     const blob = new Blob([header + lines.join('\n')], { type: 'text/plain;charset=utf-8' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `bestie-chat-export-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.download = `chat-export-${new Date().toISOString().slice(0, 10)}.txt`;
     a.click();
     showToast('📥 Chat transcript exported!');
   }

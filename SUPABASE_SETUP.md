@@ -1,6 +1,6 @@
-# 🚀 Supabase Setup Guide for Bestie Chat
+# 🚀 Supabase Setup Guide for chat
 
-Bestie Chat is fully configured to use **Supabase (PostgreSQL)** for all user accounts, room data, real-time messaging history, notes, and media.
+**chat** is fully configured to use **Supabase (PostgreSQL)** for all user accounts, room data, real-time messaging history, notes, and media.
 
 Follow these 3 simple steps to connect your Supabase project:
 
