@@ -16,8 +16,10 @@
   --text:         #1F1E1D;
   --text2:        #4A4742;
   --muted:        #78756F;
+  --text-muted:   #78756F;
   --online:       #388E3C;
   --offline:      #D32F2F;
+  --header-bg:    #FFFFFF;
   --radius:       12px;
   --radius-sm:    8px;
   --radius-xs:    6px;
@@ -2776,7 +2778,176 @@ header {
   }
 }
 
+/* ═══════════════════ 22. DARK THEME ═══════════════════ */
+body.theme-dark {
+  --bg:           #0E0E10;
+  --bg2:          #1A1A1F;
+  --sidebar-bg:   #141418;
+  --panel:        #1E1E24;
+  --surface:      #1E1E24;
+  --surface2:     #26262E;
+  --border:       #2E2E38;
+  --border-soft:  #26262E;
+  --bubble-me:    #2A2060;
+  --bubble-them:  #1E1E24;
+  --text:         #E8E6E0;
+  --text2:        #B4B0A8;
+  --muted:        #6B6860;
+  --text-muted:   #6B6860;
+  --header-bg:    #141418;
+  --shadow:       0 1px 6px rgba(0,0,0,0.4);
+  --shadow-sm:    0 1px 4px rgba(0,0,0,0.3);
+  --shadow-lg:    0 4px 20px rgba(0,0,0,0.5);
+}
+
+/* Dark mode: override the context menu dark glass to actually look dark */
+body.theme-dark #contextMenu {
+  background: rgba(28, 28, 36, 0.98);
+  border-color: rgba(255,255,255,0.08);
+}
+body.theme-dark .modal-overlay {
+  background: rgba(0,0,0,0.85);
+}
+body.theme-dark #messages {
+  background: var(--bg);
+}
+body.theme-dark .msg.me {
+  background: var(--bubble-me);
+  color: #E8E6E0;
+  border-color: #2A2060;
+}
+body.theme-dark .msg.them {
+  background: var(--bubble-them);
+  color: var(--text);
+  border-color: var(--border);
+}
+body.theme-dark .date-divider {
+  background: var(--surface2);
+  color: var(--muted);
+  border: none;
+}
+body.theme-dark .toast {
+  background: var(--panel);
+  border-color: var(--border);
+  color: var(--text);
+}
+body.theme-dark #login {
+  background: var(--bg);
+}
+body.theme-dark .login-card {
+  background: var(--panel);
+  border-color: var(--border);
+}
+body.theme-dark input[type="text"],
+body.theme-dark input[type="password"],
+body.theme-dark input[type="date"],
+body.theme-dark input[type="datetime-local"],
+body.theme-dark textarea,
+body.theme-dark select {
+  background: var(--surface2) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+body.theme-dark .meta {
+  color: var(--muted);
+}
+
+/* ═══════════════════ 22b. iOS / iMessage THEME ═══════════════════ */
+body.theme-ios {
+  --bg:           #F2F2F7;
+  --bg2:          #E5E5EA;
+  --sidebar-bg:   #EFEFF4;
+  --panel:        #FFFFFF;
+  --surface:      #FFFFFF;
+  --surface2:     #F2F2F7;
+  --border:       #C6C6C8;
+  --border-soft:  #D1D1D6;
+  --bubble-me:    #007AFF;
+  --bubble-them:  #FFFFFF;
+  --accent:       #007AFF;
+  --accent2:      #0056CC;
+  --accent-glow:  rgba(0, 122, 255, 0.18);
+  --text:         #000000;
+  --text2:        #3C3C43;
+  --muted:        #8E8E93;
+  --text-muted:   #8E8E93;
+  --header-bg:    rgba(255,255,255,0.88);
+  --radius:       18px;
+  --radius-sm:    12px;
+  --shadow:       0 1px 4px rgba(0,0,0,0.08);
+  --shadow-lg:    0 8px 24px rgba(0,0,0,0.12);
+  --font:         -apple-system, 'SF Pro Text', BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+}
+
+/* iMessage style: my bubbles are blue with white text, their bubbles are white */
+body.theme-ios .msg.me {
+  background: #007AFF;
+  color: #FFFFFF;
+  border-color: #007AFF;
+  border-radius: 18px 18px 4px 18px;
+}
+body.theme-ios .msg.me .meta,
+body.theme-ios .msg.me .edited-tag {
+  color: rgba(255,255,255,0.7);
+}
+body.theme-ios .msg.them {
+  background: #FFFFFF;
+  color: #000000;
+  border-color: #C6C6C8;
+  border-radius: 18px 18px 18px 4px;
+}
+body.theme-ios header {
+  background: rgba(255,255,255,0.88) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 0.5px solid rgba(0,0,0,0.12);
+}
+body.theme-ios #inputBarContainer {
+  background: rgba(255,255,255,0.88) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-top: 0.5px solid rgba(0,0,0,0.12);
+}
+body.theme-ios .input-pill {
+  border-radius: 24px;
+  background: #F2F2F7;
+  border-color: #C6C6C8;
+}
+body.theme-ios #sendBtn {
+  background: #007AFF;
+  border-radius: 50%;
+}
+body.theme-ios .date-divider {
+  background: transparent;
+  border: none;
+  color: #8E8E93;
+  font-size: 11px;
+  letter-spacing: 0;
+}
+body.theme-ios .msg-wrap.me .msg .meta {
+  color: rgba(255,255,255,0.7);
+}
+body.theme-ios #messages {
+  background: #F2F2F7;
+}
+body.theme-ios .sidebar-brand,
+body.theme-ios .sidebar-nav {
+  background: var(--sidebar-bg);
+}
+body.theme-ios .modal-card {
+  border-radius: 20px 20px 0 0;
+}
+body.theme-ios .read-tick.read {
+  color: #007AFF;
+}
+body.theme-ios .reaction-pill.mine {
+  background: rgba(0,122,255,0.12);
+  border-color: #007AFF;
+  color: #007AFF;
+}
+
 /* ═══════════════════ 23. FUNCTIONAL CLASSES (RESTYLED) ═══════════════════ */
+
 
 /* Doodle Canvas */
 #doodleCanvas { background: var(--surface); border: 1px solid var(--border-soft); border-radius: 12px; width: 100%; touch-action: none; cursor: crosshair;}
@@ -3002,7 +3173,7 @@ body.night-glow header, body.night-glow #inputBarContainer { box-shadow: 0 0 30p
 
 /* Clean static background for chat */
 #chatMain {
-  background: var(--bg) !important;
+  background: var(--bg);
 }
 
 /* Graceful fade + slight translate on message bubbles and modal popups */

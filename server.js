@@ -786,7 +786,9 @@ io.on('connection', (socket) => {
   // ── Room meta ─────────────────────────────────────────────────────────────
   socket.on('update-mood', async (mood) => { try { if (!currentRoom) return; await mStore.updateRoomMeta(currentRoom, { mood: String(mood||'').slice(0,100) }); io.to(currentRoom).emit('mood-update', mood); } catch (err) { console.error('update-mood error:', err); } });
   socket.on('update-jokes', async (jokes) => { try { if (!currentRoom) return; const safe=(Array.isArray(jokes)?jokes:[]).map(j=>String(j).slice(0,200)).slice(0,20); await mStore.updateRoomMeta(currentRoom,{jokes:safe}); io.to(currentRoom).emit('jokes-update',safe); } catch (err) { console.error('update-jokes error:', err); } });
-  socket.on('update-countdown', async ({label,date}={}) => { try { if (!currentRoom) return; const cd={label:String(label||'').slice(0,50),date:date||null}; await mStore.updateRoomMeta(currentRoom,{countdown:cd}); io.to(currentRoom).emit('countdown-update',cd); } catch (err) { console.error('update-countdown error:', err); } });
+
+        socket.on('update-countdown', async ({label,date}={}) => { try { if (!currentRoom) return; const cd={label:String(label||'').slice(0,50),date:date||null}; await mStore.updateRoomMeta(currentRoom,{countdown:cd}); io.to(currentRoom).emit('countdown-update',cd); } catch (err) { console.error('update-countdown error:', err); } });
+        socket.on('update-weather', async (city) => { try { if (!currentRoom) return; const c=String(city||'').slice(0,100); await mStore.updateRoomMeta(currentRoom,{weatherCity:c}); io.to(currentRoom).emit('weather-update',c); } catch (err) { console.error('update-weather error:', err); } });
 
   socket.on('update-nickname', async (nick) => {
     try {

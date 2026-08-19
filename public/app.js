@@ -1591,8 +1591,8 @@
     input.value = '';
     if (els.attachMenu) els.attachMenu.style.display = 'none';
 
-    if (file.size > 15 * 1024 * 1024) {
-      showToast('File too large (Max 15MB)');
+    if (file.size > 25 * 1024 * 1024) {
+      showToast('File too large (Max 25MB)');
       return;
     }
     showToast(`Uploading ${file.name}… 📄`);
@@ -2548,6 +2548,12 @@
       }
       if (els.moodInput) els.moodInput.value  = payload.mood  || '';
       if (els.jokesInput) els.jokesInput.value = (payload.jokes || []).join('\n');
+      if (payload.weatherCity) {
+        localStorage.setItem('bestieWeatherCity', payload.weatherCity);
+        const cityInput = document.getElementById('weatherCityInput');
+        if (cityInput) cityInput.value = payload.weatherCity;
+        fetchWeatherForCity(payload.weatherCity);
+      }
       if (payload.countdown) {
         if (els.countdownLabel) els.countdownLabel.value = payload.countdown.label || '';
         if (els.countdownDate) els.countdownDate.value  = payload.countdown.date ? payload.countdown.date.slice(0, 16) : '';
@@ -2845,6 +2851,12 @@
 
     socket.on('mood-update',      (mood)  => { if (els.moodInput) els.moodInput.value = mood || ''; });
     socket.on('jokes-update',     (jokes) => { if (els.jokesInput) els.jokesInput.value = (jokes || []).join('\n'); });
+    socket.on('weather-update',   (city)  => {
+      localStorage.setItem('bestieWeatherCity', city);
+      const cityInput = document.getElementById('weatherCityInput');
+      if (cityInput) cityInput.value = city || '';
+      if (city) fetchWeatherForCity(city);
+    });
     socket.on('countdown-update', (cd)    => {
       if (!cd) return;
       if (els.countdownLabel) els.countdownLabel.value = cd.label || '';
@@ -3648,7 +3660,7 @@
   };
 
   function changeAccent(accentKey) {
-    const root = document.documentElement;
+    const root = document.body;
     const select = document.getElementById('accentSelect');
     if (select && accentKey !== undefined) select.value = accentKey || '';
 
@@ -4097,6 +4109,7 @@
   function saveWeatherCity(city) {
     localStorage.setItem('bestieWeatherCity', city);
     fetchWeatherForCity(city);
+    if (socket && joined) socket.emit('update-weather', city);
   }
 
   function fetchWeatherForCity(city) {
@@ -5136,17 +5149,6 @@
       console.error('Push setup error:', err);
       showToast('Could not set up notifications');
     }
-  }
-
-  function urlBase64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-    for (let i = 0; i < rawData.length; ++i) {
-      outputArray[i] = rawData.charCodeAt(i);
-    }
-    return outputArray;
   }
 
   function confirmClearHistory() {
