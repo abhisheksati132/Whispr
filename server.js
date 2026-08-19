@@ -3,6 +3,7 @@ const express  = require('express');
 const http     = require('http');
 const { Server } = require('socket.io');
 const path     = require('path');
+const fs       = require('fs');
 const crypto   = require('crypto');
 const webpush  = require('web-push');
 const jwt      = require('jsonwebtoken');
@@ -65,7 +66,7 @@ app.use((_req, res, next) => {
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   next();
 });
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '40mb' }));
 app.use(express.static(path.join(__dirname, 'public'), { index: 'index.html' }));
 app.get('/uploads/:filename', async (req, res) => {
   const filename = path.basename(req.params.filename);
@@ -82,7 +83,7 @@ app.get('/uploads/:filename', async (req, res) => {
       return res.send(media.data);
     }
   } catch (e) {
-    console.error('Error fetching media from MongoDB:', e);
+    console.error('Error fetching media from Supabase:', e);
   }
   res.status(404).send('File not found');
 });
@@ -133,6 +134,23 @@ app.get('/api/link-preview', async (req, res) => {
       }
     } catch {
       return res.status(400).json({ error: 'Malformed URL' });
+    }
+
+    const host = targetUrl.hostname.toLowerCase().replace(/\.$/, '');
+    const isIP = (ip) => {
+      const parts = ip.split('.').map(Number);
+      return parts.length === 4 && parts.every(p => Number.isInteger(p) && p >= 0 && p <= 255);
+    };
+    const ip = isIP(host) ? host : null;
+    const privateIP = ip && (
+      ip === '127.0.0.1' || ip === '0.0.0.0' ||
+      /^10\./.test(ip) || /^192\.168\./.test(ip) || /^169\.254\./.test(ip) || /^172\.(1[6-9]|2[0-9]|3[01])\./.test(ip)
+    );
+    if (
+      host === 'localhost' || host === '::1' || host.endsWith('.local') || host.endsWith('.localhost') ||
+      privateIP || (!ip && /^[0-9]/.test(host) && host.includes('.'))
+    ) {
+      return res.status(400).json({ error: 'Disallowed host' });
     }
 
     const cacheKey = targetUrl.href;
@@ -218,42 +236,6 @@ app.post('/api/push-unsubscribe', async (req, res) => {
     await mStore.deletePushSub(endpoint);
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// ── Link preview ──────────────────────────────────────────────────────────────
-app.get('/api/link-preview', async (req, res) => {
-  const targetUrl = req.query.url;
-  if (!targetUrl) return res.status(400).json({ error: 'Missing url' });
-  let timer;
-  try {
-    const parsedUrl = new URL(targetUrl);
-    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') return res.status(400).json({ error: 'Invalid protocol' });
-    const host = parsedUrl.hostname.toLowerCase();
-    if (
-      host === 'localhost' || host === '127.0.0.1' || host === '::1' || host.endsWith('.local') ||
-      /^10\./.test(host) || /^172\.(1[6-9]|2[0-9]|3[01])\./.test(host) || /^192\.168\./.test(host) || /^169\.254\./.test(host)
-    ) {
-      return res.status(400).json({ error: 'Disallowed host' });
-    }
-    const ctrl = new AbortController();
-    timer = setTimeout(() => ctrl.abort(), 3000);
-    const response = await fetch(targetUrl, { signal: ctrl.signal, redirect: 'manual', headers: { 'User-Agent': 'BestieChatBot/1.0' } });
-    if (!response.ok) return res.status(response.status).json({ error: 'Failed to fetch preview' });
-    const html = await response.text();
-    const getMeta = (n) => {
-      const m = html.match(new RegExp(`<meta[^>]+(?:property|name)=["']${n}["'][^>]+content=["']([^"']+)["']`, 'i'));
-      if (m) return m[1];
-      const m2 = html.match(new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']${n}["']`, 'i'));
-      return m2 ? m2[1] : '';
-    };
-    let title = getMeta('og:title') || getMeta('twitter:title');
-    if (!title) { const tm = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i); title = tm ? tm[1].trim() : ''; }
-    res.json({ title: title || parsedUrl.hostname, description: getMeta('og:description') || getMeta('description') || '', image: getMeta('og:image') || getMeta('twitter:image') || '', url: targetUrl });
-  } catch (err) {
-    res.status(500).json({ error: 'Could not generate link preview' });
-  } finally {
-    if (timer) clearTimeout(timer);
-  }
 });
 
 // ── File upload ───────────────────────────────────────────────────────────────
@@ -441,6 +423,7 @@ io.on('connection', (socket) => {
 
       const streak = mStore.recordActivity(username);
       mStore.setLastSeen(username);
+      socket.to(currentRoom).emit('streak-update', streak);
 
       const roomMeta = await mStore.getRoomMeta(currentRoom);
       const history = await mStore.getMessages(currentRoom, 100);

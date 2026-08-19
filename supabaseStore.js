@@ -505,11 +505,13 @@ async function getProfile(username) {
 }
 
 async function updateProfile(username, updates) {
-  const current = await getProfile(username);
+  const clean = String(username || '').toLowerCase();
+  const current = await getProfile(clean);
   const updated = { ...current, ...updates };
-  profileCache.set(username, updated);
-  if (memUsers.has(username.toLowerCase())) {
-    Object.assign(memUsers.get(username.toLowerCase()), updates);
+  profileCache.set(clean, updated);
+  profileCache.delete(username);
+  if (memUsers.has(clean)) {
+    Object.assign(memUsers.get(clean), updates);
   }
   if (isDbReady()) {
     try {
@@ -518,7 +520,7 @@ async function updateProfile(username, updates) {
       if (updates.color !== undefined)     dbUpdates.color = updates.color;
       if (updates.statusBio !== undefined) dbUpdates.status_bio = updates.statusBio;
       if (updates.nickname !== undefined)  dbUpdates.nickname = updates.nickname;
-      await supabase.from('users').update(dbUpdates).eq('username', username.toLowerCase());
+      await supabase.from('users').update(dbUpdates).eq('username', clean);
     } catch (_) {}
   }
   return updated;
@@ -599,11 +601,11 @@ function recordActivity(username) {
   const today = new Date().toISOString().slice(0, 10);
   const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
   const entry = activityCache.get(username) || { date: null, streak: 0 };
-  if (entry.date === today) return entry.streak;
+  if (entry.date === today) return { days: entry.streak, lastDate: entry.date };
   entry.streak = (entry.date === yesterday) ? entry.streak + 1 : 1;
   entry.date = today;
   activityCache.set(username, entry);
-  return entry.streak;
+  return { days: entry.streak, lastDate: entry.date };
 }
 
 // ── Feelings ─────────────────────────────────────────────────────────────────
@@ -836,7 +838,7 @@ async function getStarredMessages(roomName, username) {
       .select('*')
       .eq('room', roomName)
       .eq('deleted', false)
-      .contains('starred_by', JSON.stringify([username]));
+      .contains('starred_by', [username]);
 
     return (data || []).map(dbMsgToJs);
   } catch (_) {

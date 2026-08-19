@@ -298,17 +298,12 @@ function recordActivity(username) {
   const today = new Date().toISOString().slice(0, 10);
   const streak = data.streak;
   if (streak.lastDate !== today) {
-    if (streak.lastDate && streak.usersToday.length >= 2) {
+    const bothActiveYesterday = streak.lastDate && streak.usersToday.length >= 2;
+    if (bothActiveYesterday) {
       const yesterday = new Date(streak.lastDate);
       const expected = new Date(yesterday);
       expected.setDate(expected.getDate() + 1);
-      if (expected.toISOString().slice(0, 10) === today) {
-        streak.days += 1;
-      } else {
-        streak.days = 1;
-      }
-    } else if (!streak.lastDate) {
-      streak.days = 1;
+      streak.days = expected.toISOString().slice(0, 10) === today ? streak.days + 1 : 1;
     } else {
       streak.days = 1;
     }
@@ -386,7 +381,7 @@ function resetForTests() {
 }
 
 const DAILY_QUESTIONS = [
-  'What made you smile today? smile',
+  'What made you smile today?',
   'If you could teleport anywhere right now, where would you go?',
   'What song has been stuck in your head?',
   "What's something you're looking forward to this week?",
