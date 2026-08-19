@@ -266,10 +266,11 @@ app.post('/api/upload', (req, res) => {
   try {
     const { data, mime, kind, name } = req.body;
     if (!data || !mime) return res.status(400).json({ error: 'Missing data' });
+    const cleanMime = String(mime).split(';')[0].trim().toLowerCase();
     const allowed = [
-      'image/jpeg','image/png','image/gif','image/webp',
-      'audio/webm','audio/ogg','audio/mp3','audio/wav','audio/mpeg',
-      'video/mp4','video/webm','video/quicktime',
+      'image/jpeg','image/png','image/gif','image/webp','image/svg+xml','image/heic','image/heif',
+      'audio/webm','audio/ogg','audio/mp3','audio/wav','audio/mpeg','audio/mp4','audio/aac','audio/m4a','audio/x-m4a',
+      'video/mp4','video/webm','video/quicktime','video/3gpp','video/ogg',
       'application/pdf','application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/vnd.ms-excel',
@@ -277,11 +278,11 @@ app.post('/api/upload', (req, res) => {
       'application/zip','application/x-zip-compressed',
       'text/plain','text/csv'
     ];
-    if (!allowed.includes(mime)) return res.status(400).json({ error: 'Unsupported type' });
+    if (!allowed.includes(cleanMime)) return res.status(400).json({ error: 'Unsupported type: ' + cleanMime });
     const mimeExtMap = {
-      'image/jpeg': 'jpg', 'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp',
-      'audio/webm': 'webm', 'audio/ogg': 'ogg', 'audio/mp3': 'mp3', 'audio/wav': 'wav', 'audio/mpeg': 'mp3',
-      'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov',
+      'image/jpeg': 'jpg', 'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp', 'image/svg+xml': 'svg', 'image/heic': 'heic', 'image/heif': 'heif',
+      'audio/webm': 'webm', 'audio/ogg': 'ogg', 'audio/mp3': 'mp3', 'audio/wav': 'wav', 'audio/mpeg': 'mp3', 'audio/mp4': 'm4a', 'audio/aac': 'aac', 'audio/m4a': 'm4a', 'audio/x-m4a': 'm4a',
+      'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov', 'video/3gpp': '3gp', 'video/ogg': 'ogv',
       'application/pdf': 'pdf', 'application/msword': 'doc',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
       'application/vnd.ms-excel': 'xls',
@@ -289,14 +290,14 @@ app.post('/api/upload', (req, res) => {
       'application/zip': 'zip', 'application/x-zip-compressed': 'zip',
       'text/plain': 'txt', 'text/csv': 'csv'
     };
-    const ext = mimeExtMap[mime] || (mime.split('/')[1] ? mime.split('/')[1].replace('jpeg','jpg') : 'bin');
+    const ext = mimeExtMap[cleanMime] || (cleanMime.split('/')[1] ? cleanMime.split('/')[1].replace('jpeg','jpg') : 'bin');
     const base64Data = (data.includes(',') ? data.split(',')[1] : data).trim();
     if (!/^[A-Za-z0-9+/=]+$/.test(base64Data)) return res.status(400).json({ error: 'Invalid base64' });
     const buffer = Buffer.from(base64Data, 'base64');
-    if (buffer.length > 15 * 1024 * 1024) return res.status(413).json({ error: 'File too large (max 15MB)' });
+    if (buffer.length > 25 * 1024 * 1024) return res.status(413).json({ error: 'File too large (max 25MB)' });
     const url = mStore.saveUpload(buffer, ext);
     res.json({ url, kind, name: name || 'file', size: buffer.length });
-  } catch (err) { res.status(500).json({ error: 'Upload failed' }); }
+  } catch (err) { console.error('Upload error:', err); res.status(500).json({ error: 'Upload failed' }); }
 });
 
 // ── GIF search endpoint (Tenor + Giphy with CORS fallback) ────────────────────

@@ -1762,14 +1762,26 @@
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       recordChunks = [];
       const recorderOpts = { audioBitsPerSecond: 128000 };
+      let chosenMime = '';
       if (typeof MediaRecorder.isTypeSupported === 'function') {
         if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-          recorderOpts.mimeType = 'audio/webm;codecs=opus';
+          chosenMime = 'audio/webm;codecs=opus';
+        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+          chosenMime = 'audio/mp4';
         } else if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
-          recorderOpts.mimeType = 'audio/ogg;codecs=opus';
+          chosenMime = 'audio/ogg;codecs=opus';
+        } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+          chosenMime = 'audio/webm';
         }
       }
-      mediaRecorder = new MediaRecorder(stream, recorderOpts);
+      if (chosenMime) recorderOpts.mimeType = chosenMime;
+
+      try {
+        mediaRecorder = new MediaRecorder(stream, recorderOpts);
+      } catch (_) {
+        mediaRecorder = new MediaRecorder(stream);
+      }
+
       recordStartTime = Date.now();
       
       if (els.recordingWaveformBar) {
@@ -1793,22 +1805,28 @@
         if (!recordChunks.length) return;
 
         const duration = Math.max(1, Math.round((Date.now() - recordStartTime) / 1000));
-        const mimeType = recorderOpts.mimeType || 'audio/webm';
+        const mimeType = (recordChunks[0] && recordChunks[0].type) || chosenMime || 'audio/webm';
         const blob = new Blob(recordChunks, { type: mimeType });
         const reader = new FileReader();
         reader.onload = async () => {
           try {
+            showToast('Sending voice note… 🎙️');
             const { url } = await uploadFile(reader.result, mimeType, 'voice');
             socket.emit('message', { type: 'voice', url, duration, replyTo: replyingTo });
             cancelReply();
             playSound('send');
-          } catch { renderSystem('Could not send voice note'); }
+          } catch (err) {
+            console.error('Voice send error:', err);
+            renderSystem('Could not send voice note');
+            showToast('Voice note failed to upload');
+          }
         };
         reader.readAsDataURL(blob);
       };
 
       mediaRecorder.start();
       if (btn) btn.classList.add('recording');
+      showToast('🎙️ Recording voice note… Tap again to send');
       setTimeout(() => {
         if (mediaRecorder && mediaRecorder.state === 'recording') {
           mediaRecorder.stop();
@@ -1818,7 +1836,7 @@
     } catch (err) {
       console.warn('Microphone access failed:', err);
       renderSystem('🔒 Microphone access needed for voice notes');
-      showToast('🔒 Mic blocked! Click lock icon 🔒 next to URL in address bar to allow mic.');
+      showToast('🔒 Mic blocked! Allow mic access in browser settings to send voice notes.');
     }
   }
 
@@ -3579,14 +3597,11 @@
       toggleRecord();
       return;
     }
-    if (inputSendMode === 'voice') {
-      inputSendMode = 'video';
-      showToast('⭕ Switched to Video Note (tap to switch / hold to record)');
+    if (inputSendMode === 'video') {
+      startVideoNote();
     } else {
-      inputSendMode = 'voice';
-      showToast('🎙️ Switched to Voice Note (tap to switch / hold to record)');
+      toggleRecord();
     }
-    toggleSendMicIcons();
   }
 
   function toggleAttachMenu() {
@@ -4957,15 +4972,6 @@
     const input = document.getElementById('dqAnswerInput');
     if (!card || !textEl) return;
 
-    const today = new Date().toISOString().slice(0, 10);
-    const dismissedDate = localStorage.getItem('dismissedDailyQuestionDate');
-
-    // If manually dismissed today and not freshly revealed, keep hidden
-    if (dismissedDate === today && !state.revealed) {
-      card.style.display = 'none';
-      return;
-    }
-
     textEl.textContent = state.question || 'What made you smile today?';
     card.style.display = 'block';
     card.style.opacity = '1';
@@ -4996,30 +5002,6 @@
       if (waitingArea) waitingArea.style.display = 'none';
       if (revealedArea) revealedArea.style.display = 'none';
       if (inputArea) inputArea.style.display = 'flex';
-
-      // Auto-vanish if not used within 25 seconds
-      if (dailyQuestionAutoDismissTimer) clearTimeout(dailyQuestionAutoDismissTimer);
-      dailyQuestionAutoDismissTimer = setTimeout(() => {
-        if (input && !input.value.trim() && document.activeElement !== input) {
-          dismissDailyQuestion(false);
-        }
-      }, 25000);
-
-      // Cancel auto-dismiss when typing or focusing
-      if (input) {
-        input.onfocus = () => {
-          if (dailyQuestionAutoDismissTimer) {
-            clearTimeout(dailyQuestionAutoDismissTimer);
-            dailyQuestionAutoDismissTimer = null;
-          }
-        };
-        input.oninput = () => {
-          if (dailyQuestionAutoDismissTimer) {
-            clearTimeout(dailyQuestionAutoDismissTimer);
-            dailyQuestionAutoDismissTimer = null;
-          }
-        };
-      }
     }
   }
 
@@ -5032,10 +5014,19 @@
     showToast('🔒 Answer locked! Waiting for Bestie…');
   }
 
-  function fetchDailyQuestion() {
+  async function fetchDailyQuestion() {
     if (socket && joined) {
       socket.emit('get-daily-answer-state');
     }
+    try {
+      const res = await fetch('/api/daily-question');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.question && !currentDailyQuestionState) {
+          renderDailyQuestionCard({ question: data.question, answers: {}, revealed: false });
+        }
+      }
+    } catch (_) {}
   }
 
   function updateScoreboardDisplay(scores) {
@@ -5225,8 +5216,9 @@
   }
 
   function openProfile() {
+    hideModal('extrasPanel');
     showModal('profileModal');
-    const profile = getProfile(myName);
+    const profile = getProfile(myName) || {};
     const avatarDisplay  = document.getElementById('profileAvatarDisplay');
     const statusInput    = document.getElementById('profileStatusInput');
     const nicknameInput  = document.getElementById('profileNicknameInput');
@@ -5235,7 +5227,7 @@
     if (avatarDisplay) avatarDisplay.textContent = profile.avatar || '✨';
     if (statusInput)   statusInput.value = profile.statusBio || '';
     if (nicknameInput) nicknameInput.value = localStorage.getItem('bestieChatNickname') || '';
-    if (statMsgs)      statMsgs.textContent = allMessagesCached.filter(m => m.user === myName).length;
+    if (statMsgs)      statMsgs.textContent = Array.isArray(allMessagesCached) ? allMessagesCached.filter(m => m.user === myName).length : 0;
     if (statStreak)    statStreak.textContent = currentStreakDays || 1;
     updatePrefsProfileDisplay();
     updateSidebarMyProfile();
@@ -5826,12 +5818,19 @@
       modal.style.display = 'flex';
 
       videoNoteChunks = [];
-      let mimeType = 'video/webm';
+      let mimeType = '';
       if (typeof MediaRecorder.isTypeSupported === 'function') {
         if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) mimeType = 'video/webm;codecs=vp8,opus';
         else if (MediaRecorder.isTypeSupported('video/mp4')) mimeType = 'video/mp4';
+        else if (MediaRecorder.isTypeSupported('video/webm')) mimeType = 'video/webm';
       }
-      videoNoteRecorder = new MediaRecorder(videoNoteStream, { mimeType });
+
+      try {
+        videoNoteRecorder = mimeType ? new MediaRecorder(videoNoteStream, { mimeType }) : new MediaRecorder(videoNoteStream);
+      } catch (_) {
+        videoNoteRecorder = new MediaRecorder(videoNoteStream);
+      }
+
       videoNoteRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) videoNoteChunks.push(e.data); };
       videoNoteRecorder.onstop = async () => {
         if (videoNoteStream) {
@@ -5843,19 +5842,23 @@
         if (!videoNoteChunks.length) return;
 
         const dur = Math.max(1, Math.round((Date.now() - videoNoteStartTime) / 1000));
-        const blob = new Blob(videoNoteChunks, { type: mimeType });
+        const finalMime = (videoNoteChunks[0] && videoNoteChunks[0].type) || mimeType || 'video/mp4';
+        const blob = new Blob(videoNoteChunks, { type: finalMime });
         const reader = new FileReader();
         reader.onload = async () => {
           try {
             showToast('Sending circular video note… 🚀');
-            const { url } = await uploadFile(reader.result, mimeType, 'video');
+            const { url } = await uploadFile(reader.result, finalMime, 'video');
             socket.emit('message', { type: 'video-note', url, duration: dur, replyTo: replyingTo });
             cancelReply();
             playSound('send');
           } catch (err) {
+            console.error('Video note send error:', err);
             showToast('Failed to send video note');
           }
         };
+        reader.readAsDataURL(blob);
+      };
         reader.readAsDataURL(blob);
       };
 
