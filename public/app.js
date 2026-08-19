@@ -1290,6 +1290,25 @@
     return match ? match[0] : null;
   }
 
+  function autoExpandMsgInput() {
+    if (!els.msgInput) return;
+    els.msgInput.style.height = '24px';
+    els.msgInput.style.height = Math.min(els.msgInput.scrollHeight, 120) + 'px';
+    saveDraft();
+  }
+
+  function saveDraft() {
+    if (!myRoom || !els.msgInput) return;
+    localStorage.setItem(`bestieDraft_${myRoom}`, els.msgInput.value);
+  }
+
+  function restoreDraft() {
+    if (!myRoom || !els.msgInput) return;
+    const draft = localStorage.getItem(`bestieDraft_${myRoom}`) || '';
+    els.msgInput.value = draft;
+    if (draft) autoExpandMsgInput();
+  }
+
   function sendMessage() {
     const rawText = els.msgInput.value.trim();
     if (!rawText) {
@@ -1306,6 +1325,8 @@
       const encEdit = encryptE2EE(rawText);
       socket.emit('edit-message', { messageId: editingMessageId, text: encEdit });
       els.msgInput.value     = '';
+      autoExpandMsgInput();
+      localStorage.removeItem(`bestieDraft_${myRoom}`);
       editingMessageId       = null;
       cancelReply();
       toggleSendMicIcons();
@@ -1324,6 +1345,8 @@
       
       socket.emit('message', payload);
       els.msgInput.value = '';
+      autoExpandMsgInput();
+      localStorage.removeItem(`bestieDraft_${myRoom}`);
       cancelReply();
       toggleSendMicIcons();
       playSound('send');
@@ -1678,22 +1701,28 @@
     ).join('');
   }
 
-  async function searchGifs() {
-    const q = (els.gifSearch.value || '').trim().toLowerCase();
-    if (!q) { renderGifGrid(STICKERS); return; }
+  let gifSearchDebounce = null;
 
-    // Try Giphy API first
-    if (giphyApiKey) {
+  async function searchGifs() {
+    clearTimeout(gifSearchDebounce);
+    gifSearchDebounce = setTimeout(async () => {
+      const q = (els.gifSearch && els.gifSearch.value ? els.gifSearch.value.trim() : '');
       try {
-        const res  = await fetch(`https://api.giphy.com/v1/gifs/search?q=${encodeURIComponent(q)}&api_key=${giphyApiKey}&limit=12&rating=g`);
-        const data = await res.json();
-        const results = (data.data || []).map((r) => ({ url: r.images.fixed_height_small.url, tags: [q] }));
-        if (results.length) { renderGifGrid(results); return; }
-      } catch (_) { /* fall through */ }
-    }
-    // Local fallback
-    const filtered = STICKERS.filter((s) => s.tags.some((t) => t.includes(q)));
-    renderGifGrid(filtered.length ? filtered : STICKERS);
+        const endpoint = q ? `/api/gifs?q=${encodeURIComponent(q)}` : '/api/gifs?q=cute%20love';
+        const res = await fetch(endpoint);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.results && data.results.length) {
+            renderGifGrid(data.results);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('GIF search error:', err);
+      }
+      const filtered = STICKERS.filter((s) => !q || s.tags.some((t) => t.includes(q.toLowerCase())));
+      renderGifGrid(filtered.length ? filtered : STICKERS);
+    }, 200);
   }
 
   function sendSticker(url) {
@@ -1793,14 +1822,23 @@
     if (btn) btn.classList.toggle('active', searchActive);
   }
 
+  let searchMatches = [];
+  let currentSearchMatchIndex = -1;
+
   function performSearch() {
     const q = (els.searchInput ? els.searchInput.value : '').toLowerCase().trim();
+    const matchCountEl = document.getElementById('searchMatchCount');
+    const prevBtn = document.getElementById('searchPrevBtn');
+    const nextBtn = document.getElementById('searchNextBtn');
+    
+    searchMatches = [];
+    currentSearchMatchIndex = -1;
+
     els.messages.querySelectorAll('.msg-wrap').forEach((wrap) => {
       const msgEl = wrap.querySelector('.msg');
       if (!msgEl) return;
       if (!q) {
         wrap.style.display = '';
-        // Remove any existing highlights
         msgEl.querySelectorAll('mark.search-highlight').forEach((m) => {
           m.outerHTML = m.textContent;
         });
@@ -1817,13 +1855,63 @@
           div.innerHTML = div.innerHTML.replace(re, (m) => `<mark class="search-highlight">${m}</mark>`);
         }
       });
-      wrap.style.display = (found || (msgEl.textContent || '').toLowerCase().includes(q)) ? '' : 'none';
+      if (found || (msgEl.textContent || '').toLowerCase().includes(q)) {
+        wrap.style.display = '';
+        searchMatches.push(wrap);
+      } else {
+        wrap.style.display = 'none';
+      }
     });
+
+    if (!q || !searchMatches.length) {
+      if (matchCountEl) matchCountEl.style.display = 'none';
+      if (prevBtn) prevBtn.style.display = 'none';
+      if (nextBtn) nextBtn.style.display = 'none';
+    } else {
+      if (matchCountEl) {
+        matchCountEl.textContent = `${searchMatches.length} match${searchMatches.length === 1 ? '' : 'es'}`;
+        matchCountEl.style.display = 'inline';
+      }
+      if (prevBtn) prevBtn.style.display = 'inline-block';
+      if (nextBtn) nextBtn.style.display = 'inline-block';
+      navigateSearch(1);
+    }
+  }
+
+  function navigateSearch(direction) {
+    if (!searchMatches.length) return;
+    currentSearchMatchIndex = (currentSearchMatchIndex + direction + searchMatches.length) % searchMatches.length;
+    const targetWrap = searchMatches[currentSearchMatchIndex];
+    if (targetWrap) {
+      targetWrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      targetWrap.classList.remove('nudge-shake');
+      void targetWrap.offsetWidth;
+      targetWrap.classList.add('nudge-shake');
+      const matchCountEl = document.getElementById('searchMatchCount');
+      if (matchCountEl) {
+        matchCountEl.textContent = `${currentSearchMatchIndex + 1} / ${searchMatches.length}`;
+      }
+    }
   }
 
   function clearSearch() {
     if (els.searchInput) els.searchInput.value = '';
-    if (els.messages) els.messages.querySelectorAll('.msg-wrap').forEach((w) => { w.style.display = ''; });
+    searchMatches = [];
+    currentSearchMatchIndex = -1;
+    const matchCountEl = document.getElementById('searchMatchCount');
+    const prevBtn = document.getElementById('searchPrevBtn');
+    const nextBtn = document.getElementById('searchNextBtn');
+    if (matchCountEl) matchCountEl.style.display = 'none';
+    if (prevBtn) prevBtn.style.display = 'none';
+    if (nextBtn) nextBtn.style.display = 'none';
+    if (els.messages) {
+      els.messages.querySelectorAll('.msg-wrap').forEach((w) => {
+        w.style.display = '';
+        w.querySelectorAll('mark.search-highlight').forEach((m) => {
+          m.outerHTML = m.textContent;
+        });
+      });
+    }
     if (els.searchBar) els.searchBar.classList.remove('open');
     searchActive = false;
     const btn = document.getElementById('searchToggleBtn');
@@ -2229,6 +2317,7 @@
       lastDateLabel = '';
       allMessagesCached.forEach((m) => renderMessage(m, true));
       if (els.msgInput) els.msgInput.focus();
+      restoreDraft();
       startIntervals();
       clearUnread();
       setTimeout(confetti, 300);
@@ -4104,9 +4193,15 @@
       if (els.nameInput) els.nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { if (els.passwordInput) els.passwordInput.focus(); else joinChat(); } });
       if (els.passwordInput) els.passwordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') joinChat(); });
       if (els.msgInput) {
-        els.msgInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) sendMessage(); });
+        els.msgInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+          }
+        });
         els.msgInput.addEventListener('input', () => {
           if (joined && socket) socket.emit('typing');
+          autoExpandMsgInput();
           const len = els.msgInput.value.length;
           if (els.charCount) els.charCount.textContent = len > 1800 ? `${len}/2000` : '';
           toggleSendMicIcons();
@@ -5208,7 +5303,7 @@
     toggleExtras, toggleFeelings, setFeeling, sendPulse,
     toggleSound, saveMood, saveJokes, saveCountdown, saveNickname,
     toggleGifPanel, searchGifs, sendSticker,
-    toggleSearch, clearSearch,
+    toggleSearch, clearSearch, navigateSearch,
     openGallery, closeGallery, openLightbox, closeLightbox,
     openDoodle, closeDoodle, clearDoodle, sendDoodle,
     setDoodleColor, setDoodleTool, setDoodleSize,

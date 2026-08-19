@@ -1643,6 +1643,29 @@ header {
   padding: 8px 12px;
   color: var(--text);
 }
+.search-nav-btn {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  color: var(--text2);
+  border-radius: 6px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.search-nav-btn:hover {
+  background: var(--surface2);
+  color: var(--accent);
+}
+#msgInput {
+  line-height: 1.4;
+  font-family: inherit;
+  font-size: 15px;
+}
 
 /* ═══════════════════ 18. PINNED BANNER ═══════════════════ */
 #pinnedBanner {

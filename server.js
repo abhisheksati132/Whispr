@@ -253,6 +253,60 @@ app.post('/api/upload', (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Upload failed' }); }
 });
 
+// ── GIF search endpoint (Tenor + Giphy with CORS fallback) ────────────────────
+app.get('/api/gifs', async (req, res) => {
+  const query = (req.query.q || 'cute love').trim();
+  const limit = Math.min(24, Math.max(1, parseInt(req.query.limit || '16', 10)));
+  
+  // 1. Giphy API Key (if provided in env)
+  const giphyKey = process.env.GIPHY_API_KEY;
+  if (giphyKey) {
+    try {
+      const response = await fetch(`https://api.giphy.com/v1/gifs/search?api_key=${giphyKey}&q=${encodeURIComponent(query)}&limit=${limit}&rating=g`);
+      if (response.ok) {
+        const data = await response.json();
+        const results = (data.data || []).map(g => ({
+          id: g.id,
+          url: g.images?.fixed_height?.url || g.images?.downsized?.url || g.images?.original?.url,
+          title: g.title || query
+        })).filter(g => Boolean(g.url));
+        if (results.length) return res.json({ results });
+      }
+    } catch (e) {
+      console.warn('Giphy search error:', e);
+    }
+  }
+
+  // 2. Tenor Public Search Fallback
+  try {
+    const tenorRes = await fetch(`https://g.tenor.com/v1/search?q=${encodeURIComponent(query)}&key=LIVDSRZULELA&limit=${limit}`);
+    if (tenorRes.ok) {
+      const data = await tenorRes.json();
+      const results = (data.results || []).map(r => ({
+        id: r.id,
+        url: r.media?.[0]?.gif?.url || r.media?.[0]?.tinygif?.url,
+        title: r.title || query
+      })).filter(g => Boolean(g.url));
+      if (results.length) return res.json({ results });
+    }
+  } catch (e) {
+    console.warn('Tenor fallback error:', e);
+  }
+
+  // 3. Guaranteed High-Quality Curated Fallback
+  const CURATED_GIFS = [
+    { url: 'https://media1.tenor.com/m/3k9413J7RkIAAAAC/cat-love.gif', title: 'cat love' },
+    { url: 'https://media1.tenor.com/m/n387vI0y4cAAAAAC/love-hug.gif', title: 'warm hug' },
+    { url: 'https://media1.tenor.com/m/w5d3kS7R8KAAAAAC/cute-dance.gif', title: 'happy dance' },
+    { url: 'https://media1.tenor.com/m/VFFTr7xZ19YAAAAC/milk-and-mocha-hug.gif', title: 'bear hug' },
+    { url: 'https://media1.tenor.com/m/Z62Z7mP7JPAAAAAC/heart-cute.gif', title: 'heart sparkle' },
+    { url: 'https://media1.tenor.com/m/7aA4-f2X97AAAAAC/cat-cuddle.gif', title: 'cuddle' },
+    { url: 'https://media1.tenor.com/m/HhM9qI72k_AAAAAC/bubu-dudu-kiss.gif', title: 'sweet kiss' },
+    { url: 'https://media1.tenor.com/m/0vLhGjBq5v8AAAAC/excited-happy.gif', title: 'excited' }
+  ];
+  res.json({ results: CURATED_GIFS });
+});
+
 // ── Online users in-memory ────────────────────────────────────────────────────
 const rooms = new Map(); // room → Map<socketId, {name, profile}>
 const roomPictionaryState = new Map();
