@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles.css?v=12013" />
+  <link rel="stylesheet" href="/styles.css?v=12014" />
   <link rel="stylesheet" href="/clay.css?v=9" />
 </head>
 <body>
@@ -636,30 +636,87 @@
   </div>
 </div>
 
-<!-- Call Overlay -->
-<div id="callOverlay" style="display:none">
-  <div class="call-card">
-    <div class="call-user-info">
+<!-- Modern Full-Screen Calling Suite -->
+<div id="callOverlay" class="call-overlay" style="display:none">
+  <!-- Top Header Bar -->
+  <div class="call-top-bar">
+    <button class="call-top-btn" onclick="BestieChat.minimizeCall()" title="Minimize Call">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+    </button>
+    <div class="call-header-center">
+      <div class="call-security-badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span>End-to-End Encrypted</span>
+      </div>
+      <div id="callTimer" class="call-timer" style="display:none">00:00</div>
+    </div>
+    <button id="flipCamBtn" class="call-top-btn" onclick="BestieChat.flipCamera()" title="Flip Camera" style="display:none">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+    </button>
+  </div>
+
+  <!-- Audio Center View (Avatar + Waves) -->
+  <div id="callAudioView" class="call-audio-view">
+    <div class="call-avatar-wrapper">
+      <div class="call-avatar-pulse"></div>
+      <div class="call-avatar-pulse delay-1"></div>
       <div id="callAvatar" class="call-avatar">✨</div>
-      <h3 id="callName">Bestie</h3>
-      <div id="callStatusText">Calling…</div>
     </div>
-    <div class="video-grid" id="videoGrid">
-      <video id="remoteVideo" autoplay playsinline></video>
-      <video id="localVideo" autoplay playsinline muted></video>
-    </div>
-    <div class="call-controls">
-      <button id="pipCallBtn" class="call-btn" onclick="BestieChat.minimizeCall()" title="Minimize to Floating Bubble">🗗</button>
-      <button id="muteAudioBtn" class="call-btn" onclick="BestieChat.toggleMuteAudio()" title="Mute">🎤</button>
-      <button id="toggleCamBtn" class="call-btn" onclick="BestieChat.toggleCamera()" title="Camera">📹</button>
-      <button id="endCallBtn" class="call-btn end-call" onclick="BestieChat.endCall()" title="End">📞</button>
-    </div>
-    <div class="incoming-controls" id="incomingControls" style="display:none">
-      <button class="call-btn accept-call" onclick="BestieChat.acceptCall()">📞 Accept</button>
-      <button class="call-btn decline-call" onclick="BestieChat.endCall()">✕ Decline</button>
+    <h2 id="callName" class="call-user-name">Bestie</h2>
+    <div id="callStatusText" class="call-status-label">Calling…</div>
+    <div id="callAudioWaves" class="call-audio-waves" style="display:none">
+      <span></span><span></span><span></span><span></span><span></span>
     </div>
   </div>
-</div><!-- end #callOverlay -->
+
+  <!-- Video View Container -->
+  <div id="videoGrid" class="call-video-view" style="display:none">
+    <video id="remoteVideo" class="call-remote-video" autoplay playsinline></video>
+    <div class="call-local-video-card" id="localVideoCard">
+      <video id="localVideo" class="call-local-video" autoplay playsinline muted></video>
+    </div>
+  </div>
+
+  <!-- Active Call Control Dock (During Active Call / Calling) -->
+  <div id="activeCallControls" class="call-bottom-dock">
+    <div class="call-dock-pill">
+      <button id="muteAudioBtn" class="call-action-btn" onclick="BestieChat.toggleMuteAudio()" title="Mute Microphone">
+        <svg class="mic-on-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        <svg class="mic-off-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+      </button>
+
+      <button id="toggleCamBtn" class="call-action-btn" onclick="BestieChat.toggleCamera()" title="Toggle Camera">
+        <svg class="cam-on-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+        <svg class="cam-off-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+      </button>
+
+      <button id="speakerBtn" class="call-action-btn" onclick="BestieChat.toggleSpeaker()" title="Speaker">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+      </button>
+
+      <button id="endCallBtn" class="call-action-btn end-call-btn" onclick="BestieChat.endCall()" title="End Call">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Incoming Call Answer / Decline Sheet (When receiving call) -->
+  <div id="incomingControls" class="call-incoming-sheet" style="display:none">
+    <div class="incoming-action-group">
+      <button class="call-circle-btn decline-call-btn" onclick="BestieChat.endCall()" title="Decline Call">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/></svg>
+      </button>
+      <span class="incoming-label">Decline</span>
+    </div>
+
+    <div class="incoming-action-group">
+      <button class="call-circle-btn accept-call-btn" onclick="BestieChat.acceptCall()" title="Accept Call">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+      </button>
+      <span class="incoming-label">Accept</span>
+    </div>
+  </div>
+</div>
 
 <!-- Floating Picture-in-Picture Call Bubble -->
 <div id="pipCallContainer" style="display:none;" onclick="BestieChat.restoreCall()">
@@ -1149,7 +1206,7 @@
 <!-- Scripts -->
 <script src="/socket.io/socket.io.js"></script>
 <script src="/crypto-js.min.js"></script>
-<script src="/app.js?v=41"></script>
+<script src="/app.js?v=42"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {

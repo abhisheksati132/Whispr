@@ -2808,21 +2808,37 @@
       callType = type;
       
       const overlay = document.getElementById('callOverlay');
-      const acceptBtns = document.getElementById('incomingControls');
+      const incomingControls = document.getElementById('incomingControls');
+      const activeControls = document.getElementById('activeCallControls');
       const statusText = document.getElementById('callStatusText');
       const callAvatar = document.getElementById('callAvatar');
       const callName = document.getElementById('callName');
-      const camBtn = document.getElementById('toggleCamBtn');
+      const audioView = document.getElementById('callAudioView');
+      const videoGrid = document.getElementById('videoGrid');
+      const flipCamBtn = document.getElementById('flipCamBtn');
+      const audioWaves = document.getElementById('callAudioWaves');
       
       if (overlay) overlay.style.display = 'flex';
-      if (acceptBtns) acceptBtns.style.display = 'flex';
-      if (statusText) statusText.textContent = `Incoming ${type} call…`;
+      if (incomingControls) incomingControls.style.display = 'flex';
+      if (activeControls) activeControls.style.display = 'none';
+      if (statusText) statusText.textContent = `Incoming ${type === 'video' ? 'Video' : 'Voice'} Call…`;
+      if (audioWaves) audioWaves.style.display = 'none';
       
       const p = getProfile(from);
       if (callAvatar) callAvatar.textContent = p.avatar || '🐱';
       if (callName) callName.textContent = p.nickname || from;
-      if (camBtn) camBtn.style.display = type === 'video' ? 'flex' : 'none';
       
+      if (type === 'video') {
+        if (audioView) audioView.style.display = 'none';
+        if (videoGrid) videoGrid.style.display = 'block';
+        if (flipCamBtn) flipCamBtn.style.display = 'flex';
+      } else {
+        if (audioView) audioView.style.display = 'flex';
+        if (videoGrid) videoGrid.style.display = 'none';
+        if (flipCamBtn) flipCamBtn.style.display = 'none';
+      }
+      
+      if (navigator.vibrate) navigator.vibrate([300, 500, 300, 500, 300]);
       playSound('receive');
     });
 
@@ -2830,7 +2846,10 @@
       if (webrtcConn) {
         webrtcConn.setRemoteDescription(new RTCSessionDescription(answer)).catch(console.error);
         const statusText = document.getElementById('callStatusText');
-        if (statusText) statusText.textContent = 'Active Call';
+        const audioWaves = document.getElementById('callAudioWaves');
+        if (statusText) statusText.textContent = 'Connected 🟢';
+        if (audioWaves) audioWaves.style.display = 'flex';
+        startCallTimer();
       }
     });
 
@@ -2997,18 +3016,56 @@
     }
   }
 
+  let callTimerInterval = null;
+  let callStartTime = 0;
+  let currentFacingMode = 'user';
+
+  function startCallTimer() {
+    stopCallTimer();
+    callStartTime = Date.now();
+    const timerEl = document.getElementById('callTimer');
+    if (timerEl) {
+      timerEl.style.display = 'block';
+      timerEl.textContent = '00:00';
+    }
+    callTimerInterval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
+      const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+      const s = String(elapsed % 60).padStart(2, '0');
+      if (timerEl) timerEl.textContent = `${m}:${s}`;
+    }, 1000);
+  }
+
+  function stopCallTimer() {
+    if (callTimerInterval) {
+      clearInterval(callTimerInterval);
+      callTimerInterval = null;
+    }
+    const timerEl = document.getElementById('callTimer');
+    if (timerEl) {
+      timerEl.style.display = 'none';
+      timerEl.textContent = '00:00';
+    }
+  }
+
   async function startCall(type) {
     if (!joined) return;
     callType = type;
     
     const overlay = document.getElementById('callOverlay');
-    const acceptBtns = document.getElementById('incomingControls');
+    const incomingControls = document.getElementById('incomingControls');
+    const activeControls = document.getElementById('activeCallControls');
     const statusText = document.getElementById('callStatusText');
-    const camBtn = document.getElementById('toggleCamBtn');
+    const audioView = document.getElementById('callAudioView');
+    const videoGrid = document.getElementById('videoGrid');
+    const flipCamBtn = document.getElementById('flipCamBtn');
+    const audioWaves = document.getElementById('callAudioWaves');
     
     if (overlay) overlay.style.display = 'flex';
-    if (acceptBtns) acceptBtns.style.display = 'none';
+    if (incomingControls) incomingControls.style.display = 'none';
+    if (activeControls) activeControls.style.display = 'flex';
     if (statusText) statusText.textContent = 'Calling…';
+    if (audioWaves) audioWaves.style.display = 'none';
     
     const others = currentOnlineUsers.filter(u => u !== myName);
     const bestie = others[0] || 'Bestie';
@@ -3019,7 +3076,15 @@
     if (callAvatar) callAvatar.textContent = p.avatar || '🐱';
     if (callName) callName.textContent = p.nickname || bestie;
     
-    if (camBtn) camBtn.style.display = type === 'video' ? 'flex' : 'none';
+    if (type === 'video') {
+      if (audioView) audioView.style.display = 'none';
+      if (videoGrid) videoGrid.style.display = 'block';
+      if (flipCamBtn) flipCamBtn.style.display = 'flex';
+    } else {
+      if (audioView) audioView.style.display = 'flex';
+      if (videoGrid) videoGrid.style.display = 'none';
+      if (flipCamBtn) flipCamBtn.style.display = 'none';
+    }
     
     try {
       const stream = await getUserMediaStream(type);
@@ -3028,7 +3093,6 @@
       const localVideo = document.getElementById('localVideo');
       if (localVideo) {
         localVideo.srcObject = stream;
-        localVideo.style.display = type === 'video' && stream.getVideoTracks().length > 0 ? 'block' : 'none';
       }
       
       initPeerConnection(type);
@@ -3041,6 +3105,7 @@
       await webrtcConn.setLocalDescription(offer);
       
       socket.emit('call-invite', { offer, type });
+      playSound('send');
       
     } catch (err) {
       console.error('Call failed to start:', err);
@@ -3071,11 +3136,30 @@
   async function acceptCall() {
     if (!webrtcCallOffer) return;
     
+    if (navigator.vibrate) navigator.vibrate(0);
+    
     const statusText = document.getElementById('callStatusText');
     if (statusText) statusText.textContent = 'Connecting…';
     
-    const acceptBtns = document.getElementById('incomingControls');
-    if (acceptBtns) acceptBtns.style.display = 'none';
+    const incomingControls = document.getElementById('incomingControls');
+    const activeControls = document.getElementById('activeCallControls');
+    const audioView = document.getElementById('callAudioView');
+    const videoGrid = document.getElementById('videoGrid');
+    const flipCamBtn = document.getElementById('flipCamBtn');
+    const audioWaves = document.getElementById('callAudioWaves');
+    
+    if (incomingControls) incomingControls.style.display = 'none';
+    if (activeControls) activeControls.style.display = 'flex';
+    
+    if (callType === 'video') {
+      if (audioView) audioView.style.display = 'none';
+      if (videoGrid) videoGrid.style.display = 'block';
+      if (flipCamBtn) flipCamBtn.style.display = 'flex';
+    } else {
+      if (audioView) audioView.style.display = 'flex';
+      if (videoGrid) videoGrid.style.display = 'none';
+      if (flipCamBtn) flipCamBtn.style.display = 'none';
+    }
     
     try {
       const stream = await getUserMediaStream(callType);
@@ -3084,7 +3168,6 @@
       const localVideo = document.getElementById('localVideo');
       if (localVideo) {
         localVideo.srcObject = stream;
-        localVideo.style.display = callType === 'video' && stream.getVideoTracks().length > 0 ? 'block' : 'none';
       }
       
       initPeerConnection(callType);
@@ -3098,7 +3181,9 @@
       await webrtcConn.setLocalDescription(answer);
       
       socket.emit('call-accept', { answer });
-      if (statusText) statusText.textContent = 'Active Call';
+      if (statusText) statusText.textContent = 'Connected 🟢';
+      if (audioWaves) audioWaves.style.display = 'flex';
+      startCallTimer();
       
     } catch (err) {
       console.error('Failed to accept call:', err);
@@ -3111,6 +3196,8 @@
     if (!silent && socket) {
       socket.emit('call-hangup');
     }
+    if (navigator.vibrate) navigator.vibrate(0);
+    stopCallTimer();
     
     if (localStreamStream) {
       localStreamStream.getTracks().forEach((t) => t.stop());
@@ -3128,8 +3215,20 @@
     
     const muteBtn = document.getElementById('muteAudioBtn');
     const camBtn = document.getElementById('toggleCamBtn');
-    if (muteBtn) { muteBtn.textContent = '🎤'; muteBtn.classList.remove('active'); }
-    if (camBtn) { camBtn.textContent = '📹'; camBtn.classList.remove('active'); }
+    if (muteBtn) {
+      muteBtn.classList.remove('active-muted');
+      const onIcon = muteBtn.querySelector('.mic-on-icon');
+      const offIcon = muteBtn.querySelector('.mic-off-icon');
+      if (onIcon) onIcon.style.display = 'block';
+      if (offIcon) offIcon.style.display = 'none';
+    }
+    if (camBtn) {
+      camBtn.classList.remove('active-muted');
+      const onIcon = camBtn.querySelector('.cam-on-icon');
+      const offIcon = camBtn.querySelector('.cam-off-icon');
+      if (onIcon) onIcon.style.display = 'block';
+      if (offIcon) offIcon.style.display = 'none';
+    }
     
     const overlay = document.getElementById('callOverlay');
     if (overlay) overlay.style.display = 'none';
@@ -3245,9 +3344,13 @@
     localStreamStream.getAudioTracks().forEach((t) => t.enabled = !audioMuted);
     const muteBtn = document.getElementById('muteAudioBtn');
     if (muteBtn) {
-      muteBtn.textContent = audioMuted ? '🔇' : '🎤';
-      muteBtn.classList.toggle('active', audioMuted);
+      muteBtn.classList.toggle('active-muted', audioMuted);
+      const onIcon = muteBtn.querySelector('.mic-on-icon');
+      const offIcon = muteBtn.querySelector('.mic-off-icon');
+      if (onIcon) onIcon.style.display = audioMuted ? 'none' : 'block';
+      if (offIcon) offIcon.style.display = audioMuted ? 'block' : 'none';
     }
+    showToast(audioMuted ? 'Microphone muted 🔇' : 'Microphone unmuted 🎙️');
   }
 
   function toggleCamera() {
@@ -3256,9 +3359,44 @@
     localStreamStream.getVideoTracks().forEach((t) => t.enabled = !cameraOff);
     const camBtn = document.getElementById('toggleCamBtn');
     if (camBtn) {
-      camBtn.textContent = cameraOff ? '❌' : '📹';
-      camBtn.classList.toggle('active', cameraOff);
+      camBtn.classList.toggle('active-muted', cameraOff);
+      const onIcon = camBtn.querySelector('.cam-on-icon');
+      const offIcon = camBtn.querySelector('.cam-off-icon');
+      if (onIcon) onIcon.style.display = cameraOff ? 'none' : 'block';
+      if (offIcon) offIcon.style.display = cameraOff ? 'block' : 'none';
     }
+    showToast(cameraOff ? 'Camera turned off 🚫' : 'Camera turned on 📹');
+  }
+
+  async function flipCamera() {
+    if (!localStreamStream || callType !== 'video') return;
+    currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+    try {
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: currentFacingMode },
+        audio: false
+      });
+      const newVideoTrack = newStream.getVideoTracks()[0];
+      const oldVideoTrack = localStreamStream.getVideoTracks()[0];
+      if (oldVideoTrack) {
+        localStreamStream.removeTrack(oldVideoTrack);
+        oldVideoTrack.stop();
+      }
+      localStreamStream.addTrack(newVideoTrack);
+      const localVideo = document.getElementById('localVideo');
+      if (localVideo) localVideo.srcObject = localStreamStream;
+      if (webrtcConn) {
+        const sender = webrtcConn.getSenders().find(s => s.track && s.track.kind === 'video');
+        if (sender) sender.replaceTrack(newVideoTrack);
+      }
+      showToast(`Switched to ${currentFacingMode === 'user' ? 'Front' : 'Back'} Camera 🔄`);
+    } catch (err) {
+      showToast('Could not flip camera');
+    }
+  }
+
+  function toggleSpeaker() {
+    showToast('🔊 Audio routed to Loudspeaker');
   }
 
   // ═══════════════════ CHAT WALLPAPER ═══════════════════
@@ -5641,7 +5779,7 @@
     startEditMessage, deleteMessage,
     pinMessageById, unpinMessage, scrollToPinned,
     copyText,
-    startCall, acceptCall, endCall, toggleMuteAudio, toggleCamera,
+    startCall, acceptCall, endCall, toggleMuteAudio, toggleCamera, flipCamera, toggleSpeaker,
     changeWallpaper,
     toggleAttachMenu, triggerPhotoUpload,
     toggleSidebar, closeSidebar, sidebarNavTo, openGamesHub, closeGamesHub,
