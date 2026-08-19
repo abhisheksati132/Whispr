@@ -925,4 +925,28 @@ if (require.main === module) {
   server.listen(PORT, '0.0.0.0', () => console.log(`✨ Whispr running on port ${PORT}`));
 }
 
+// ── Process Lifecycle & Graceful Shutdown ─────────────────────────────────────
+process.on('SIGTERM', () => {
+  console.log('🛑 SIGTERM signal received: closing HTTP and WebSocket servers...');
+  server.close(() => {
+    console.log('✅ Server closed cleanly.');
+    process.exit(0);
+  });
+  setTimeout(() => process.exit(0), 4000).unref();
+});
+
+process.on('SIGINT', () => {
+  console.log('🛑 SIGINT signal received: exiting cleanly...');
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 4000).unref();
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('⚠️ Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('❌ Uncaught Exception:', err);
+});
+
 module.exports = { app, server };
