@@ -1,17 +1,10 @@
 'use strict';
-const express  = require('express');
-const router   = express.Router();
-const jwt      = require('jsonwebtoken');
-const mongoose = require('mongoose');
-const Room     = require('../models/Room');
-const Message  = require('../models/Message');
-const User     = require('../models/User');
+const express = require('express');
+const router  = express.Router();
+const jwt     = require('jsonwebtoken');
+const store   = require('../supabaseStore');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-me';
-
-function isMongoReady() {
-  return mongoose.connection.readyState === 1;
-}
 
 function authMw(req, res, next) {
   try {
@@ -27,39 +20,8 @@ function authMw(req, res, next) {
 // GET /api/rooms/list — all rooms the user participates in
 router.get('/list', authMw, async (req, res) => {
   try {
-    if (!isMongoReady()) return res.json([]);
-    const rooms = await Room.find({
-      $or: [{ participants: req.username }, { type: 'public' }]
-    }).sort({ lastActivity: -1 }).limit(30).lean();
-
-    const result = await Promise.all(rooms.map(async (room) => {
-      const lastMsg = await Message.findOne({ room: room.name, deleted: false })
-        .sort({ time: -1 }).lean();
-      const readTime = (room.readBy || {})[req.username] || 0;
-      const unread = await Message.countDocuments({
-        room: room.name, time: { $gt: readTime }, deleted: false
-      });
-      const otherParticipant = room.type === 'dm'
-        ? (room.participants || []).find(p => p !== req.username)
-        : null;
-      return {
-        name: room.name,
-        type: room.type,
-        participants: room.participants,
-        otherParticipant,
-        lastMessage: lastMsg ? {
-          text: lastMsg.text || (lastMsg.type === 'image' ? '📷 Photo' : lastMsg.type === 'voice' ? '🎤 Voice note' : ''),
-          user: lastMsg.user,
-          time: lastMsg.time,
-          type: lastMsg.type
-        } : null,
-        unread,
-        mood: room.mood,
-        lastActivity: room.lastActivity || 0
-      };
-    }));
-
-    res.json(result);
+    const rooms = await store.listUserRooms(req.username);
+    res.json(rooms);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -70,19 +32,8 @@ router.post('/dm', authMw, async (req, res) => {
   try {
     const { targetUsername } = req.body;
     if (!targetUsername) return res.status(400).json({ error: 'targetUsername required' });
-    const targetClean = targetUsername.toLowerCase();
-
-    const sorted = [req.username, targetClean].sort();
-    const dmName = `dm_${sorted.join('_')}`;
-
-    if (isMongoReady()) {
-      let room = await Room.findOne({ name: dmName }).lean();
-      if (!room) {
-        room = await Room.create({ name: dmName, type: 'dm', participants: sorted, lastActivity: Date.now() });
-        room = room.toObject ? room.toObject() : room;
-      }
-    }
-    res.json({ roomName: dmName, participants: sorted });
+    const dm = await store.getOrCreateDMRoom(req.username, targetUsername);
+    res.json(dm);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -93,12 +44,8 @@ router.get('/users/search', authMw, async (req, res) => {
   try {
     const { q } = req.query;
     if (!q || typeof q !== 'string' || q.length < 2) return res.json([]);
-    if (!isMongoReady()) return res.json([]);
-    const safeQ = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const users = await User.find({
-      username: { $regex: safeQ.toLowerCase(), $options: 'i' }
-    }).limit(8).select('username avatar color').lean();
-    res.json(users.filter(u => u.username !== req.username));
+    const users = await store.searchUsers(q, req.username);
+    res.json(users);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -108,11 +55,9 @@ router.get('/users/search', authMw, async (req, res) => {
 router.get('/:roomName/messages', authMw, async (req, res) => {
   try {
     const { roomName } = req.params;
-    if (!isMongoReady()) return res.json([]);
-    const query = { room: roomName };
-    if (req.query.before) query.time = { $lt: parseInt(req.query.before) };
-    const messages = await Message.find(query).sort({ time: -1 }).limit(50).lean();
-    res.json(messages.reverse());
+    const before = req.query.before ? parseInt(req.query.before, 10) : null;
+    const messages = await store.getRoomMessagesPaginated(roomName, before, 50);
+    res.json(messages);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -5,10 +5,10 @@ const { Server } = require('socket.io');
 const path     = require('path');
 const crypto   = require('crypto');
 const webpush  = require('web-push');
-const mongoose = require('mongoose');
 const jwt      = require('jsonwebtoken');
 
-const mStore = require('./mongoStore');
+const mStore = require('./supabaseStore');
+const { isConfigured, checkConnection } = require('./supabaseClient');
 const {
   normalizeName, normalizeRoom, normalizeText, normalizeNickname,
   randomJoinMessage, randomLeaveMessage, randomGamePrompt
@@ -18,37 +18,32 @@ const CHAT_PASSWORD = process.env.CHAT_PASSWORD || '';
 const GIPHY_API_KEY = process.env.GIPHY_API_KEY || '';
 const JWT_SECRET    = process.env.JWT_SECRET || 'fallback-secret-change-me';
 
-// ── MongoDB ──────────────────────────────────────────────────────────────────
+// ── Supabase (PostgreSQL) ────────────────────────────────────────────────────
 (async () => {
-  const uri = process.env.MONGODB_URI;
-  if (uri) {
+  if (isConfigured()) {
     try {
       console.log('\n=============================================');
-      console.log('🔄 Attempting to connect to MongoDB...');
-      console.log('🔗 URI provided: ', uri.substring(0, 20) + '... (hidden for security)');
-      await mongoose.connect(uri, {
-        serverSelectionTimeoutMS: 5000,
-        dbName: process.env.MONGODB_DB_NAME || 'bestiedb'
-      });
-      const db = mongoose.connection.db;
-      const msgCount = await mongoose.model('Message').countDocuments().catch(() => 0);
-      const userCount = await mongoose.model('User').countDocuments().catch(() => 0);
-      console.log(`✅ MongoDB connected successfully! [DB: "${db.databaseName}", Total Messages: ${msgCount}, Registered Users: ${userCount}]`);
+      console.log('🔄 Checking Supabase connection...');
+      const status = await checkConnection();
+      if (status.connected) {
+        console.log('✅ Supabase (PostgreSQL) connected successfully!');
+      } else {
+        console.warn('⚠️  Supabase reachable with notice:', status.reason);
+      }
       console.log('=============================================\n');
     } catch (err) {
       console.error('\n=============================================');
-      console.error('❌ MONGODB CONNECTION FATAL ERROR:');
+      console.error('❌ SUPABASE INITIALIZATION WARNING:');
       console.error(err.message);
       console.error('---------------------------------------------');
-      console.error('👉 If this says "bad auth" -> Your database password in the URL is wrong or has special characters (like @ or #) that need to be URL encoded.');
-      console.error('👉 If this says "querySrv ENOTFOUND" -> The cluster name in your URL is wrong.');
-      console.error('👉 If this says "timeout" -> Your MongoDB Atlas Network Access (IP Whitelist) is NOT set to 0.0.0.0/0. Railway IPs change, so you MUST allow access from anywhere!');
+      console.error('👉 Make sure you have run the supabase_schema.sql script in your Supabase SQL Editor!');
       console.error('=============================================\n');
     }
   } else {
     console.warn('\n=============================================');
-    console.warn('⚠️  NO MONGODB_URI FOUND in environment variables!');
-    console.warn('⚠️  Data will NOT persist across server restarts.');
+    console.warn('⚠️  NO SUPABASE_URL or SUPABASE_KEY found in environment!');
+    console.warn('⚠️  Operating in resilient in-memory mode.');
+    console.warn('⚠️  Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to persist data.');
     console.warn('=============================================\n');
   }
 })();
@@ -103,7 +98,7 @@ require('./routes/rooms')(app);
 
 // ── Health ────────────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => res.send('ok'));
-app.get('/api/health', (_req, res) => res.json({ status: 'ok', uptime: Math.floor(process.uptime()), timestamp: Date.now(), mongo: mongoose.connection.readyState === 1 }));
+app.get('/api/health', (_req, res) => res.json({ status: 'ok', uptime: Math.floor(process.uptime()), timestamp: Date.now(), database: isConfigured() ? 'supabase' : 'memory', supabase: isConfigured() }));
 app.get('/api/config', (_req, res) => res.json({ passwordRequired: Boolean(CHAT_PASSWORD), giphyKey: GIPHY_API_KEY }));
 app.get('/api/daily-question', (_req, res) => res.json({ question: mStore.getDailyQuestion() }));
 app.get('/api/export-chat', async (req, res) => {
@@ -828,12 +823,7 @@ io.on('connection', (socket) => {
       if (!msg || msg.type !== 'poll') return;
       const votes = msg.votes || {};
       votes[username] = option;
-      const MsgDoc = require('./models/Message');
-      if (mongoose.connection.readyState === 1) {
-        await MsgDoc.findOneAndUpdate({ id: messageId }, { $set: { votes } });
-      } else {
-        msg.votes = votes;
-      }
+      await mStore.updatePollVotes(currentRoom, messageId, votes);
       io.to(currentRoom).emit('poll-update', { messageId, votes });
     } catch (err) { console.error('poll-vote error:', err); }
   });
@@ -926,8 +916,8 @@ io.on('connection', (socket) => {
 });
 
 // ── Periodic cleanup ──────────────────────────────────────────────────────────
-setInterval(() => mStore.cleanExpiredRooms().catch(()=>{}), 24 * 60 * 60 * 1000);
-setInterval(() => mStore.cleanDisappearingMessages().catch(()=>{}), 60 * 1000);
+setInterval(() => mStore.cleanExpiredRooms().catch(()=>{}), 24 * 60 * 60 * 1000).unref();
+setInterval(() => mStore.cleanDisappearingMessages().catch(()=>{}), 60 * 1000).unref();
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 if (require.main === module) {
