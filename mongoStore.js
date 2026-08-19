@@ -468,6 +468,16 @@ async function getStarredMessages(roomName, username) {
   return Message.find({ room: roomName, starredBy: username, deleted: { $ne: true } }).lean();
 }
 
+async function getDailyQuestionState(roomName, username) {
+  const localStore = require('./store');
+  return localStore.getDailyQuestionState(roomName, username);
+}
+
+async function saveDailyQuestionAnswer(roomName, username, answer) {
+  const localStore = require('./store');
+  return localStore.saveDailyQuestionAnswer(roomName, username, answer);
+}
+
 function persist() {} // no-op, MongoDB auto-persists
 
 module.exports = {
@@ -479,7 +489,7 @@ module.exports = {
   setLastSeen, getLastSeen, recordActivity,
   setFeeling, getFeelings,
   updateGameScore,
-  getDailyQuestion, getMotd,
+  getDailyQuestion, getDailyQuestionState, saveDailyQuestionAnswer, getMotd,
   getUploadsDir, saveUpload,
   cleanExpiredRooms, cleanDisappearingMessages, persist,
   savePushSub, deletePushSub, getPushSubs,

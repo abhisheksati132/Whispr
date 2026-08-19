@@ -453,6 +453,89 @@ function clearHistory(room) {
   return state;
 }
 
+function getDailyQuestionState(room, username) {
+  const state = getRoom(room);
+  const today = new Date().toISOString().slice(0, 10);
+  if (!state.dailyQuestion || state.dailyQuestion.date !== today) {
+    state.dailyQuestion = {
+      date: today,
+      question: getDailyQuestion(),
+      answers: {},
+      revealed: false
+    };
+    persist();
+  }
+  
+  const dq = state.dailyQuestion;
+  const userCount = Object.keys(dq.answers || {}).length;
+  if (userCount >= 2 && !dq.revealed) {
+    dq.revealed = true;
+    persist();
+  }
+
+  if (!dq.revealed) {
+    const maskedAnswers = {};
+    for (const [user, val] of Object.entries(dq.answers || {})) {
+      if (user === username) {
+        maskedAnswers[user] = val;
+      } else {
+        maskedAnswers[user] = { locked: true, time: val.time };
+      }
+    }
+    return {
+      date: dq.date,
+      question: dq.question,
+      answers: maskedAnswers,
+      revealed: false,
+      answeredUsers: Object.keys(dq.answers || {})
+    };
+  }
+
+  return {
+    date: dq.date,
+    question: dq.question,
+    answers: dq.answers,
+    revealed: true,
+    answeredUsers: Object.keys(dq.answers || {})
+  };
+}
+
+function saveDailyQuestionAnswer(room, username, answer) {
+  const state = getRoom(room);
+  const today = new Date().toISOString().slice(0, 10);
+  if (!state.dailyQuestion || state.dailyQuestion.date !== today) {
+    state.dailyQuestion = {
+      date: today,
+      question: getDailyQuestion(),
+      answers: {},
+      revealed: false
+    };
+  }
+
+  state.dailyQuestion.answers[username] = {
+    text: String(answer || '').trim().slice(0, 500),
+    time: Date.now()
+  };
+
+  const answeredUsers = Object.keys(state.dailyQuestion.answers);
+  if (answeredUsers.length >= 2) {
+    state.dailyQuestion.revealed = true;
+    if (!state.diary) state.diary = [];
+    const combinedDiaryEntry = {
+      date: today,
+      text: `✨ Daily Q: "${state.dailyQuestion.question}"\n` +
+            answeredUsers.map(u => `• ${u}: "${state.dailyQuestion.answers[u].text}"`).join('\n'),
+      image: ''
+    };
+    if (!state.diary.some(d => d.text.includes(state.dailyQuestion.question))) {
+      state.diary.unshift(combinedDiaryEntry);
+    }
+  }
+
+  persist();
+  return getDailyQuestionState(room, username);
+}
+
 function cleanDisappearingMessages() {
   const now = Date.now();
   let changed = false;
@@ -498,6 +581,8 @@ module.exports = {
   markMessageRead,
   starMessage,
   getStarredMessages,
+  getDailyQuestionState,
+  saveDailyQuestionAnswer,
   MOTD_PROMPTS,
   MILESTONES,
   FEELINGS

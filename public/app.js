@@ -430,6 +430,30 @@
       </div>`;
       setTimeout(() => startSecretCountdown(msg.id, msg.time), 0);
 
+    } else if (msg.type === 'time-capsule') {
+      const isUnlocked = Date.now() >= (msg.unlockAt || 0);
+      const unlockDateStr = new Date(msg.unlockAt || Date.now()).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      const decCapsule = decryptE2EE(msg.text);
+
+      if (isUnlocked) {
+        body = `<div class="msg ${mine ? 'me' : 'them'} time-capsule-unlocked">
+          ${metaLine}
+          <div style="font-size:11px; font-weight:700; color:#d97706; margin-bottom:4px;">🎁 TIME CAPSULE UNLOCKED!</div>
+          <div class="msg-text">${escapeHtml(decCapsule)}</div>
+          ${editedTag}
+        </div>`;
+      } else {
+        body = `<div class="msg ${mine ? 'me' : 'them'}">
+          ${metaLine}
+          <div class="time-capsule-card">
+            <div class="time-capsule-icon">🎁</div>
+            <div class="time-capsule-title">Time Capsule Locked</div>
+            <div class="time-capsule-timer" id="capsule-timer-${msg.id}">Opens: ${escapeHtml(unlockDateStr)}</div>
+          </div>
+        </div>`;
+        setTimeout(() => startTimeCapsuleCountdown(msg.id, msg.unlockAt), 0);
+      }
+
     } else if (msg.type === 'poll') {
       const opts = (msg.options || []).map((o) => {
         const voted = msg.votes && msg.votes[myName] === o;
@@ -598,6 +622,34 @@
       if (remaining > 0) requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
+  }
+
+  function startTimeCapsuleCountdown(msgId, unlockAt) {
+    const timerEl = document.getElementById(`capsule-timer-${msgId}`);
+    if (!timerEl) return;
+    const tick = () => {
+      const remaining = (unlockAt || 0) - Date.now();
+      if (remaining <= 0) {
+        refreshMessagesLayout();
+        confetti();
+        playSound('milestone');
+        showToast('🎁 A Time Capsule has unlocked!');
+        return;
+      }
+      if (timerEl && timerEl.isConnected) {
+        const d = Math.floor(remaining / (1000 * 60 * 60 * 24));
+        const h = Math.floor((remaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const m = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((remaining % (1000 * 60)) / 1000);
+        let timeStr = '';
+        if (d > 0) timeStr = `${d}d ${h}h ${m}m`;
+        else if (h > 0) timeStr = `${h}h ${m}m ${s}s`;
+        else timeStr = `${m}m ${s}s`;
+        timerEl.textContent = `Unlocks in: ${timeStr} ⏳`;
+        setTimeout(tick, 1000);
+      }
+    };
+    tick();
   }
 
   function updateReactions(messageId, reactions) {
@@ -1803,23 +1855,156 @@
     }
   }
 
-  // ═══════════════════ GALLERY ═══════════════════
+  // ═══════════════════ CATEGORIZED MEDIA VAULT ═══════════════════
+  let activeVaultTab = 'photos';
+
   function openGallery() {
-    const imgs = allImageMessages;
-    if (!imgs.length) {
-      els.galleryGrid.innerHTML = '';
-      els.galleryEmpty.style.display = 'block';
-    } else {
-      els.galleryEmpty.style.display = 'none';
-      els.galleryGrid.innerHTML = imgs.map((m) =>
-        `<img src="${escapeHtml(m.url)}" loading="lazy" alt="shared photo" onclick="BestieChat.openLightbox('${escapeHtml(m.url)}')" />`
-      ).join('');
-    }
     showModal('galleryModal');
+    const firstTabBtn = document.querySelector('.vault-tab-btn');
+    filterGallery('photos', firstTabBtn);
   }
 
   function closeGallery() {
     hideModal('galleryModal');
+  }
+
+  function filterGallery(type, btn) {
+    activeVaultTab = type || 'photos';
+    if (btn) {
+      document.querySelectorAll('.vault-tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+    const grid = document.getElementById('galleryGrid');
+    const empty = document.getElementById('galleryEmpty');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    let items = [];
+    if (type === 'photos') {
+      items = allMessagesCached.filter(m => !m.deleted && (m.type === 'image' || (m.url && m.url.match(/\.(jpg|jpeg|png|webp|gif)/i))));
+      if (!items.length) {
+        if (empty) empty.style.display = 'block';
+        return;
+      }
+      if (empty) empty.style.display = 'none';
+      grid.style.display = 'grid';
+      grid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+      grid.style.gap = '8px';
+      grid.innerHTML = items.map(m => `
+        <img src="${escapeHtml(m.url)}" loading="lazy" alt="photo" style="width:100%; aspect-ratio:1; object-fit:cover; border-radius:12px; cursor:pointer;" onclick="BestieChat.openLightbox('${escapeHtml(m.url)}')" />
+      `).join('');
+    } else if (type === 'voice') {
+      items = allMessagesCached.filter(m => !m.deleted && m.type === 'voice');
+      if (!items.length) { if (empty) empty.style.display = 'block'; return; }
+      if (empty) empty.style.display = 'none';
+      grid.style.display = 'flex';
+      grid.style.flexDirection = 'column';
+      grid.style.gap = '8px';
+      grid.innerHTML = items.map(m => `
+        <div style="background:var(--surface); border:1px solid var(--border-soft); border-radius:14px; padding:10px 14px; display:flex; align-items:center; justify-content:space-between;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button onclick="new Audio('${escapeHtml(m.url)}').play()" style="background:var(--accent-glow); border:none; color:var(--accent); width:32px; height:32px; border-radius:50%; cursor:pointer;">▶</button>
+            <span style="font-size:13px; font-weight:600;">🎤 Voice Note (${m.duration || '0'}s)</span>
+          </div>
+          <span style="font-size:11px; color:var(--muted);">${new Date(m.time).toLocaleDateString()}</span>
+        </div>
+      `).join('');
+    } else if (type === 'videos') {
+      items = allMessagesCached.filter(m => !m.deleted && m.type === 'video-note');
+      if (!items.length) { if (empty) empty.style.display = 'block'; return; }
+      if (empty) empty.style.display = 'none';
+      grid.style.display = 'grid';
+      grid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+      grid.style.gap = '8px';
+      grid.innerHTML = items.map(m => `
+        <div style="position:relative; width:100%; aspect-ratio:1; border-radius:50%; overflow:hidden; border:2px solid var(--accent);">
+          <video src="${escapeHtml(m.url)}" autoplay loop muted playsinline style="width:100%; height:100%; object-fit:cover;"></video>
+        </div>
+      `).join('');
+    } else if (type === 'links') {
+      items = allMessagesCached.filter(m => !m.deleted && m.text && m.text.match(/https?:\/\/[^\s]+/i));
+      if (!items.length) { if (empty) empty.style.display = 'block'; return; }
+      if (empty) empty.style.display = 'none';
+      grid.style.display = 'flex';
+      grid.style.flexDirection = 'column';
+      grid.style.gap = '8px';
+      grid.innerHTML = items.map(m => {
+        const urlMatch = m.text.match(/https?:\/\/[^\s]+/i);
+        const url = urlMatch ? urlMatch[0] : '';
+        return `
+          <a class="vault-link-item" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">
+            <span style="font-size:20px;">🔗</span>
+            <div style="flex:1; overflow:hidden;">
+              <div style="font-size:13px; font-weight:600; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${escapeHtml(url)}</div>
+              <div style="font-size:11px; color:var(--muted);">${escapeHtml(getDisplayName(m.user))} · ${new Date(m.time).toLocaleDateString()}</div>
+            </div>
+          </a>
+        `;
+      }).join('');
+    } else if (type === 'starred') {
+      items = allMessagesCached.filter(m => !m.deleted && m.starredBy && m.starredBy.includes(myName));
+      if (!items.length) { if (empty) empty.style.display = 'block'; return; }
+      if (empty) empty.style.display = 'none';
+      grid.style.display = 'flex';
+      grid.style.flexDirection = 'column';
+      grid.style.gap = '8px';
+      grid.innerHTML = items.map(m => {
+        const label = m.type === 'image' ? '📸 Photo' : (m.type === 'voice' ? '🎤 Voice note' : (m.type === 'video-note' ? '⭕ Video note' : decryptE2EE(m.text || '')));
+        return `
+          <div class="starred-card" onclick="BestieChat.closeGallery(); BestieChat.scrollToMessage('${m.id}')">
+            <div class="starred-card-meta">
+              <span>${escapeHtml(getDisplayName(m.user))}</span>
+              <span>${new Date(m.time).toLocaleDateString()}</span>
+            </div>
+            <div class="starred-card-text">${escapeHtml(label)}</div>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  // ═══════════════════ TIME CAPSULE ═══════════════════
+  function openTimeCapsuleModal() {
+    if (els.attachMenu) els.attachMenu.style.display = 'none';
+    setCapsulePreset(1);
+    showModal('timeCapsuleModal');
+  }
+
+  function closeTimeCapsuleModal() {
+    hideModal('timeCapsuleModal');
+  }
+
+  function setCapsulePreset(days) {
+    const d = new Date();
+    d.setDate(d.getDate() + Number(days || 1));
+    const input = document.getElementById('capsuleDateInput');
+    if (input) {
+      const pad = (n) => String(n).padStart(2, '0');
+      input.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+  }
+
+  function sendTimeCapsule() {
+    const textInput = document.getElementById('capsuleTextInput');
+    const dateInput = document.getElementById('capsuleDateInput');
+    if (!textInput || !textInput.value.trim()) {
+      showToast('Please write a capsule message!');
+      return;
+    }
+    const unlockTime = dateInput && dateInput.value ? new Date(dateInput.value).getTime() : (Date.now() + 86400000);
+    if (unlockTime <= Date.now()) {
+      showToast('Please pick a future unlock date!');
+      return;
+    }
+    socket.emit('message', {
+      type: 'time-capsule',
+      text: textInput.value.trim(),
+      unlockAt: unlockTime
+    });
+    closeTimeCapsuleModal();
+    textInput.value = '';
+    showToast('⏳ Time Capsule sealed and sent!');
+    playSound('send');
   }
 
   function openLightbox(url) {
@@ -2072,9 +2257,18 @@
       renderHeatmap();
 
       // Premium dashboard features
-      fetchDailyQuestion();
+      if (payload.dailyQuestionState) renderDailyQuestionCard(payload.dailyQuestionState);
+      else fetchDailyQuestion();
       updateScoreboardDisplay(payload.gameScores || { wins: {}, losses: {} });
       updateE2EEFingerprint();
+    });
+
+    socket.on('daily-answer-update', (state) => {
+      renderDailyQuestionCard(state);
+      if (state && state.revealed) {
+        confetti();
+        playSound('milestone');
+      }
     });
 
     socket.on('message', (msg) => {
@@ -2445,19 +2639,25 @@
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       throw new Error('Camera/Microphone is not supported in this browser or origin (requires HTTPS).');
     }
+    const audioConstraints = {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
+      sampleRate: 48000
+    };
     if (type === 'video') {
       try {
-        return await navigator.mediaDevices.getUserMedia({ audio: true, video: { facingMode: 'user' } });
+        return await navigator.mediaDevices.getUserMedia({ audio: audioConstraints, video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } });
       } catch (e1) {
         try {
-          return await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+          return await navigator.mediaDevices.getUserMedia({ audio: audioConstraints, video: true });
         } catch (e2) {
           showToast('📹 Camera permission denied or unavailable. Continuing with Voice Call.');
-          return await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+          return await navigator.mediaDevices.getUserMedia({ audio: audioConstraints, video: false });
         }
       }
     } else {
-      return await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      return await navigator.mediaDevices.getUserMedia({ audio: audioConstraints, video: false });
     }
   }
 
@@ -2598,10 +2798,109 @@
     const overlay = document.getElementById('callOverlay');
     if (overlay) overlay.style.display = 'none';
     
+    const pip = document.getElementById('pipCallContainer');
+    const pipRemoteVideo = document.getElementById('pipRemoteVideo');
+    if (pip) pip.style.display = 'none';
+    if (pipRemoteVideo) pipRemoteVideo.srcObject = null;
+    
     const localVideo = document.getElementById('localVideo');
     const remoteVideo = document.getElementById('remoteVideo');
     if (localVideo) localVideo.srcObject = null;
     if (remoteVideo) remoteVideo.srcObject = null;
+  }
+
+  function minimizeCall() {
+    const overlay = document.getElementById('callOverlay');
+    const pip = document.getElementById('pipCallContainer');
+    const remoteVideo = document.getElementById('remoteVideo');
+    const pipRemoteVideo = document.getElementById('pipRemoteVideo');
+    const pipAvatar = document.getElementById('pipAvatar');
+    const callAvatar = document.getElementById('callAvatar');
+
+    if (!pip || !overlay) return;
+    overlay.style.display = 'none';
+    pip.style.display = 'block';
+
+    if (remoteVideo && pipRemoteVideo && remoteVideo.srcObject) {
+      pipRemoteVideo.srcObject = remoteVideo.srcObject;
+      pipRemoteVideo.style.display = callType === 'video' ? 'block' : 'none';
+      if (pipAvatar) pipAvatar.style.display = callType === 'video' ? 'none' : 'flex';
+    } else if (pipAvatar && callAvatar) {
+      pipAvatar.textContent = callAvatar.textContent;
+      pipAvatar.style.display = 'flex';
+    }
+    makeDraggable(pip);
+    showToast('🗗 Call minimized to corner');
+  }
+
+  function restoreCall() {
+    const overlay = document.getElementById('callOverlay');
+    const pip = document.getElementById('pipCallContainer');
+    const remoteVideo = document.getElementById('remoteVideo');
+    const pipRemoteVideo = document.getElementById('pipRemoteVideo');
+
+    if (pip) pip.style.display = 'none';
+    if (overlay) overlay.style.display = 'flex';
+
+    if (pipRemoteVideo && remoteVideo && pipRemoteVideo.srcObject) {
+      remoteVideo.srcObject = pipRemoteVideo.srcObject;
+    }
+  }
+
+  function makeDraggable(el) {
+    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+    el.onmousedown = dragMouseDown;
+    el.ontouchstart = dragTouchStart;
+
+    function dragMouseDown(e) {
+      if (e.target.closest('.pip-controls')) return;
+      e.preventDefault();
+      pos3 = e.clientX;
+      pos4 = e.clientY;
+      document.onmouseup = closeDragElement;
+      document.onmousemove = elementDrag;
+    }
+
+    function elementDrag(e) {
+      e.preventDefault();
+      pos1 = pos3 - e.clientX;
+      pos2 = pos4 - e.clientY;
+      pos3 = e.clientX;
+      pos4 = e.clientY;
+      el.style.top = (el.offsetTop - pos2) + "px";
+      el.style.left = (el.offsetLeft - pos1) + "px";
+      el.style.bottom = 'auto';
+      el.style.right = 'auto';
+    }
+
+    function closeDragElement() {
+      document.onmouseup = null;
+      document.onmousemove = null;
+    }
+
+    function dragTouchStart(e) {
+      if (e.target.closest('.pip-controls')) return;
+      pos3 = e.touches[0].clientX;
+      pos4 = e.touches[0].clientY;
+      document.ontouchend = closeDragTouch;
+      document.ontouchmove = elementTouchDrag;
+    }
+
+    function elementTouchDrag(e) {
+      pos1 = pos3 - e.touches[0].clientX;
+      pos2 = pos4 - e.touches[0].clientY;
+      pos3 = e.touches[0].clientX;
+      pos4 = e.touches[0].clientY;
+      el.style.top = (el.offsetTop - pos2) + "px";
+      el.style.left = (el.offsetLeft - pos1) + "px";
+      el.style.bottom = 'auto';
+      el.style.right = 'auto';
+    }
+
+    function closeDragTouch() {
+      document.ontouchend = null;
+      document.ontouchmove = null;
+    }
   }
 
   function toggleMuteAudio() {
@@ -3977,22 +4276,63 @@
     localStorage.setItem('dismissedDailyQuestionDate', today);
   }
 
-  function fetchDailyQuestion() {
-    fetch('/api/daily-question')
-      .then(res => res.json())
-      .then(data => {
-        const textEl = document.getElementById('dailyQuestionText');
-        const banner = document.getElementById('dailyQuestion');
-        if (textEl && banner && data.question) {
-          const dismissedDate = localStorage.getItem('dismissedDailyQuestionDate');
-          const today = new Date().toISOString().slice(0, 10);
-          if (dismissedDate !== today) {
-            textEl.textContent = data.question;
-            banner.style.display = 'block';
-          }
+  let currentDailyQuestionState = null;
+
+  function renderDailyQuestionCard(state) {
+    if (!state) return;
+    currentDailyQuestionState = state;
+    const card = document.getElementById('dailyQuestion');
+    const textEl = document.getElementById('dailyQuestionText');
+    const inputArea = document.getElementById('dqInputArea');
+    const waitingArea = document.getElementById('dqWaitingArea');
+    const revealedArea = document.getElementById('dqRevealedArea');
+    const answersList = document.getElementById('dqAnswersList');
+    if (!card || !textEl) return;
+
+    textEl.textContent = state.question || 'What made you smile today?';
+    card.style.display = 'block';
+
+    const myAnswerObj = state.answers && state.answers[myName];
+    const isAnsweredByMe = Boolean(myAnswerObj && !myAnswerObj.locked);
+
+    if (state.revealed) {
+      if (inputArea) inputArea.style.display = 'none';
+      if (waitingArea) waitingArea.style.display = 'none';
+      if (revealedArea) {
+        revealedArea.style.display = 'block';
+        if (answersList) {
+          answersList.innerHTML = Object.entries(state.answers || {}).map(([user, val]) => `
+            <div class="dq-answer-row">
+              <span class="dq-answer-user">${escapeHtml(getDisplayName(user))}:</span>
+              <span>"${escapeHtml(val.text || '')}"</span>
+            </div>
+          `).join('');
         }
-      })
-      .catch(() => {});
+      }
+    } else if (isAnsweredByMe) {
+      if (inputArea) inputArea.style.display = 'none';
+      if (revealedArea) revealedArea.style.display = 'none';
+      if (waitingArea) waitingArea.style.display = 'block';
+    } else {
+      if (waitingArea) waitingArea.style.display = 'none';
+      if (revealedArea) revealedArea.style.display = 'none';
+      if (inputArea) inputArea.style.display = 'flex';
+    }
+  }
+
+  function submitDailyAnswer() {
+    const input = document.getElementById('dqAnswerInput');
+    if (!input || !input.value.trim() || !joined || !socket) return;
+    const answer = input.value.trim();
+    socket.emit('submit-daily-answer', { answer });
+    input.value = '';
+    showToast('🔒 Answer locked! Waiting for Bestie…');
+  }
+
+  function fetchDailyQuestion() {
+    if (socket && joined) {
+      socket.emit('get-daily-answer-state');
+    }
   }
 
   function updateScoreboardDisplay(scores) {
@@ -4906,6 +5246,8 @@
     setAuthMode, selectLoginAvatar, quickReentry, showFullLoginForm, copyInviteLink, togglePasswordVisibility, logout,
     // Multi-chat DMs
     loadChatList, switchRoom, openNewChatModal, closeNewChatModal, searchUsersForDM, startDMWith, openChatsModal, closeChatsModal, toggleStickerPanel,
+    // Next-Gen Suite
+    submitDailyAnswer, openTimeCapsuleModal, closeTimeCapsuleModal, setCapsulePreset, sendTimeCapsule, filterGallery, minimizeCall, restoreCall,
     scrollToBottom: scrollBottom
   };
 

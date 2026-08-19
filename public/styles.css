@@ -2732,4 +2732,263 @@ body.night-glow header, body.night-glow #inputBarContainer { box-shadow: 0 0 30p
   line-height: 1.4;
 }
 
+/* ==========================================================================
+   26. NEXT-GEN POWER SUITE (Daily Unlock, Time Capsule, PiP, Media Vault)
+   ========================================================================== */
+
+/* ── Answer-to-Unlock Daily Question Card ── */
+.dq-card {
+  margin: 10px 16px 6px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, rgba(234, 179, 8, 0.08), rgba(217, 119, 87, 0.08));
+  border: 1px solid rgba(234, 179, 8, 0.25);
+  border-radius: 18px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  animation: msgSlideUp 0.35s ease both;
+}
+.dq-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.dq-badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #d97706;
+  text-transform: uppercase;
+}
+.dq-prompt {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.45;
+  margin-bottom: 10px;
+}
+.dq-input-area {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.dq-input-area input {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 20px;
+  padding: 8px 14px;
+  font-size: 13px;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.dq-input-area input:focus {
+  border-color: var(--accent);
+}
+.dq-input-area button {
+  background: linear-gradient(135deg, #eab308, #d97757);
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.15s;
+}
+.dq-input-area button:hover {
+  transform: scale(1.03);
+}
+.dq-lock-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: rgba(234, 179, 8, 0.12);
+  border: 1px dashed rgba(234, 179, 8, 0.4);
+  border-radius: 16px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #d97706;
+}
+.dq-answers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  border-top: 1px solid rgba(234, 179, 8, 0.15);
+  padding-top: 8px;
+}
+.dq-answer-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.dq-answer-user {
+  font-weight: 700;
+  color: var(--accent);
+  min-width: 60px;
+}
+
+/* ── Time Capsule Locked Message Bubble ── */
+.time-capsule-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, rgba(234, 179, 8, 0.12), rgba(245, 158, 11, 0.06));
+  border: 1.5px dashed #eab308;
+  border-radius: 18px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(234, 179, 8, 0.15);
+}
+.time-capsule-icon {
+  font-size: 34px;
+  animation: giftBounce 2s infinite ease-in-out;
+}
+@keyframes giftBounce {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-6px) rotate(4deg); }
+}
+.time-capsule-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #d97706;
+}
+.time-capsule-timer {
+  display: inline-block;
+  background: rgba(234, 179, 8, 0.18);
+  border: 1px solid rgba(234, 179, 8, 0.35);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #b45309;
+  letter-spacing: 0.04em;
+}
+.time-capsule-unlocked {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+}
+
+/* ── Picture-in-Picture Floating Call Overlay ── */
+#pipCallContainer {
+  position: fixed;
+  bottom: 90px;
+  right: 18px;
+  width: 140px;
+  height: 190px;
+  border-radius: 20px;
+  overflow: hidden;
+  background: #000;
+  border: 2px solid var(--accent);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+  z-index: 1500;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+#pipCallContainer:hover {
+  transform: scale(1.03);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.6);
+}
+#pipCallContainer:active {
+  cursor: grabbing;
+}
+#pipRemoteVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.pip-avatar {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  background: var(--surface2);
+}
+.pip-controls {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 4px 8px;
+  border-radius: 20px;
+  backdrop-filter: blur(8px);
+}
+.pip-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: #fff;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.pip-btn.danger {
+  background: #ef4444;
+}
+.pip-btn:hover {
+  transform: scale(1.1);
+}
+
+/* ── Media Vault Tabs ── */
+.vault-tabs {
+  scrollbar-width: none;
+}
+.vault-tabs::-webkit-scrollbar {
+  display: none;
+}
+.vault-tab-btn {
+  background: none;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.18s ease;
+}
+.vault-tab-btn:hover {
+  color: var(--text);
+  background: var(--surface2);
+}
+.vault-tab-btn.active {
+  background: var(--accent-glow);
+  color: var(--accent);
+}
+.vault-link-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  text-decoration: none;
+  color: var(--text);
+}
+.vault-link-item:hover {
+  border-color: var(--accent);
+}
+
 

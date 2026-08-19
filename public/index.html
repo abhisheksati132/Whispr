@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>chat ✨</title>
   <meta name="description" content="Private real-time chat space." />
-  <link rel="manifest" href="/manifest.json?v=910" />
+  <link rel="manifest" href="/manifest.json?v=911" />
   <link rel="icon" type="image/x-icon" href="/favicon.ico?v=902" />
   <link rel="shortcut icon" type="image/png" href="/icon-192.png?v=902" />
   <link rel="apple-touch-icon" href="/icon-192.png?v=902" />
@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles.css?v=12008" />
+  <link rel="stylesheet" href="/styles.css?v=12009" />
   <link rel="stylesheet" href="/clay.css?v=9" />
 </head>
 <body>
@@ -210,11 +210,29 @@
     <!-- MOTD Banner -->
     <div id="motdBanner"></div>
 
-    <!-- Daily Question Card -->
-    <div id="dailyQuestion" style="display:none">
-      <div class="dq-label">✨ Daily Question</div>
-      <div id="dailyQuestionText"></div>
-      <button class="dq-dismiss" onclick="BestieChat.dismissDailyQuestion()" title="Dismiss">✕</button>
+    <!-- Daily Question Card (Answer to Unlock) -->
+    <div id="dailyQuestion" class="dq-card" style="display:none">
+      <div class="dq-header">
+        <span class="dq-badge">✨ QUESTION OF THE DAY</span>
+        <button class="dq-dismiss" onclick="BestieChat.dismissDailyQuestion()" title="Dismiss">✕</button>
+      </div>
+      <div id="dailyQuestionText" class="dq-prompt"></div>
+      
+      <!-- Unanswered state -->
+      <div id="dqInputArea" class="dq-input-area" style="display:none;">
+        <input id="dqAnswerInput" type="text" placeholder="Type your answer to unlock bestie's..." maxlength="300" onkeydown="if(event.key==='Enter') BestieChat.submitDailyAnswer()" />
+        <button id="dqSubmitBtn" onclick="BestieChat.submitDailyAnswer()">Unlock ✨</button>
+      </div>
+
+      <!-- Locked / Waiting for Bestie state -->
+      <div id="dqWaitingArea" class="dq-waiting-area" style="display:none;">
+        <div class="dq-lock-pill">🔒 Your answer is locked in! Waiting for Bestie to answer...</div>
+      </div>
+
+      <!-- Revealed state -->
+      <div id="dqRevealedArea" class="dq-revealed-area" style="display:none;">
+        <div id="dqAnswersList" class="dq-answers-list"></div>
+      </div>
     </div>
 
     <!-- Pinned Banner -->
@@ -363,6 +381,12 @@
         </span>
         <span class="attach-label">Secret</span>
       </button>
+      <button class="attach-item" onclick="BestieChat.openTimeCapsuleModal()" title="Time Capsule">
+        <span class="attach-icon" style="background:#eab308">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </span>
+        <span class="attach-label">Capsule</span>
+      </button>
     </div>
 
     <!-- Sticker Panel -->
@@ -457,14 +481,22 @@
   </div>
 </div>
 
+<!-- Categorized Media Vault -->
 <div id="galleryModal" class="modal-overlay" style="display:none" onclick="if(event.target===this) BestieChat.closeGallery()">
-  <div class="modal-card">
+  <div class="modal-card" style="max-width:620px; width:92%;">
     <div class="modal-header">
-      <h3>📸 Shared Photos</h3>
+      <h3>📂 Media & Memory Vault</h3>
       <button class="modal-close" onclick="BestieChat.closeGallery()">✕</button>
     </div>
-    <div id="galleryGrid" style="padding:16px; display:grid; grid-template-columns:repeat(3,1fr); gap:8px;"></div>
-    <div id="galleryEmpty" style="display:none; padding:32px; text-align:center; color:var(--muted);">No photos shared yet 🥺</div>
+    <div class="vault-tabs" style="display:flex; gap:4px; padding:10px 16px; background:var(--surface); border-bottom:1px solid var(--border-soft); overflow-x:auto;">
+      <button class="vault-tab-btn active" onclick="BestieChat.filterGallery('photos', this)">📸 Photos</button>
+      <button class="vault-tab-btn" onclick="BestieChat.filterGallery('voice', this)">🎤 Voice</button>
+      <button class="vault-tab-btn" onclick="BestieChat.filterGallery('videos', this)">⭕ Videos</button>
+      <button class="vault-tab-btn" onclick="BestieChat.filterGallery('links', this)">🔗 Links</button>
+      <button class="vault-tab-btn" onclick="BestieChat.filterGallery('starred', this)">⭐ Starred</button>
+    </div>
+    <div id="galleryGrid" style="padding:16px; min-height:180px; max-height:60vh; overflow-y:auto;"></div>
+    <div id="galleryEmpty" style="display:none; padding:48px 16px; text-align:center; color:var(--muted);">No media items found in this section 🥺</div>
   </div>
 </div>
 
@@ -603,6 +635,7 @@
       <video id="localVideo" autoplay playsinline muted></video>
     </div>
     <div class="call-controls">
+      <button id="pipCallBtn" class="call-btn" onclick="BestieChat.minimizeCall()" title="Minimize to Floating Bubble">🗗</button>
       <button id="muteAudioBtn" class="call-btn" onclick="BestieChat.toggleMuteAudio()" title="Mute">🎤</button>
       <button id="toggleCamBtn" class="call-btn" onclick="BestieChat.toggleCamera()" title="Camera">📹</button>
       <button id="endCallBtn" class="call-btn end-call" onclick="BestieChat.endCall()" title="End">📞</button>
@@ -613,6 +646,48 @@
     </div>
   </div>
 </div><!-- end #callOverlay -->
+
+<!-- Floating Picture-in-Picture Call Bubble -->
+<div id="pipCallContainer" style="display:none;" onclick="BestieChat.restoreCall()">
+  <video id="pipRemoteVideo" autoplay playsinline muted></video>
+  <div id="pipAvatar" class="pip-avatar">✨</div>
+  <div class="pip-controls" onclick="event.stopPropagation()">
+    <button class="pip-btn" onclick="BestieChat.restoreCall()" title="Expand Call">🗖</button>
+    <button class="pip-btn danger" onclick="BestieChat.endCall()" title="End Call">📞</button>
+  </div>
+</div>
+
+<!-- Time Capsule Modal -->
+<div id="timeCapsuleModal" class="modal-overlay" style="display:none" onclick="if(event.target===this) BestieChat.closeTimeCapsuleModal()">
+  <div class="modal-card" style="max-width:460px; width:92%;">
+    <div class="modal-header">
+      <h3>⏳ Create Time Capsule</h3>
+      <button class="modal-close" onclick="BestieChat.closeTimeCapsuleModal()">✕</button>
+    </div>
+    <div style="padding:20px; display:flex; flex-direction:column; gap:14px;">
+      <p style="font-size:13px; color:var(--muted); margin:0;">Lock a message or memory in a glowing gift capsule that automatically opens on a future date.</p>
+      
+      <div>
+        <label style="display:block; font-size:12px; font-weight:600; text-transform:uppercase; color:var(--muted); margin-bottom:6px;">Capsule Message</label>
+        <textarea id="capsuleTextInput" placeholder="Write something special for the future..." rows="3" style="width:100%; box-sizing:border-box;"></textarea>
+      </div>
+
+      <div>
+        <label style="display:block; font-size:12px; font-weight:600; text-transform:uppercase; color:var(--muted); margin-bottom:6px;">Unlock Date & Time</label>
+        <div style="display:flex; gap:8px; margin-bottom:8px;">
+          <button class="smart-pill" type="button" onclick="BestieChat.setCapsulePreset(1)">In 24h</button>
+          <button class="smart-pill" type="button" onclick="BestieChat.setCapsulePreset(7)">In 1 Week</button>
+          <button class="smart-pill" type="button" onclick="BestieChat.setCapsulePreset(30)">In 1 Month</button>
+        </div>
+        <input id="capsuleDateInput" type="datetime-local" style="width:100%; box-sizing:border-box;" />
+      </div>
+
+      <button class="btn btn-primary" onclick="BestieChat.sendTimeCapsule()" style="width:100%; padding:12px; border-radius:14px; background:linear-gradient(135deg, #eab308, #f59e0b); color:#fff; font-weight:600; border:none; cursor:pointer;">
+        🎁 Seal & Lock Capsule
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- Profile Modal -->
 <div id="profileModal" class="modal-overlay" style="display:none" onclick="if(event.target===this) BestieChat.closeProfile()">
@@ -1060,11 +1135,11 @@
 <!-- Scripts -->
 <script src="/socket.io/socket.io.js"></script>
 <script src="/crypto-js.min.js"></script>
-<script src="/app.js?v=36"></script>
+<script src="/app.js?v=37"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js?v=11307').catch(console.error);
+      navigator.serviceWorker.register('/sw.js?v=11308').catch(console.error);
     });
   }
   function forceClearAppCache() {

@@ -78,3 +78,27 @@ test('store tracks streak activity', () => {
   const streak = store.getStreak();
   assert.equal(streak.usersToday.length, 2);
 });
+
+test('store daily question locks answers until both reply', () => {
+  store.resetForTests();
+  const state1 = store.saveDailyQuestionAnswer('test-room', 'Alice', 'Drinking matcha!');
+  assert.equal(state1.revealed, false);
+  assert.ok(state1.answers['Alice']);
+  
+  // Bob queries state -> Alice's text should be masked
+  const bobView = store.getDailyQuestionState('test-room', 'Bob');
+  assert.equal(bobView.revealed, false);
+  assert.equal(bobView.answers['Alice'].locked, true);
+  assert.equal(bobView.answers['Alice'].text, undefined);
+
+  // Bob answers -> reveals both!
+  const state2 = store.saveDailyQuestionAnswer('test-room', 'Bob', 'Going for a walk!');
+  assert.equal(state2.revealed, true);
+  assert.equal(state2.answers['Alice'].text, 'Drinking matcha!');
+  assert.equal(state2.answers['Bob'].text, 'Going for a walk!');
+  
+  // Auto-archived to diary
+  const room = store.getRoom('test-room');
+  assert.ok(room.diary && room.diary.length >= 1);
+  assert.ok(room.diary[0].text.includes('Drinking matcha!'));
+});

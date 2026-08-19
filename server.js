@@ -362,7 +362,8 @@ io.on('connection', (socket) => {
         bonsai: roomMeta.bonsai || { growth:0, lastWatered:null },
         gameScores: roomMeta.gameScores || { wins:{}, losses:{} },
         hasPassword: Boolean(roomMeta.roomPassword),
-        disappearingTimer: roomMeta.disappearingTimer || 0
+        disappearingTimer: roomMeta.disappearingTimer || 0,
+        dailyQuestionState: await mStore.getDailyQuestionState(currentRoom, username)
       });
 
       io.to(currentRoom).emit('system', randomJoinMessage(profile.nickname || username));
@@ -399,6 +400,26 @@ io.on('connection', (socket) => {
     } catch (err) { console.error('set-disappearing-timer error:', err); }
   });
 
+  // ── Daily Question Answer to Unlock ───────────────────────────────────────
+  socket.on('submit-daily-answer', async ({ answer } = {}) => {
+    try {
+      if (!currentRoom || !username) return;
+      const updatedState = await mStore.saveDailyQuestionAnswer(currentRoom, username, answer);
+      io.to(currentRoom).emit('daily-answer-update', updatedState);
+      if (updatedState.revealed) {
+        io.to(currentRoom).emit('system', '✨ Both answered today\'s question! Answers revealed & saved to Diary!');
+      }
+    } catch (err) { console.error('submit-daily-answer error:', err); }
+  });
+
+  socket.on('get-daily-answer-state', async () => {
+    try {
+      if (!currentRoom || !username) return;
+      const state = await mStore.getDailyQuestionState(currentRoom, username);
+      socket.emit('daily-answer-update', state);
+    } catch (err) { console.error('get-daily-answer-state error:', err); }
+  });
+
   // ── Message ───────────────────────────────────────────────────────────────
   socket.on('message', async (payload) => {
     if (!username || !currentRoom) return;
@@ -417,6 +438,15 @@ io.on('connection', (socket) => {
       else if (type === 'image') { if (!payload.url) return; msgData = { user: username, text: payload.text||'', url: payload.url, type:'image' }; }
       else if (type === 'voice') { if (!payload.url) return; msgData = { user: username, text:'', url: payload.url, duration: payload.duration||0, type:'voice' }; }
       else if (type === 'video-note') { if (!payload.url) return; msgData = { user: username, text:'', url: payload.url, duration: payload.duration||0, type:'video-note' }; }
+      else if (type === 'time-capsule') {
+        msgData = {
+          user: username,
+          text: payload.text || '',
+          url: payload.url || '',
+          unlockAt: typeof payload.unlockAt === 'number' ? payload.unlockAt : (Date.now() + 86400000),
+          type: 'time-capsule'
+        };
+      }
       else if (type === 'music') { if (!payload.url) return; msgData = { user: username, text: payload.text||payload.url, url: payload.url, type:'music' }; }
       else {
         const text = normalizeText(payload.text||''); if (!text) return;
