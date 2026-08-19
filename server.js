@@ -519,10 +519,8 @@ io.on('connection', (socket) => {
   // ── Message ───────────────────────────────────────────────────────────────
   socket.on('message', async (payload) => {
     if (!username) username = normalizeName(payload && payload.user) || socket.data.authenticatedUser || 'Bestie';
-    if (!currentRoom) {
-      currentRoom = normalizeRoom(payload && payload.room) || 'our-private-space';
-      socket.join(currentRoom);
-    }
+    if (!currentRoom) currentRoom = normalizeRoom(payload && payload.room) || 'our-private-space';
+    socket.join(currentRoom);
     const _now = Date.now();
     if (_now > msgResetAt) { msgCount = 0; msgResetAt = _now + 5000; }
     msgCount++;

@@ -110,11 +110,12 @@
     } catch (e) {}
   }
   function flushOutboxQueue() {
-    if (!socket || !socket.connected || !joined) return;
+    if (!socket || !socket.connected) return;
+    loadOutboxQueue();
     if (!outboxQueue.length) return;
     const queue = [...outboxQueue];
     queue.forEach(item => {
-      socket.emit('message', item);
+      if (item) socket.emit('message', item);
     });
   }
 
@@ -2539,6 +2540,7 @@
       const banner = document.getElementById('offlineBanner');
       if (banner) banner.style.display = 'none';
       flushOfflineQueue();
+      flushOutboxQueue();
       if (joined || (myName && myRoom)) doSocketJoin();
     });
 
@@ -2643,6 +2645,7 @@
       else fetchDailyQuestion();
       updateScoreboardDisplay(payload.gameScores || { wins: {}, losses: {} });
       updateE2EEFingerprint();
+      flushOutboxQueue();
     });
 
     socket.on('daily-answer-update', (state) => {
