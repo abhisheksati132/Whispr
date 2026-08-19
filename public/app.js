@@ -1423,32 +1423,7 @@
     if (!myRoom || !els.msgInput) return;
     const draft = localStorage.getItem(`bestieDraft_${myRoom}`) || '';
     els.msgInput.value = draft;
-    if (draft) autoExpandMsgInput();
   }
-
-  function sendMessage() {
-    const rawText = els.msgInput.value.trim();
-    if (!rawText) {
-      toggleRecord();
-      return;
-    }
-    if (!joined) return;
-
-    const url = findUrl(rawText);
-    const text = encryptE2EE(rawText);
-
-    // Editing mode
-    if (editingMessageId) {
-      const encEdit = encryptE2EE(rawText);
-      socket.emit('edit-message', { messageId: editingMessageId, text: encEdit });
-      els.msgInput.value     = '';
-      autoExpandMsgInput();
-      localStorage.removeItem(`bestieDraft_${myRoom}`);
-      editingMessageId       = null;
-      cancelReply();
-      toggleSendMicIcons();
-      return;
-    }
 
   function sendMessagePayload(payload) {
     const clientMsgId = 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
