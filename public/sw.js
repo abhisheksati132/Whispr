@@ -1,5 +1,5 @@
 // Cache Version
-const CACHE = 'bestie-v12022-speed';
+const CACHE = 'whispr-v1-speed';
 const IMMUTABLE_ASSETS = [
   '/icon-192.png',
   '/favicon.ico',
@@ -61,7 +61,7 @@ self.addEventListener('fetch', (e) => {
 
 // Push Notification Handler
 self.addEventListener('push', (e) => {
-  let data = { title: 'chat', body: 'New message received 💬', icon: '/icon-192.png' };
+  let data = { title: 'Whispr', body: 'New message received 💬', icon: '/icon-192.png' };
   if (e.data) {
     try {
       data = e.data.json();

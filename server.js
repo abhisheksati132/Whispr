@@ -51,7 +51,7 @@ const JWT_SECRET    = process.env.JWT_SECRET || 'fallback-secret-change-me';
 // ── VAPID ─────────────────────────────────────────────────────────────────────
 let vapidKeys = { publicKey: process.env.VAPID_PUBLIC_KEY, privateKey: process.env.VAPID_PRIVATE_KEY };
 if (!vapidKeys.publicKey || !vapidKeys.privateKey) vapidKeys = webpush.generateVAPIDKeys();
-webpush.setVapidDetails('mailto:bestie@chat.local', vapidKeys.publicKey, vapidKeys.privateKey);
+webpush.setVapidDetails('mailto:whispr@app.local', vapidKeys.publicKey, vapidKeys.privateKey);
 
 // ── Express ───────────────────────────────────────────────────────────────────
 const app    = express();
@@ -922,7 +922,7 @@ setInterval(() => mStore.cleanDisappearingMessages().catch(()=>{}), 60 * 1000).u
 // ── Start ─────────────────────────────────────────────────────────────────────
 if (require.main === module) {
   const PORT = process.env.PORT || 3000;
-  server.listen(PORT, '0.0.0.0', () => console.log(`✨ chat running on port ${PORT}`));
+  server.listen(PORT, '0.0.0.0', () => console.log(`✨ Whispr running on port ${PORT}`));
 }
 
 module.exports = { app, server };

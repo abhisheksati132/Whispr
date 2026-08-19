@@ -1,8 +1,8 @@
 {
   "id": "https://chat-jh59.onrender.com/",
-  "name": "chat",
-  "short_name": "chat",
-  "description": "Private real-time chat space.",
+  "name": "Whispr",
+  "short_name": "Whispr",
+  "description": "Private, encrypted real-time chat space.",
   "lang": "en",
   "dir": "ltr",
   "start_url": "/",
@@ -44,20 +44,20 @@
       "sizes": "540x960",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "chat Mobile View"
+      "label": "Whispr Mobile View"
     },
     {
       "src": "/screenshot-desktop.png",
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "chat Desktop View"
+      "label": "Whispr Desktop View"
     }
   ],
   "shortcuts": [
     {
-      "name": "Open Chat",
-      "short_name": "Chat",
+      "name": "Open Whispr",
+      "short_name": "Whispr",
       "description": "Jump straight into your chat room",
       "url": "/",
       "icons": [
@@ -106,10 +106,10 @@
   "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
   "widgets": [
     {
-      "name": "chat Quick Status",
-      "short_name": "chat",
+      "name": "Whispr Quick Status",
+      "short_name": "Whispr",
       "description": "View recent messages and your status",
-      "tag": "chat-widget",
+      "tag": "whispr-widget",
       "template": "widget-template",
       "ms_ac_template": "widget-ms-template.json",
       "data": "widget-data.json",
@@ -118,7 +118,7 @@
         {
           "src": "/screenshot-mobile.png",
           "sizes": "540x960",
-          "label": "chat widget preview"
+          "label": "Whispr widget preview"
         }
       ],
       "icons": [

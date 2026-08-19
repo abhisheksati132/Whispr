@@ -1,6 +1,6 @@
-# 🚀 Supabase Setup Guide for chat
+# 🚀 Supabase Setup Guide for Whispr
 
-**chat** is fully configured to use **Supabase (PostgreSQL)** for all user accounts, room data, real-time messaging history, notes, and media.
+**Whispr** is fully configured to use **Supabase (PostgreSQL)** for all user accounts, room data, real-time messaging history, notes, and media.
 
 Follow these 3 simple steps to connect your Supabase project:
 

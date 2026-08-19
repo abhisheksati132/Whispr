@@ -3,21 +3,21 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
-  <title>chat ✨</title>
-  <meta name="description" content="Private real-time chat space." />
-  <link rel="manifest" href="/manifest.json?v=913" />
+  <title>Whispr ✨</title>
+  <meta name="description" content="Whispr — Private, encrypted real-time space." />
+  <link rel="manifest" href="/manifest.json?v=914" />
   <link rel="icon" type="image/x-icon" href="/favicon.ico?v=902" />
   <link rel="shortcut icon" type="image/png" href="/icon-192.png?v=902" />
   <link rel="apple-touch-icon" href="/icon-192.png?v=902" />
   <meta name="theme-color" content="#FAF9F5" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="chat" />
+  <meta name="apple-mobile-web-app-title" content="Whispr" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles.css?v=12022" />
-  <link rel="stylesheet" href="/clay.css?v=14" />
+  <link rel="stylesheet" href="/styles.css?v=12023" />
+  <link rel="stylesheet" href="/clay.css?v=15" />
 </head>
 <body>
 
@@ -40,15 +40,15 @@
     <div class="login-card">
       <!-- Brand -->
       <div class="login-brand" style="margin-bottom: 12px;">
-        <img src="/icon-192.png?v=901" alt="chat logo" width="56" height="56" style="border-radius:14px; margin-bottom: 8px; border: 1px solid var(--border);" />
-        <h1 class="brand-text-login" style="font-size: 36px; font-weight: 700; letter-spacing: -0.03em; margin: 0 0 2px 0; color: var(--text);">chat</h1>
-        <p class="login-tagline" style="font-size: 14px; font-weight: 500; color: var(--muted); margin: 0;">Your private space.</p>
+        <img src="/icon-192.png?v=901" alt="Whispr logo" width="56" height="56" style="border-radius:14px; margin-bottom: 8px; border: 1px solid var(--border);" />
+        <h1 class="brand-text-login" style="font-size: 36px; font-weight: 700; letter-spacing: -0.03em; margin: 0 0 2px 0; color: var(--text);">Whispr</h1>
+        <p class="login-tagline" style="font-size: 14px; font-weight: 500; color: var(--muted); margin: 0;">Your private, encrypted space.</p>
       </div>
 
       <!-- Quick 1-Tap Re-entry (if returning user with valid JWT) -->
       <div id="quickReentryContainer" style="display:none; margin-bottom:12px; flex-direction:column; gap:12px; align-items:center;">
         <div id="quickReentryBtn" onclick="BestieChat.quickReentry()" style="font-size:16px; font-weight:600; color:var(--text); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:color 0.2s;" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color='var(--text)'">
-          <span id="quickReentryText">✨ Continue to Chat</span>
+          <span id="quickReentryText">✨ Continue to Whispr</span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </div>
         <div style="font-size:13px; color:var(--muted); cursor:pointer; transition:color 0.2s;" onclick="BestieChat.showFullLoginForm()" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">or log in with another name →</div>
@@ -99,8 +99,8 @@
     <div class="sidebar-drawer">
       <!-- Brand -->
       <div class="sidebar-brand" style="display:flex; align-items:center; gap:8px;">
-        <img src="/icon-192.png?v=901" alt="chat" width="24" height="24" style="border-radius:6px; border:1px solid var(--border);" />
-        <span class="brand-text" style="font-weight: 700; font-size: 19px; letter-spacing: -0.03em; color: var(--text);">chat</span>
+        <img src="/icon-192.png?v=901" alt="Whispr" width="24" height="24" style="border-radius:6px; border:1px solid var(--border);" />
+        <span class="brand-text" style="font-weight: 700; font-size: 19px; letter-spacing: -0.03em; color: var(--text);">Whispr</span>
         <span id="unreadBadge" class="unread-badge" style="display:none; background:#388E3C; color:#fff; font-size:11px; font-weight:700; border-radius:10px; padding:2px 8px; margin-left:auto;">0</span>
       </div>
 
@@ -185,7 +185,7 @@
       <div class="header-bestie" onclick="BestieChat.openBestieProfile()" title="View Bestie's Profile">
         <div id="headerBestieAvatar" class="header-avatar">🐱</div>
         <div class="header-bestie-info">
-          <div id="headerBestieName" class="header-bestie-name">Chat</div>
+          <div id="headerBestieName" class="header-bestie-name">Whispr</div>
           <div id="headerBestieStatus" class="header-bestie-status bestie-status">Connecting…</div>
         </div>
       </div>

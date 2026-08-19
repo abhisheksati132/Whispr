@@ -1,4 +1,4 @@
-# chat 💭
+# Whispr 💭
 
 A private, real-time encrypted messaging and collaborative space. Fast, zero noise, with WebRTC voice/video calling, ephemeral media, and Supabase (PostgreSQL) persistence.
 
