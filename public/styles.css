@@ -579,11 +579,14 @@ select option {
 
 .sidebar-footer {
   margin-top: auto;
-  padding: 12px;
+  padding: 0 12px;
+  height: 74px;
   display: flex;
+  align-items: center;
   justify-content: center;
   gap: 8px;
   border-top: 1px solid var(--border);
+  box-sizing: border-box;
 }
 .sidebar-icon-btn {
   width: 36px;
@@ -1207,6 +1210,8 @@ header {
   flex-direction: row;
   align-items: center;
   gap: 10px;
+  min-height: 74px;
+  box-sizing: border-box;
 }
 
 .input-row {
@@ -1258,9 +1263,11 @@ header {
   box-shadow: none !important;
   color: var(--text);
   font-size: 14px;
-  padding: 6px 0;
+  line-height: 1.4;
+  padding: 8px 0;
   max-height: 120px;
   resize: none;
+  overflow-y: auto;
 }
 #msgInput:focus, #msgInput:focus-visible {
   outline: none !important;

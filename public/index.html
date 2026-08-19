@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles.css?v=12026" />
+  <link rel="stylesheet" href="/styles.css?v=12027" />
   <link rel="stylesheet" href="/clay.css?v=18" />
 </head>
 <body>
@@ -444,7 +444,7 @@
         <button class="pill-btn" onclick="BestieChat.toggleEmojiPicker()" title="Emoji" data-emoji-toggle>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg>
         </button>
-        <textarea id="msgInput" rows="1" placeholder="Message…" autocomplete="off" maxlength="2000" style="resize:none; height:24px; max-height:120px; overflow-y:auto; line-height:1.4; padding:2px 0;"></textarea>
+        <textarea id="msgInput" rows="1" placeholder="Message…" autocomplete="off" maxlength="2000"></textarea>
         <span id="charCount" style="font-size:0.72rem; color:var(--accent); font-weight:600; margin-right:2px;"></span>
         <button class="pill-btn" onclick="BestieChat.toggleAttachMenu()" title="Attach" id="attachBtn">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -1259,11 +1259,11 @@
 <!-- Scripts -->
 <script src="/socket.io/socket.io.js"></script>
 <script src="/crypto-js.min.js"></script>
-<script src="/app.js?v=56"></script>
+<script src="/app.js?v=58"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js?v=12026').catch(console.error);
+      navigator.serviceWorker.register('/sw.js?v=12028').catch(console.error);
     });
   }
   function forceClearAppCache() {

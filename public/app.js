@@ -101,8 +101,14 @@
   function loadOutboxQueue() {
     try {
       const raw = localStorage.getItem('bestieOutboxQueue');
-      if (raw) outboxQueue = JSON.parse(raw);
-    } catch (e) {}
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) outboxQueue = parsed;
+        else outboxQueue = [];
+      }
+    } catch (e) {
+      outboxQueue = [];
+    }
   }
   function saveOutboxQueue() {
     try {
@@ -112,7 +118,7 @@
   function flushOutboxQueue() {
     if (!socket || !socket.connected) return;
     loadOutboxQueue();
-    if (!outboxQueue.length) return;
+    if (!outboxQueue || !outboxQueue.length) return;
     const queue = [...outboxQueue];
     queue.forEach(item => {
       if (item) socket.emit('message', item);
@@ -1463,7 +1469,7 @@
 
   function autoExpandMsgInput() {
     if (!els.msgInput) return;
-    els.msgInput.style.height = '24px';
+    els.msgInput.style.height = '36px';
     els.msgInput.style.height = Math.min(els.msgInput.scrollHeight, 120) + 'px';
     saveDraft();
   }
