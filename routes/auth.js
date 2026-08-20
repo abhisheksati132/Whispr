@@ -10,7 +10,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-me';
 // POST /api/auth/register — create new account
 router.post('/register', async (req, res) => {
   try {
-    const { username, password, nickname, avatar, bio } = req.body;
+    const { username, password, email, nickname, avatar, bio } = req.body;
     const rawPass = password || req.body.pin;
     if (!username || !rawPass) {
       return res.status(400).json({ error: 'Username and password are required' });
@@ -28,6 +28,13 @@ router.post('/register', async (req, res) => {
     if (existing) {
       return res.status(409).json({ error: `Username @${clean} is already taken. Please choose another username or Sign In.` });
     }
+    
+    if (email && email.trim()) {
+      let existingEmail = await store.getUserByEmailOrUsername(email);
+      if (existingEmail && existingEmail.email === email.trim().toLowerCase()) {
+        return res.status(409).json({ error: `Email address is already registered.` });
+      }
+    }
 
     const pinHash = await bcrypt.hash(String(rawPass), 10);
     const avatarEmoji = avatar || '✨';
@@ -36,8 +43,9 @@ router.post('/register', async (req, res) => {
     const user = await store.createUser({
       username: clean,
       pinHash,
+      email: email,
       avatar: avatarEmoji,
-      color: '#818cf8',
+      color: '#3390ec',
       statusBio: (bio || '').trim() || 'Available',
       nickname: displayName
     });
@@ -50,7 +58,7 @@ router.post('/register', async (req, res) => {
       token,
       username: clean,
       avatar: user.avatar || avatarEmoji,
-      color: user.color || '#818cf8',
+      color: user.color || '#3390ec',
       statusBio: user.statusBio || '',
       nickname: user.nickname || displayName
     });
@@ -66,14 +74,14 @@ router.post('/login', async (req, res) => {
     const { username, password } = req.body;
     const rawPass = password || req.body.pin;
     if (!username || !rawPass) {
-      return res.status(400).json({ error: 'Username and password are required' });
+      return res.status(400).json({ error: 'Username or Email, and password are required' });
     }
-    const clean = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
-    if (!clean) return res.status(400).json({ error: 'Please enter a valid username' });
+    const identifier = String(username).trim().toLowerCase();
+    if (!identifier) return res.status(400).json({ error: 'Please enter a valid username or email' });
 
-    let user = await store.getUserByUsername(clean);
+    let user = await store.getUserByEmailOrUsername(identifier);
     if (!user) {
-      return res.status(404).json({ error: `Account @${clean} not found. Please click 'Create Account' to register.` });
+      return res.status(404).json({ error: `Account not found. Please check your credentials or register.` });
     }
 
     const match = await bcrypt.compare(String(rawPass), user.pinHash || '');
@@ -82,14 +90,14 @@ router.post('/login', async (req, res) => {
     }
 
     store.setLastSeen(user.username);
-    await store.getOrCreateDMRoom(clean, clean);
+    await store.getOrCreateDMRoom(user.username, user.username);
 
     const token = jwt.sign({ username: user.username }, JWT_SECRET, { expiresIn: '60d' });
     res.json({
       token,
       username: user.username,
       avatar: user.avatar || '✨',
-      color: user.color || '#818cf8',
+      color: user.color || '#3390ec',
       statusBio: user.statusBio || '',
       nickname: user.nickname || user.username
     });

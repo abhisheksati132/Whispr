@@ -1,34 +1,36 @@
-/* ═══════════════════ DESIGN TOKENS ═══════════════════ */
+/* ═══════════════════ DESIGN TOKENS (TELEGRAM STYLE) ═══════════════════ */
 :root {
-  --bg:           #FAF9F5;
-  --bg2:          #F3F1EB;
-  --sidebar-bg:   #F5F4EE;
-  --panel:        #FFFFFF;
-  --surface:      #FFFFFF;
-  --surface2:     #F5F3EC;
-  --border:       #E5E3DE;
-  --border-soft:  #ECEAE4;
-  --bubble-me:    #F4ECE7;
-  --bubble-them:  #FFFFFF;
-  --accent:       #D97757;
-  --accent2:      #CC6D4E;
-  --accent-glow:  rgba(217, 119, 87, 0.14);
-  --text:         #1F1E1D;
-  --text2:        #4A4742;
-  --muted:        #78756F;
-  --text-muted:   #78756F;
-  --online:       #388E3C;
-  --offline:      #D32F2F;
-  --header-bg:    #FFFFFF;
+  --bg:           #0e1621;
+  --bg2:          #17212b;
+  --sidebar-bg:   #17212b;
+  --panel:        #17212b;
+  --surface:      #242f3d;
+  --surface2:     #202b36;
+  --border:       #101921;
+  --border-soft:  #202b36;
+  --bubble-me:    #2b5278;
+  --bubble-them:  #182533;
+  --bubble-me-text:   #ffffff;
+  --bubble-them-text: #ffffff;
+  --accent:       #3390ec;
+  --accent2:      #2b82d9;
+  --accent-glow:  rgba(51, 144, 236, 0.18);
+  --text:         #ffffff;
+  --text2:        #e4ecf2;
+  --muted:        #708499;
+  --text-muted:   #708499;
+  --online:       #4fae4e;
+  --offline:      #708499;
+  --header-bg:    #17212b;
   --radius:       12px;
   --radius-sm:    8px;
   --radius-xs:    6px;
-  --shadow:       0 1px 3px rgba(31, 30, 29, 0.05), 0 1px 2px rgba(31, 30, 29, 0.03);
-  --shadow-sm:    0 1px 2px rgba(31, 30, 29, 0.04);
-  --shadow-lg:    0 4px 12px rgba(31, 30, 29, 0.08);
+  --shadow:       0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-sm:    0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-lg:    0 4px 16px rgba(0, 0, 0, 0.4);
   --transition:   180ms cubic-bezier(0.4, 0, 0.2, 1);
-  --font:         'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-serif:   'Source Serif 4', 'Georgia', 'Cambria', serif;
+  --font:         'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-serif:   'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 /* ═══════════════════ 1. BASE RESET & PERFORMANCE ═══════════════════ */
@@ -2828,23 +2830,25 @@ header {
   }
 }
 
-/* ═══════════════════ 22. DARK THEME ═══════════════════ */
+/* ═══════════════════ 22. DARK THEME (TELEGRAM SLATE) ═══════════════════ */
 body.theme-dark {
-  --bg:           #0E0E10;
-  --bg2:          #1A1A1F;
-  --sidebar-bg:   #141418;
-  --panel:        #1E1E24;
-  --surface:      #1E1E24;
-  --surface2:     #26262E;
-  --border:       #2E2E38;
-  --border-soft:  #26262E;
-  --bubble-me:    #2A2060;
-  --bubble-them:  #1E1E24;
-  --text:         #E8E6E0;
-  --text2:        #B4B0A8;
-  --muted:        #6B6860;
-  --text-muted:   #6B6860;
-  --header-bg:    #141418;
+  --bg:           #0e1621;
+  --bg2:          #17212b;
+  --sidebar-bg:   #17212b;
+  --panel:        #17212b;
+  --surface:      #242f3d;
+  --surface2:     #202b36;
+  --border:       #101921;
+  --border-soft:  #202b36;
+  --bubble-me:    #2b5278;
+  --bubble-them:  #182533;
+  --accent:       #3390ec;
+  --accent2:      #2b82d9;
+  --text:         #ffffff;
+  --text2:        #e4ecf2;
+  --muted:        #708499;
+  --text-muted:   #708499;
+  --header-bg:    #17212b;
   --shadow:       0 1px 6px rgba(0,0,0,0.4);
   --shadow-sm:    0 1px 4px rgba(0,0,0,0.3);
   --shadow-lg:    0 4px 20px rgba(0,0,0,0.5);
@@ -2852,24 +2856,24 @@ body.theme-dark {
 
 /* Dark mode: override the context menu dark glass to actually look dark */
 body.theme-dark #contextMenu {
-  background: rgba(28, 28, 36, 0.98);
+  background: #17212b;
   border-color: rgba(255,255,255,0.08);
 }
 body.theme-dark .modal-overlay {
-  background: rgba(0,0,0,0.85);
+  background: rgba(0,0,0,0.75);
 }
 body.theme-dark #messages {
   background: var(--bg);
 }
 body.theme-dark .msg.me {
   background: var(--bubble-me);
-  color: #E8E6E0;
-  border-color: #2A2060;
+  color: #ffffff;
+  border-color: transparent;
 }
 body.theme-dark .msg.them {
   background: var(--bubble-them);
-  color: var(--text);
-  border-color: var(--border);
+  color: #ffffff;
+  border-color: transparent;
 }
 body.theme-dark .date-divider {
   background: var(--surface2);

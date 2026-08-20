@@ -544,13 +544,37 @@ async function getUserByUsername(username) {
   }
 }
 
+async function getUserByEmailOrUsername(identifier) {
+  const clean = String(identifier || '').trim().toLowerCase();
+  if (!clean) return null;
+  if (!isDbReady()) {
+    // Fallback: search memUsers by username or email
+    for (const [uname, u] of memUsers.entries()) {
+      if (uname === clean || (u.email && u.email === clean)) return u;
+    }
+    return null;
+  }
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .or(`username.eq.${clean},email.eq.${clean}`)
+      .limit(1);
+    if (error || !data || data.length === 0) return await getUserByUsername(clean);
+    return dbUserToJs(data[0]);
+  } catch (_) {
+    return await getUserByUsername(clean);
+  }
+}
+
 async function createUser(userData) {
   const clean = String(userData.username || '').trim().toLowerCase();
   const user = {
     username:  clean,
     pinHash:   userData.pinHash || '',
+    email:     userData.email ? String(userData.email).trim().toLowerCase() : null,
     avatar:    userData.avatar || '✨',
-    color:     userData.color || '#D97757',
+    color:     userData.color || '#3390ec',
     statusBio: userData.statusBio || '',
     nickname:  userData.nickname || '',
     lastSeen:  Date.now(),
@@ -569,6 +593,7 @@ async function createUser(userData) {
       await supabase.from('users').upsert({
         username:   user.username,
         pin_hash:   user.pinHash,
+        email:      user.email,
         avatar:     user.avatar,
         color:      user.color,
         status_bio: user.statusBio,
@@ -1116,7 +1141,7 @@ module.exports = {
   getRoomMeta, updateRoomMeta,
   getMessages, addMessage, editMessage, deleteMessage, markViewOnceOpened, clearHistory,
   pinMessage, findMessage, updateReadReceipt, updateMessageReaction, updatePollVotes,
-  getProfile, updateProfile, getUserByUsername, createUser,
+  getProfile, updateProfile, getUserByUsername, getUserByEmailOrUsername, createUser,
   setLastSeen, getLastSeen, recordActivity,
   setFeeling, getFeelings,
   updateGameScore,

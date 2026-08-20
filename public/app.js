@@ -1371,11 +1371,12 @@
     const errEl  = document.getElementById('loginError');
     if (errEl) errEl.textContent = '';
 
-    const cleanName = (nameEl ? nameEl.value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '') : '');
+    let identifier = (nameEl ? nameEl.value.trim().toLowerCase() : '');
+    if (identifier.startsWith('@')) identifier = identifier.slice(1);
     const rawPass = (passEl ? passEl.value : '');
 
-    if (!cleanName || cleanName.length < 2) {
-      if (errEl) errEl.textContent = 'Please enter your username.';
+    if (!identifier || identifier.length < 2) {
+      if (errEl) errEl.textContent = 'Please enter your username or email.';
       if (nameEl) nameEl.focus();
       return;
     }
@@ -1394,7 +1395,7 @@
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: cleanName, password: rawPass })
+        body: JSON.stringify({ username: identifier, password: rawPass })
       });
       const data = await res.json();
 
@@ -1417,12 +1418,14 @@
   async function handleRegister() {
     const userEl = document.getElementById('regUsernameInput');
     const nickEl = document.getElementById('regNicknameInput');
+    const emailEl = document.getElementById('regEmailInput');
     const passEl = document.getElementById('regPasswordInput');
     const errEl  = document.getElementById('regError');
     if (errEl) errEl.textContent = '';
 
     const cleanName = (userEl ? userEl.value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '') : '');
     const displayName = (nickEl ? nickEl.value.trim() : '') || cleanName;
+    const emailVal = (emailEl ? emailEl.value.trim() : '');
     const rawPass = (passEl ? passEl.value : '');
 
     if (!cleanName || cleanName.length < 2) {
@@ -1447,6 +1450,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: cleanName,
+          email: emailVal,
           password: rawPass,
           nickname: displayName,
           avatar: selectedRegAvatar || '🐱',
