@@ -133,7 +133,7 @@ router.get('/me', async (req, res) => {
     res.json({
       username: user.username,
       avatar: user.avatar || '✨',
-      color: user.color || '#818cf8',
+      color: user.color || '#D97757',
       statusBio: user.statusBio || '',
       nickname: user.nickname || ''
     });
