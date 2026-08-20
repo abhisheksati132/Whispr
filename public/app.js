@@ -119,9 +119,17 @@
     if (!socket || !socket.connected) return;
     loadOutboxQueue();
     if (!outboxQueue || !outboxQueue.length) return;
+    const now = Date.now();
+    outboxQueue = outboxQueue.filter(item => item && item.clientMsgId && (now - (item.time || now)) < 120000);
     const queue = [...outboxQueue];
-    queue.forEach(item => {
-      if (item) socket.emit('message', item);
+    outboxQueue = [];
+    saveOutboxQueue();
+    queue.forEach((item, index) => {
+      setTimeout(() => {
+        if (socket && socket.connected && item) {
+          socket.emit('message', item);
+        }
+      }, index * 150);
     });
   }
 
@@ -437,8 +445,36 @@
     }
   }, { threshold: 0.5 });
 
+  function renderEmptyWelcome() {
+    if (!els.messages) return;
+    const existing = els.messages.querySelector('.empty-chat-welcome');
+    if (existing) return;
+    const cleanMyName = (myName || '').toLowerCase();
+    const isDm = myRoom && myRoom.startsWith('dm_');
+    let title = 'Welcome to your Private Space ✨';
+    let sub = 'Send a message below, start a game, or share your invite link with a bestie to start talking!';
+    if (isDm) {
+      const parts = myRoom.replace('dm_', '').split('_');
+      const other = parts.find(p => p.toLowerCase() !== cleanMyName) || parts[0];
+      title = `Direct Chat with @${other} 💬`;
+      sub = `This is the start of your direct private conversation with @${other}. Say hello!`;
+    }
+    const welcomeDiv = document.createElement('div');
+    welcomeDiv.className = 'empty-chat-welcome';
+    welcomeDiv.style.cssText = 'display:flex; flex-direction:column; align-items:center; justify-content:center; padding:48px 20px; text-align:center; margin:auto;';
+    welcomeDiv.innerHTML = `
+      <div style="font-size:44px; margin-bottom:12px;">💭</div>
+      <h3 style="font-size:17px; font-weight:700; margin-bottom:6px; color:var(--text);">${escapeHtml(title)}</h3>
+      <p style="font-size:13px; color:var(--muted); max-width:340px; line-height:1.5; margin-bottom:16px;">${escapeHtml(sub)}</p>
+      ${!isDm ? `<button onclick="BestieChat.copyInviteLink()" style="background:linear-gradient(135deg, #4338ca, #818cf8); color:#fff; border:none; border-radius:12px; padding:10px 18px; font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px;">🔗 Copy 1-Click Invite Link</button>` : ''}
+    `;
+    els.messages.appendChild(welcomeDiv);
+  }
+
   function renderMessage(msg, skipSound) {
     if (!msg || !msg.id) return;
+    const welcome = els.messages ? els.messages.querySelector('.empty-chat-welcome') : null;
+    if (welcome) welcome.remove();
     maybeAddDateDivider(msg.time || Date.now());
 
     const mine    = msg.user === myName;
@@ -2651,7 +2687,11 @@
       });
       if (els.messages) els.messages.innerHTML = '';
       lastDateLabel = '';
-      allMessagesCached.forEach((m) => renderMessage(m, true));
+      if (!allMessagesCached || allMessagesCached.length === 0) {
+        renderEmptyWelcome();
+      } else {
+        allMessagesCached.forEach((m) => renderMessage(m, true));
+      }
       if (els.msgInput) els.msgInput.focus();
       restoreDraft();
       startIntervals();
@@ -5574,26 +5614,37 @@
 
   function renderChatList(rooms) {
     const list = document.getElementById('dmList');
-    if (!list) return;
+    const sidebarList = document.getElementById('sidebarDmList');
+    if (!list && !sidebarList) return;
+
     if (!rooms || !rooms.length) {
-      list.innerHTML = '<div class="dm-list-empty">No chats yet</div>';
+      const emptyHtml = '<div style="padding:10px 8px; font-size:11px; color:var(--muted); text-align:center;">No direct chats yet. Click "+ New" above to message a user!</div>';
+      if (list) list.innerHTML = emptyHtml;
+      if (sidebarList) sidebarList.innerHTML = emptyHtml;
       return;
     }
-    list.innerHTML = rooms.map(room => {
+
+    const html = rooms.map(room => {
       const name    = room.otherParticipant || room.name.replace('dm_', '').replace(/_/g, ', ');
       const preview = room.lastMessage
-        ? `${room.lastMessage.user === myName ? 'You: ' : ''}${room.lastMessage.text || (room.lastMessage.type === 'image' ? '\uD83D\uDCF7 Photo' : room.lastMessage.type === 'voice' ? '\uD83C\uDFA4 Voice' : '\uD83D\uDCAC')}`.slice(0, 38)
+        ? `${room.lastMessage.user === myName ? 'You: ' : ''}${room.lastMessage.text || (room.lastMessage.type === 'image' ? '📷 Photo' : room.lastMessage.type === 'voice' ? '🎤 Voice' : '💬')}`.slice(0, 30)
         : 'No messages yet';
       const timeStr = room.lastActivity ? formatTimestamp(room.lastActivity) : '';
       const badge   = room.unread > 0 ? `<div class="dm-row-badge">${room.unread}</div>` : '';
       const active  = room.name === myRoom ? 'active' : '';
       return `<div class="dm-row ${active}" onclick="BestieChat.switchRoom('${escapeHtml(room.name)}')">
-        <div class="dm-row-avatar">\u2728</div>
-        <div class="dm-row-info"><div class="dm-row-name">@${escapeHtml(name)}</div><div class="dm-row-preview">${escapeHtml(preview)}</div></div>
+        <div class="dm-row-avatar">✨</div>
+        <div class="dm-row-info">
+          <div class="dm-row-name">@${escapeHtml(name)}</div>
+          <div class="dm-row-preview">${escapeHtml(preview)}</div>
+        </div>
         ${badge}
-        <div style="font-size:0.67rem;color:var(--muted);flex-shrink:0;">${timeStr}</div>
+        <div style="font-size:0.65rem; color:var(--muted); flex-shrink:0;">${timeStr}</div>
       </div>`;
     }).join('');
+
+    if (list) list.innerHTML = html;
+    if (sidebarList) sidebarList.innerHTML = html;
   }
 
   function formatTimestamp(ts) {

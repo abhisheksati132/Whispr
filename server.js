@@ -514,7 +514,7 @@ io.on('connection', (socket) => {
     const _now = Date.now();
     if (_now > msgResetAt) { msgCount = 0; msgResetAt = _now + 5000; }
     msgCount++;
-    if (msgCount > 10) { socket.emit('rate-limited', { message: 'Slow down! Take a breath.' }); return; }
+    if (msgCount > 60) { socket.emit('rate-limited', { message: 'Slow down! Take a breath.' }); return; }
 
     let msgData;
     if (typeof payload === 'string') {
