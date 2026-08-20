@@ -841,12 +841,69 @@ io.on('connection', (socket) => {
     } catch (err) { console.error('poll-vote error:', err); }
   });
 
-  // ── WebRTC ────────────────────────────────────────────────────────────────
-  socket.on('call-invite', (payload) => { try { if (currentRoom) { socket.to(currentRoom).emit('call-invite', { from: username, offer: payload.offer, type: payload.type }); sendPushToRoom(currentRoom, username, `Incoming ${payload.type||'voice'} call! 📞`, `From ${username}`); } } catch (err) { console.error('call-invite error:', err); } });
-  socket.on('call-accept', (payload) => { try { if (currentRoom) socket.to(currentRoom).emit('call-accept', { answer: payload.answer }); } catch (err) { console.error('call-accept error:', err); } });
-  socket.on('call-decline', () => { try { if (currentRoom) socket.to(currentRoom).emit('call-decline'); } catch (err) { console.error('call-decline error:', err); } });
-  socket.on('call-candidate', (payload) => { try { if (currentRoom) socket.to(currentRoom).emit('call-candidate', { candidate: payload.candidate }); } catch (err) { console.error('call-candidate error:', err); } });
-  socket.on('call-hangup', () => { try { if (currentRoom) socket.to(currentRoom).emit('call-hangup'); } catch (err) { console.error('call-hangup error:', err); } });
+  // ── WebRTC Calling ────────────────────────────────────────────────────────
+  socket.on('call-invite', (payload = {}) => {
+    try {
+      const data = {
+        from: username,
+        offer: payload.offer,
+        type: payload.type || 'audio',
+        callerSocketId: socket.id,
+        room: currentRoom
+      };
+      if (payload.targetUser) {
+        io.to('user:' + payload.targetUser.toLowerCase()).emit('call-invite', data);
+      }
+      if (currentRoom) {
+        socket.to(currentRoom).emit('call-invite', data);
+        if (currentRoom.startsWith('dm_')) {
+          const parts = currentRoom.replace('dm_', '').split('_');
+          for (const p of parts) {
+            if (p.toLowerCase() !== (username || '').toLowerCase()) {
+              io.to('user:' + p.toLowerCase()).emit('call-invite', data);
+            }
+          }
+        }
+        sendPushToRoom(currentRoom, username, `Incoming ${payload.type||'voice'} call! 📞`, `From ${username}`);
+      }
+    } catch (err) { console.error('call-invite error:', err); }
+  });
+
+  socket.on('call-accept', (payload = {}) => {
+    try {
+      const data = { answer: payload.answer, from: username, calleeSocketId: socket.id };
+      if (payload.callerSocketId) io.to(payload.callerSocketId).emit('call-accept', data);
+      if (payload.targetUser) io.to('user:' + payload.targetUser.toLowerCase()).emit('call-accept', data);
+      if (currentRoom) socket.to(currentRoom).emit('call-accept', data);
+    } catch (err) { console.error('call-accept error:', err); }
+  });
+
+  socket.on('call-decline', (payload = {}) => {
+    try {
+      const data = { from: username };
+      if (payload.callerSocketId) io.to(payload.callerSocketId).emit('call-decline', data);
+      if (payload.targetUser) io.to('user:' + payload.targetUser.toLowerCase()).emit('call-decline', data);
+      if (currentRoom) socket.to(currentRoom).emit('call-decline', data);
+    } catch (err) { console.error('call-decline error:', err); }
+  });
+
+  socket.on('call-candidate', (payload = {}) => {
+    try {
+      const data = { candidate: payload.candidate, from: username };
+      if (payload.targetSocketId) io.to(payload.targetSocketId).emit('call-candidate', data);
+      if (payload.targetUser) io.to('user:' + payload.targetUser.toLowerCase()).emit('call-candidate', data);
+      if (currentRoom) socket.to(currentRoom).emit('call-candidate', data);
+    } catch (err) { console.error('call-candidate error:', err); }
+  });
+
+  socket.on('call-hangup', (payload = {}) => {
+    try {
+      const data = { from: username };
+      if (payload.targetSocketId) io.to(payload.targetSocketId).emit('call-hangup', data);
+      if (payload.targetUser) io.to('user:' + payload.targetUser.toLowerCase()).emit('call-hangup', data);
+      if (currentRoom) socket.to(currentRoom).emit('call-hangup', data);
+    } catch (err) { console.error('call-hangup error:', err); }
+  });
 
   // ── Co-Draw ───────────────────────────────────────────────────────────────
   socket.on('draw-stroke', (data) => { try { if (currentRoom) socket.to(currentRoom).emit('draw-stroke', data); } catch (err) { console.error('draw-stroke error:', err); } });

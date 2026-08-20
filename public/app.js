@@ -180,11 +180,18 @@
   let audioMuted = false;
   let cameraOff = false;
   let callType = null;
+  let callPartner = null;
+  let callPartnerSocketId = null;
 
   const rtcConfig = {
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' }
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' },
+      { urls: 'stun:stun3.l.google.com:19302' },
+      { urls: 'stun:stun4.l.google.com:19302' },
+      { urls: 'stun:stun.services.mozilla.com' },
+      { urls: 'stun:global.stun.twilio.com:3478' }
     ]
   };
 
@@ -2954,10 +2961,12 @@
     socket.on('receipt-update', (rb) => { applyReadReceipts(rb); });
 
     // WebRTC calling signaling listeners
-    socket.on('call-invite', ({ from, offer, type }) => {
+    socket.on('call-invite', ({ from, offer, type, callerSocketId }) => {
       webrtcCallOffer = offer;
       callType = type;
-      
+      callPartner = from;
+      callPartnerSocketId = callerSocketId || null;
+
       const overlay = document.getElementById('callOverlay');
       const incomingControls = document.getElementById('incomingControls');
       const activeControls = document.getElementById('activeCallControls');
@@ -2968,17 +2977,17 @@
       const videoGrid = document.getElementById('videoGrid');
       const flipCamBtn = document.getElementById('flipCamBtn');
       const audioWaves = document.getElementById('callAudioWaves');
-      
+
       if (overlay) overlay.style.display = 'flex';
       if (incomingControls) incomingControls.style.display = 'flex';
       if (activeControls) activeControls.style.display = 'none';
       if (statusText) statusText.textContent = `Incoming ${type === 'video' ? 'Video' : 'Voice'} Call…`;
       if (audioWaves) audioWaves.style.display = 'none';
-      
+
       const p = getProfile(from);
       if (callAvatar) callAvatar.textContent = p.avatar || '🐱';
-      if (callName) callName.textContent = p.nickname || from;
-      
+      if (callName) callName.textContent = p.nickname ? `${p.nickname} (@${from})` : `@${from}`;
+
       if (type === 'video') {
         if (audioView) audioView.style.display = 'none';
         if (videoGrid) videoGrid.style.display = 'block';
@@ -2988,12 +2997,13 @@
         if (videoGrid) videoGrid.style.display = 'none';
         if (flipCamBtn) flipCamBtn.style.display = 'none';
       }
-      
+
       if (navigator.vibrate) navigator.vibrate([300, 500, 300, 500, 300]);
       playSound('receive');
     });
 
-    socket.on('call-accept', ({ answer }) => {
+    socket.on('call-accept', ({ answer, calleeSocketId }) => {
+      if (calleeSocketId) callPartnerSocketId = calleeSocketId;
       if (webrtcConn) {
         webrtcConn.setRemoteDescription(new RTCSessionDescription(answer)).catch(console.error);
         const statusText = document.getElementById('callStatusText');
@@ -3010,7 +3020,7 @@
     });
 
     socket.on('call-candidate', ({ candidate }) => {
-      if (webrtcConn) {
+      if (webrtcConn && candidate) {
         webrtcConn.addIceCandidate(new RTCIceCandidate(candidate)).catch(console.error);
       }
     });
@@ -3202,7 +3212,7 @@
   async function startCall(type) {
     if (!joined) return;
     callType = type;
-    
+
     const overlay = document.getElementById('callOverlay');
     const incomingControls = document.getElementById('incomingControls');
     const activeControls = document.getElementById('activeCallControls');
@@ -3211,22 +3221,29 @@
     const videoGrid = document.getElementById('videoGrid');
     const flipCamBtn = document.getElementById('flipCamBtn');
     const audioWaves = document.getElementById('callAudioWaves');
-    
+
     if (overlay) overlay.style.display = 'flex';
     if (incomingControls) incomingControls.style.display = 'none';
     if (activeControls) activeControls.style.display = 'flex';
     if (statusText) statusText.textContent = 'Calling…';
     if (audioWaves) audioWaves.style.display = 'none';
-    
-    const others = currentOnlineUsers.filter(u => u !== myName);
-    const bestie = others[0] || 'Bestie';
-    const p = getProfile(bestie);
-    
+
+    // Target recipient
+    const cleanMyName = (myName || '').toLowerCase();
+    if (myRoom && myRoom.startsWith('dm_')) {
+      const parts = myRoom.replace('dm_', '').split('_');
+      callPartner = parts.find(p => p.toLowerCase() !== cleanMyName) || parts[0] || 'bestie';
+    } else {
+      const others = currentOnlineUsers.filter(u => (u || '').toLowerCase() !== cleanMyName);
+      callPartner = others[0] || 'Bestie';
+    }
+
+    const p = getProfile(callPartner);
     const callAvatar = document.getElementById('callAvatar');
     const callName = document.getElementById('callName');
     if (callAvatar) callAvatar.textContent = p.avatar || '🐱';
-    if (callName) callName.textContent = p.nickname || bestie;
-    
+    if (callName) callName.textContent = p.nickname ? `${p.nickname} (@${callPartner})` : `@${callPartner}`;
+
     if (type === 'video') {
       if (audioView) audioView.style.display = 'none';
       if (videoGrid) videoGrid.style.display = 'block';
@@ -3236,28 +3253,28 @@
       if (videoGrid) videoGrid.style.display = 'none';
       if (flipCamBtn) flipCamBtn.style.display = 'none';
     }
-    
+
     try {
       const stream = await getUserMediaStream(type);
       localStreamStream = stream;
-      
+
       const localVideo = document.getElementById('localVideo');
       if (localVideo) {
         localVideo.srcObject = stream;
       }
-      
+
       initPeerConnection(type);
-      
+
       stream.getTracks().forEach((track) => {
         webrtcConn.addTrack(track, stream);
       });
-      
+
       const offer = await webrtcConn.createOffer();
       await webrtcConn.setLocalDescription(offer);
-      
-      socket.emit('call-invite', { offer, type });
+
+      socket.emit('call-invite', { offer, type, targetUser: callPartner });
       playSound('send');
-      
+
     } catch (err) {
       console.error('Call failed to start:', err);
       renderSystem('🔒 Could not access microphone/camera');
@@ -3268,13 +3285,17 @@
 
   function initPeerConnection(type) {
     webrtcConn = new RTCPeerConnection(rtcConfig);
-    
+
     webrtcConn.onicecandidate = (e) => {
       if (e.candidate && socket) {
-        socket.emit('call-candidate', { candidate: e.candidate });
+        socket.emit('call-candidate', {
+          candidate: e.candidate,
+          targetSocketId: callPartnerSocketId,
+          targetUser: callPartner
+        });
       }
     };
-    
+
     webrtcConn.ontrack = (e) => {
       const remoteVideo = document.getElementById('remoteVideo');
       if (remoteVideo && e.streams[0]) {
@@ -3286,22 +3307,22 @@
 
   async function acceptCall() {
     if (!webrtcCallOffer) return;
-    
+
     if (navigator.vibrate) navigator.vibrate(0);
-    
+
     const statusText = document.getElementById('callStatusText');
     if (statusText) statusText.textContent = 'Connecting…';
-    
+
     const incomingControls = document.getElementById('incomingControls');
     const activeControls = document.getElementById('activeCallControls');
     const audioView = document.getElementById('callAudioView');
     const videoGrid = document.getElementById('videoGrid');
     const flipCamBtn = document.getElementById('flipCamBtn');
     const audioWaves = document.getElementById('callAudioWaves');
-    
+
     if (incomingControls) incomingControls.style.display = 'none';
     if (activeControls) activeControls.style.display = 'flex';
-    
+
     if (callType === 'video') {
       if (audioView) audioView.style.display = 'none';
       if (videoGrid) videoGrid.style.display = 'block';
@@ -3311,56 +3332,62 @@
       if (videoGrid) videoGrid.style.display = 'none';
       if (flipCamBtn) flipCamBtn.style.display = 'none';
     }
-    
+
     try {
       const stream = await getUserMediaStream(callType);
       localStreamStream = stream;
-      
+
       const localVideo = document.getElementById('localVideo');
       if (localVideo) {
         localVideo.srcObject = stream;
       }
-      
+
       initPeerConnection(callType);
-      
+
       stream.getTracks().forEach((track) => {
         webrtcConn.addTrack(track, stream);
       });
-      
+
       await webrtcConn.setRemoteDescription(new RTCSessionDescription(webrtcCallOffer));
       const answer = await webrtcConn.createAnswer();
       await webrtcConn.setLocalDescription(answer);
-      
-      socket.emit('call-accept', { answer });
+
+      socket.emit('call-accept', {
+        answer,
+        callerSocketId: callPartnerSocketId,
+        targetUser: callPartner
+      });
       if (statusText) statusText.textContent = 'Connected 🟢';
       if (audioWaves) audioWaves.style.display = 'flex';
       startCallTimer();
-      
+
     } catch (err) {
       console.error('Failed to accept call:', err);
-      socket.emit('call-decline');
+      socket.emit('call-decline', { callerSocketId: callPartnerSocketId, targetUser: callPartner });
       endCall(true);
     }
   }
 
   function endCall(silent) {
     if (!silent && socket) {
-      socket.emit('call-hangup');
+      socket.emit('call-hangup', { targetSocketId: callPartnerSocketId, targetUser: callPartner });
     }
     if (navigator.vibrate) navigator.vibrate(0);
     stopCallTimer();
-    
+
     if (localStreamStream) {
       localStreamStream.getTracks().forEach((t) => t.stop());
       localStreamStream = null;
     }
-    
+
     if (webrtcConn) {
       webrtcConn.close();
       webrtcConn = null;
     }
-    
+
     webrtcCallOffer = null;
+    callPartner = null;
+    callPartnerSocketId = null;
     audioMuted = false;
     cameraOff = false;
     
