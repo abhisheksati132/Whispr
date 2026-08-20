@@ -35,55 +35,94 @@
 </div>
 
 <!-- ═══════════════════ LOGIN PAGE ═══════════════════ -->
+<!-- ═══════════════════ LOGIN & REGISTRATION ═══════════════════ -->
 <div id="login">
   <div class="login-container">
     <div class="login-card">
       <!-- Brand -->
-      <div class="login-brand" style="margin-bottom: 12px;">
-        <img src="/icon-192.png?v=901" alt="Whispr logo" width="56" height="56" style="border-radius:14px; margin-bottom: 8px; border: 1px solid var(--border);" />
-        <h1 class="brand-text-login" style="font-size: 36px; font-weight: 700; letter-spacing: -0.03em; margin: 0 0 2px 0; color: var(--text);">Whispr</h1>
-        <p class="login-tagline" style="font-size: 14px; font-weight: 500; color: var(--muted); margin: 0;">Your private, encrypted space.</p>
+      <div class="login-brand" style="margin-bottom: 16px; text-align: center;">
+        <img src="/icon-192.png?v=901" alt="Whispr logo" width="56" height="56" style="border-radius:16px; margin-bottom: 8px; border: 1px solid var(--border);" />
+        <h1 class="brand-text-login" style="font-size: 30px; font-weight: 700; letter-spacing: -0.03em; margin: 0 0 4px 0; color: var(--text);">Whispr</h1>
+        <p class="login-tagline" style="font-size: 13px; font-weight: 500; color: var(--muted); margin: 0;">Private, real-time multi-user messaging.</p>
       </div>
 
-      <!-- Quick 1-Tap Re-entry (if returning user with valid JWT) -->
-      <div id="quickReentryContainer" style="display:none; margin-bottom:12px; flex-direction:column; gap:12px; align-items:center;">
-        <div id="quickReentryBtn" onclick="BestieChat.quickReentry()" style="font-size:16px; font-weight:600; color:var(--text); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:color 0.2s;" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color='var(--text)'">
-          <span id="quickReentryText">✨ Continue to Whispr</span>
+      <!-- Quick 1-Tap Re-entry (if returning user with valid session) -->
+      <div id="quickReentryContainer" style="display:none; margin-bottom:14px; flex-direction:column; gap:10px; align-items:center;">
+        <button id="quickReentryBtn" type="button" onclick="BestieChat.quickReentry()" class="login-btn" style="width:100%;">
+          <span id="quickReentryText">✨ Continue to your account</span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </div>
-        <div style="font-size:13px; color:var(--muted); cursor:pointer; transition:color 0.2s;" onclick="BestieChat.showFullLoginForm()" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">or log in with another name →</div>
+        </button>
+        <div style="font-size:12px; color:var(--muted); cursor:pointer;" onclick="BestieChat.showFullLoginForm()">or sign in with another account →</div>
       </div>
 
-      <!-- Form -->
-      <div class="login-form" id="loginForm">
+      <!-- Auth Mode Tabs (Sign In / Create Account) -->
+      <div class="auth-tabs" style="display:flex; background:var(--surface); border:1px solid var(--border-soft); border-radius:12px; padding:3px; margin-bottom:18px;">
+        <button type="button" id="tabBtnSignIn" class="auth-tab-btn active" onclick="BestieChat.switchAuthTab('signin')" style="flex:1; padding:8px 0; border:none; background:var(--accent); color:#fff; font-weight:600; font-size:13px; border-radius:9px; cursor:pointer; transition:all 0.2s;">Sign In</button>
+        <button type="button" id="tabBtnRegister" class="auth-tab-btn" onclick="BestieChat.switchAuthTab('register')" style="flex:1; padding:8px 0; border:none; background:none; color:var(--muted); font-weight:600; font-size:13px; border-radius:9px; cursor:pointer; transition:all 0.2s;">Create Account</button>
+      </div>
 
-
-        <!-- Username -->
+      <!-- Sign In Form -->
+      <div id="signInSection" class="login-form">
         <div class="login-field" style="margin-bottom: 12px;">
-          <label class="login-label" for="nameInput" style="display:block; margin-bottom:6px; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted);">Username</label>
-          <input id="nameInput" type="text" class="login-input" placeholder="e.g. Bestie..." maxlength="25" autocomplete="username" autocapitalize="none" style="width:100%; box-sizing:border-box;" />
+          <label class="login-label" for="nameInput" style="display:block; margin-bottom:6px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted);">Username</label>
+          <input id="nameInput" type="text" class="login-input" placeholder="Enter @username…" maxlength="25" autocomplete="username" autocapitalize="none" style="width:100%; box-sizing:border-box;" />
         </div>
 
-        <!-- Password -->
-        <div id="passwordField" class="login-field" style="margin-bottom: 16px;">
-          <label class="login-label" for="passwordInput" style="display:block; margin-bottom:6px; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted);">Password</label>
+        <div class="login-field" style="margin-bottom: 16px;">
+          <label class="login-label" for="passwordInput" style="display:block; margin-bottom:6px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted);">Password</label>
           <input id="passwordInput" type="password" class="login-input" placeholder="Enter password…" autocomplete="current-password" style="width:100%; box-sizing:border-box;" />
         </div>
 
-        <input id="nicknameInput" type="hidden" />
-        <div id="loginError" class="login-error" style="color:#D32F2F; font-size:13px; margin-bottom:10px; min-height:18px;"></div>
+        <div id="loginError" class="login-error" style="color:#f87171; font-size:12px; margin-bottom:12px; min-height:16px; text-align:center; font-weight:500;"></div>
 
-        <button id="joinBtn" type="button" class="login-btn" onclick="BestieChat.joinChat()">
-          <span id="joinBtnText">Enter Space</span>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        <button id="joinBtn" type="button" class="login-btn" onclick="BestieChat.handleSignIn()" style="width:100%; margin-bottom:10px;">
+          <span id="joinBtnText">Sign In</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </button>
-
-        <button type="button" onclick="BestieChat.copyInviteLink()" class="login-invite-btn">
-          🔗 Copy 1-Click Invite Link
-        </button>
-
-        <button id="installBtn" type="button" style="display:none; margin-top:10px;" class="login-btn">Install App 📱</button>
       </div>
+
+      <!-- Create Account Form (Hidden by default) -->
+      <div id="registerSection" class="login-form" style="display:none;">
+        <div class="login-field" style="margin-bottom: 10px;">
+          <label class="login-label" for="regUsernameInput" style="display:block; margin-bottom:4px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted);">Choose Username</label>
+          <input id="regUsernameInput" type="text" class="login-input" placeholder="e.g. alex, john_doe…" maxlength="25" autocomplete="off" autocapitalize="none" style="width:100%; box-sizing:border-box;" />
+        </div>
+
+        <div class="login-field" style="margin-bottom: 10px;">
+          <label class="login-label" for="regNicknameInput" style="display:block; margin-bottom:4px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted);">Display Name</label>
+          <input id="regNicknameInput" type="text" class="login-input" placeholder="e.g. Alex Rivera" maxlength="30" autocomplete="off" style="width:100%; box-sizing:border-box;" />
+        </div>
+
+        <div class="login-field" style="margin-bottom: 10px;">
+          <label class="login-label" for="regPasswordInput" style="display:block; margin-bottom:4px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted);">Create Password</label>
+          <input id="regPasswordInput" type="password" class="login-input" placeholder="At least 3 characters…" autocomplete="new-password" style="width:100%; box-sizing:border-box;" />
+        </div>
+
+        <!-- Avatar Selection -->
+        <div class="login-field" style="margin-bottom: 10px;">
+          <label class="login-label" style="display:block; margin-bottom:6px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted);">Choose Avatar</label>
+          <div id="avatarChipsRow" style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button type="button" class="avatar-chip selected" onclick="BestieChat.selectRegisterAvatar('🐱', this)" style="width:34px; height:34px; font-size:18px; border-radius:50%; border:2px solid var(--accent); background:var(--surface); cursor:pointer;">🐱</button>
+            <button type="button" class="avatar-chip" onclick="BestieChat.selectRegisterAvatar('🚀', this)" style="width:34px; height:34px; font-size:18px; border-radius:50%; border:1px solid var(--border); background:var(--surface); cursor:pointer;">🚀</button>
+            <button type="button" class="avatar-chip" onclick="BestieChat.selectRegisterAvatar('🌸', this)" style="width:34px; height:34px; font-size:18px; border-radius:50%; border:1px solid var(--border); background:var(--surface); cursor:pointer;">🌸</button>
+            <button type="button" class="avatar-chip" onclick="BestieChat.selectRegisterAvatar('🦊', this)" style="width:34px; height:34px; font-size:18px; border-radius:50%; border:1px solid var(--border); background:var(--surface); cursor:pointer;">🦊</button>
+            <button type="button" class="avatar-chip" onclick="BestieChat.selectRegisterAvatar('⚡', this)" style="width:34px; height:34px; font-size:18px; border-radius:50%; border:1px solid var(--border); background:var(--surface); cursor:pointer;">⚡</button>
+            <button type="button" class="avatar-chip" onclick="BestieChat.selectRegisterAvatar('👑', this)" style="width:34px; height:34px; font-size:18px; border-radius:50%; border:1px solid var(--border); background:var(--surface); cursor:pointer;">👑</button>
+            <button type="button" class="avatar-chip" onclick="BestieChat.selectRegisterAvatar('✨', this)" style="width:34px; height:34px; font-size:18px; border-radius:50%; border:1px solid var(--border); background:var(--surface); cursor:pointer;">✨</button>
+            <button type="button" class="avatar-chip" onclick="BestieChat.selectRegisterAvatar('🎧', this)" style="width:34px; height:34px; font-size:18px; border-radius:50%; border:1px solid var(--border); background:var(--surface); cursor:pointer;">🎧</button>
+          </div>
+        </div>
+
+        <div id="regError" class="login-error" style="color:#f87171; font-size:12px; margin-bottom:12px; min-height:16px; text-align:center; font-weight:500;"></div>
+
+        <button id="registerBtn" type="button" class="login-btn" onclick="BestieChat.handleRegister()" style="width:100%; margin-bottom:10px;">
+          <span id="registerBtnText">Create Free Account</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+      </div>
+
+      <!-- App Footer / Install -->
+      <button id="installBtn" type="button" style="display:none; margin-top:6px; width:100%;" class="login-btn">Install App 📱</button>
     </div>
   </div>
 </div>
@@ -1273,11 +1312,11 @@
 <!-- Scripts -->
 <script src="/socket.io/socket.io.js"></script>
 <script src="/crypto-js.min.js"></script>
-<script src="/app.js?v=67"></script>
+<script src="/app.js?v=68"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js?v=12037').catch(console.error);
+      navigator.serviceWorker.register('/sw.js?v=12038').catch(console.error);
     });
   }
   function forceClearAppCache() {

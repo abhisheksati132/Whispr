@@ -7,120 +7,99 @@ const store   = require('../supabaseStore');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-me';
 
-// POST /api/auth/register
+// POST /api/auth/register — create new account
 router.post('/register', async (req, res) => {
   try {
-    const { username, avatar } = req.body;
-    const rawPass = req.body.password || req.body.pin;
-    if (!username || !rawPass) return res.status(400).json({ error: 'Username and password required' });
-    if (String(rawPass).trim().length < 3) return res.status(400).json({ error: 'Password must be at least 3 characters' });
+    const { username, password, nickname, avatar, bio } = req.body;
+    const rawPass = password || req.body.pin;
+    if (!username || !rawPass) {
+      return res.status(400).json({ error: 'Username and password are required' });
+    }
+    if (String(rawPass).trim().length < 3) {
+      return res.status(400).json({ error: 'Password must be at least 3 characters long' });
+    }
 
     const clean = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
     if (!clean || clean.length < 2 || clean.length > 25) {
-      return res.status(400).json({ error: 'Username must be 2–25 letters, numbers or underscores' });
+      return res.status(400).json({ error: 'Username must be 2–25 letters, numbers, or underscores' });
+    }
+
+    let existing = await store.getUserByUsername(clean);
+    if (existing) {
+      return res.status(409).json({ error: `Username @${clean} is already taken. Please choose another username or Sign In.` });
     }
 
     const pinHash = await bcrypt.hash(String(rawPass), 10);
     const avatarEmoji = avatar || '✨';
+    const displayName = (nickname || '').trim() || clean;
 
-    let user = await store.getUserByUsername(clean);
-    if (user) {
-      // If user exists and password matches, log them in!
-      const match = await bcrypt.compare(String(rawPass), user.pinHash || '');
-      if (match) {
-        store.setLastSeen(clean);
-        const token = jwt.sign({ username: user.username }, JWT_SECRET, { expiresIn: '60d' });
-        return res.json({
-          token,
-          username: user.username,
-          avatar: user.avatar || avatarEmoji,
-          color: user.color || '#D97757',
-          statusBio: user.statusBio || '',
-          nickname: user.nickname || ''
-        });
-      }
-      return res.status(401).json({ error: 'Incorrect password for this username. Please try again.' });
-    }
-
-    user = await store.createUser({
+    const user = await store.createUser({
       username: clean,
       pinHash,
       avatar: avatarEmoji,
-      color: '#D97757',
-      statusBio: '',
-      nickname: ''
+      color: '#818cf8',
+      statusBio: (bio || '').trim() || 'Available',
+      nickname: displayName
     });
 
+    // Auto-create Saved Messages room for this user
+    await store.getOrCreateDMRoom(clean, clean);
+
     const token = jwt.sign({ username: clean }, JWT_SECRET, { expiresIn: '60d' });
-    return res.json({
+    return res.status(201).json({
       token,
       username: clean,
       avatar: user.avatar || avatarEmoji,
-      color: user.color || '#D97757',
+      color: user.color || '#818cf8',
       statusBio: user.statusBio || '',
-      nickname: user.nickname || ''
+      nickname: user.nickname || displayName
     });
   } catch (err) {
     console.error('register error:', err);
-    res.status(500).json({ error: 'Authentication error. Please try again.' });
+    res.status(500).json({ error: 'Failed to create account. Please try again.' });
   }
 });
 
-// POST /api/auth/login
+// POST /api/auth/login — sign in to existing account
 router.post('/login', async (req, res) => {
   try {
-    const { username } = req.body;
-    const rawPass = req.body.password || req.body.pin;
-    if (!username || !rawPass) return res.status(400).json({ error: 'Username and password required' });
+    const { username, password } = req.body;
+    const rawPass = password || req.body.pin;
+    if (!username || !rawPass) {
+      return res.status(400).json({ error: 'Username and password are required' });
+    }
     const clean = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
-    if (!clean) return res.status(400).json({ error: 'Username required' });
+    if (!clean) return res.status(400).json({ error: 'Please enter a valid username' });
 
     let user = await store.getUserByUsername(clean);
-
     if (!user) {
-      // Auto-register if user doesn't exist yet!
-      const pinHash = await bcrypt.hash(String(rawPass), 10);
-      user = await store.createUser({
-        username: clean,
-        pinHash,
-        avatar: '✨',
-        color: '#D97757',
-        statusBio: '',
-        nickname: ''
-      });
-      const token = jwt.sign({ username: clean }, JWT_SECRET, { expiresIn: '60d' });
-      return res.json({
-        token,
-        username: clean,
-        avatar: user.avatar || '✨',
-        color: user.color || '#D97757',
-        statusBio: user.statusBio || '',
-        nickname: user.nickname || ''
-      });
+      return res.status(404).json({ error: `Account @${clean} not found. Please click 'Create Account' to register.` });
     }
 
-    // Check existing password
     const match = await bcrypt.compare(String(rawPass), user.pinHash || '');
-    if (!match) return res.status(401).json({ error: 'Incorrect password for this username. Please try again.' });
+    if (!match) {
+      return res.status(401).json({ error: 'Incorrect password. Please try again.' });
+    }
 
     store.setLastSeen(user.username);
+    await store.getOrCreateDMRoom(clean, clean);
 
     const token = jwt.sign({ username: user.username }, JWT_SECRET, { expiresIn: '60d' });
     res.json({
       token,
       username: user.username,
       avatar: user.avatar || '✨',
-      color: user.color || '#D97757',
+      color: user.color || '#818cf8',
       statusBio: user.statusBio || '',
-      nickname: user.nickname || ''
+      nickname: user.nickname || user.username
     });
   } catch (err) {
     console.error('login error:', err);
-    res.status(500).json({ error: 'Login error. Please try again.' });
+    res.status(500).json({ error: 'Login failed. Please try again.' });
   }
 });
 
-// GET /api/auth/me (verify token)
+// GET /api/auth/me — verify active session token
 router.get('/me', async (req, res) => {
   try {
     const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
@@ -128,17 +107,38 @@ router.get('/me', async (req, res) => {
     const decoded = jwt.verify(token, JWT_SECRET);
 
     const user = await store.getUserByUsername(decoded.username);
-    if (!user) return res.status(401).json({ error: 'User not found' });
+    if (!user) return res.status(401).json({ error: 'User account not found' });
 
     res.json({
       username: user.username,
       avatar: user.avatar || '✨',
-      color: user.color || '#D97757',
+      color: user.color || '#818cf8',
       statusBio: user.statusBio || '',
-      nickname: user.nickname || ''
+      nickname: user.nickname || user.username
     });
   } catch (err) {
-    res.status(401).json({ error: 'Token invalid or expired — please log in again.' });
+    res.status(401).json({ error: 'Session expired. Please sign in again.' });
+  }
+});
+
+// POST /api/auth/profile — update profile
+router.post('/profile', async (req, res) => {
+  try {
+    const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
+    if (!token) return res.status(401).json({ error: 'No token provided' });
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    const { nickname, avatar, statusBio, color } = req.body;
+    const updates = {};
+    if (typeof nickname === 'string') updates.nickname = nickname.trim();
+    if (typeof avatar === 'string') updates.avatar = avatar.trim();
+    if (typeof statusBio === 'string') updates.statusBio = statusBio.trim();
+    if (typeof color === 'string') updates.color = color.trim();
+
+    const updated = await store.updateProfile(decoded.username, updates);
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update profile' });
   }
 });
 

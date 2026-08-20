@@ -1063,21 +1063,30 @@
 
     const cleanMyName = (myName || '').toLowerCase();
 
-    // 1. If currently in a DM room (e.g. dm_alex_sam)
+    // 1. If currently in a DM room (e.g. dm_alex_sam or dm_alex_alex)
     if (myRoom && myRoom.startsWith('dm_')) {
       const parts = myRoom.replace('dm_', '').split('_');
-      const otherUsername = parts.find(p => p.toLowerCase() !== cleanMyName) || parts[0] || 'bestie';
-      const p = getProfile(otherUsername);
-      bestieAvatar = p.avatar || '✨';
-      bestieDisplay = p.nickname ? `${p.nickname} (@${otherUsername})` : `@${otherUsername}`;
+      const isSaved = (parts.length === 2 && parts[0].toLowerCase() === cleanMyName && parts[1].toLowerCase() === cleanMyName);
 
-      const isOtherOnline = currentOnlineUsers.some(u => (u || '').toLowerCase() === otherUsername.toLowerCase());
-      if (isOtherOnline) {
-        bestieStatus = 'Online 🟢';
+      if (isSaved) {
+        bestieAvatar = '🔖';
+        bestieDisplay = 'Saved Messages';
+        bestieStatus = 'Your personal cloud storage & notes';
         isOnline = true;
       } else {
-        const ts = lastSeenData[otherUsername] || lastSeenData[otherUsername.toLowerCase()];
-        bestieStatus = ts ? formatLastSeen(ts) : 'Offline';
+        const otherUsername = parts.find(p => p.toLowerCase() !== cleanMyName) || parts[0] || 'bestie';
+        const p = getProfile(otherUsername);
+        bestieAvatar = p.avatar || '✨';
+        bestieDisplay = p.nickname ? `${p.nickname} (@${otherUsername})` : `@${otherUsername}`;
+
+        const isOtherOnline = currentOnlineUsers.some(u => (u || '').toLowerCase() === otherUsername.toLowerCase());
+        if (isOtherOnline) {
+          bestieStatus = 'Online 🟢';
+          isOnline = true;
+        } else {
+          const ts = lastSeenData[otherUsername] || lastSeenData[otherUsername.toLowerCase()];
+          bestieStatus = ts ? formatLastSeen(ts) : 'Offline';
+        }
       }
     } else {
       // 2. In shared space (our-private-space or custom room)
@@ -1314,115 +1323,201 @@
 
   // ─── Auth Mode Toggle ───────────────────────────────────────────────────────
   function setAuthMode(mode) {
-    authMode = mode;
-    const loginBtn    = document.getElementById('authTabLogin');
-    const registerBtn = document.getElementById('authTabRegister');
-    const joinBtnText = document.getElementById('joinBtnText');
-    const avatarField = document.getElementById('avatarPickerField');
-    if (mode === 'register') {
-      if (loginBtn)    { loginBtn.style.background = 'transparent'; loginBtn.style.color = 'var(--muted)'; }
-      if (registerBtn) { registerBtn.style.background = 'var(--accent)'; registerBtn.style.color = '#fff'; }
-      if (joinBtnText) joinBtnText.textContent = '✨ Create Account';
-      if (avatarField) avatarField.style.display = 'block';
+    switchAuthTab(mode === 'register' ? 'register' : 'signin');
+  }
+
+  let selectedRegAvatar = '🐱';
+
+  function switchAuthTab(tab) {
+    const signInSec = document.getElementById('signInSection');
+    const regSec    = document.getElementById('registerSection');
+    const tabSignIn = document.getElementById('tabBtnSignIn');
+    const tabReg    = document.getElementById('tabBtnRegister');
+    const loginErr  = document.getElementById('loginError');
+    const regErr    = document.getElementById('regError');
+    if (loginErr) loginErr.textContent = '';
+    if (regErr)   regErr.textContent = '';
+
+    if (tab === 'register') {
+      if (signInSec) signInSec.style.display = 'none';
+      if (regSec)    regSec.style.display = 'block';
+      if (tabSignIn) { tabSignIn.style.background = 'none'; tabSignIn.style.color = 'var(--muted)'; }
+      if (tabReg)    { tabReg.style.background = 'var(--accent)'; tabReg.style.color = '#fff'; }
+      const regUser = document.getElementById('regUsernameInput');
+      if (regUser) regUser.focus();
     } else {
-      if (loginBtn)    { loginBtn.style.background = 'var(--accent)'; loginBtn.style.color = '#fff'; }
-      if (registerBtn) { registerBtn.style.background = 'transparent'; registerBtn.style.color = 'var(--muted)'; }
-      if (joinBtnText) joinBtnText.textContent = '🔑 Login';
-      if (avatarField) avatarField.style.display = 'none';
+      if (signInSec) signInSec.style.display = 'block';
+      if (regSec)    regSec.style.display = 'none';
+      if (tabSignIn) { tabSignIn.style.background = 'var(--accent)'; tabSignIn.style.color = '#fff'; }
+      if (tabReg)    { tabReg.style.background = 'none'; tabReg.style.color = 'var(--muted)'; }
+      const nameInput = document.getElementById('nameInput');
+      if (nameInput) nameInput.focus();
     }
   }
 
-  // ─── Join / Auth ─────────────────────────────────────────────────────────────
-  async function joinChat() {
+  function selectRegisterAvatar(emoji, btn) {
+    selectedRegAvatar = emoji || '✨';
+    document.querySelectorAll('.avatar-chip').forEach(c => {
+      c.style.border = '1px solid var(--border)';
+    });
+    if (btn) {
+      btn.style.border = '2px solid var(--accent)';
+    }
+  }
+
+  async function handleSignIn() {
     const nameEl = document.getElementById('nameInput');
     const passEl = document.getElementById('passwordInput');
     const errEl  = document.getElementById('loginError');
     if (errEl) errEl.textContent = '';
 
-    const rawName = (nameEl ? nameEl.value.trim() : '');
-    const cleanName = (rawName.toLowerCase().replace(/[^a-z0-9_]/g, ''));
+    const cleanName = (nameEl ? nameEl.value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '') : '');
     const rawPass = (passEl ? passEl.value : '');
 
     if (!cleanName || cleanName.length < 2) {
-      if (errEl) errEl.textContent = 'Please enter a valid username (at least 2 letters/numbers).';
+      if (errEl) errEl.textContent = 'Please enter your username.';
       if (nameEl) nameEl.focus();
       return;
     }
-    if (!rawPass || rawPass.length < 3) {
-      if (errEl) errEl.textContent = 'Please enter your password (at least 3 characters).';
+    if (!rawPass || rawPass.length < 1) {
+      if (errEl) errEl.textContent = 'Please enter your password.';
       if (passEl) passEl.focus();
       return;
     }
 
     const joinBtn = document.getElementById('joinBtn');
-    if (joinBtn) {
-      joinBtn.disabled = true;
-      const textSpan = document.getElementById('joinBtnText');
-      if (textSpan) textSpan.textContent = 'Signing in...';
+    const textSpan = document.getElementById('joinBtnText');
+    if (joinBtn) joinBtn.disabled = true;
+    if (textSpan) textSpan.textContent = 'Signing in…';
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: cleanName, password: rawPass })
+      });
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        if (errEl) errEl.textContent = data.error || 'Invalid username or password.';
+        if (joinBtn) joinBtn.disabled = false;
+        if (textSpan) textSpan.textContent = 'Sign In';
+        return;
+      }
+
+      await completeUserLogin(data);
+    } catch (err) {
+      console.error('Sign in error:', err);
+      if (errEl) errEl.textContent = 'Network error. Please try again.';
+      if (joinBtn) joinBtn.disabled = false;
+      if (textSpan) textSpan.textContent = 'Sign In';
     }
+  }
+
+  async function handleRegister() {
+    const userEl = document.getElementById('regUsernameInput');
+    const nickEl = document.getElementById('regNicknameInput');
+    const passEl = document.getElementById('regPasswordInput');
+    const errEl  = document.getElementById('regError');
+    if (errEl) errEl.textContent = '';
+
+    const cleanName = (userEl ? userEl.value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '') : '');
+    const displayName = (nickEl ? nickEl.value.trim() : '') || cleanName;
+    const rawPass = (passEl ? passEl.value : '');
+
+    if (!cleanName || cleanName.length < 2) {
+      if (errEl) errEl.textContent = 'Username must be 2–25 letters/numbers.';
+      if (userEl) userEl.focus();
+      return;
+    }
+    if (!rawPass || rawPass.length < 3) {
+      if (errEl) errEl.textContent = 'Password must be at least 3 characters.';
+      if (passEl) passEl.focus();
+      return;
+    }
+
+    const regBtn = document.getElementById('registerBtn');
+    const textSpan = document.getElementById('registerBtnText');
+    if (regBtn) regBtn.disabled = true;
+    if (textSpan) textSpan.textContent = 'Creating account…';
 
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: cleanName, password: rawPass, avatar: myProfile.avatar || '✨' })
+        body: JSON.stringify({
+          username: cleanName,
+          password: rawPass,
+          nickname: displayName,
+          avatar: selectedRegAvatar || '🐱',
+          bio: 'Available'
+        })
       });
       const data = await res.json();
 
       if (!res.ok || data.error) {
-        if (errEl) errEl.textContent = data.error || 'Login failed. Please check password.';
-        if (joinBtn) {
-          joinBtn.disabled = false;
-          const textSpan = document.getElementById('joinBtnText');
-          if (textSpan) textSpan.textContent = 'Enter Space';
-        }
+        if (errEl) errEl.textContent = data.error || 'Failed to create account.';
+        if (regBtn) regBtn.disabled = false;
+        if (textSpan) textSpan.textContent = 'Create Free Account';
         return;
       }
 
-      authToken = data.token;
-      myName = data.username || cleanName;
-      myRoom = 'our-private-space';
-      if (data.avatar) myProfile.avatar = data.avatar;
-      if (data.nickname) myProfile.nickname = data.nickname;
-      if (data.statusBio) myProfile.statusBio = data.statusBio;
-
-      localStorage.setItem('bestieChatName', myName);
-      localStorage.setItem('bestieChatToken', authToken);
-      localStorage.setItem('bestieChatRoom', myRoom);
-      localStorage.setItem('bestieChatProfile', JSON.stringify(myProfile));
-
-      // Hide login and show chat space
-      const loginDiv = document.getElementById('login');
-      const chatDiv  = document.getElementById('chat');
-      if (loginDiv) loginDiv.setAttribute('style', 'display:none !important');
-      if (chatDiv)  chatDiv.setAttribute('style', 'display:flex !important');
-
-      applyRoomTheme(myRoom);
-      updateSidebarMyProfile();
-
-      await initOfflineDB();
-      loadCachedMessagesFromOfflineDB(myRoom).then(msgs => {
-        if (allMessagesCached.length === 0 && msgs.length > 0) {
-          allMessagesCached = msgs;
-          if (els.messages) els.messages.innerHTML = '';
-          lastDateLabel = '';
-          msgs.forEach(m => renderMessage(m, true));
-        }
-      });
-
-      if (!socket || !socket.connected) initSocket();
-      else doSocketJoin();
-
-      setTimeout(loadChatList, 800);
+      await completeUserLogin(data);
     } catch (err) {
-      console.error('Auth error:', err);
-      if (errEl) errEl.textContent = 'Connection error. Please try again.';
-      if (joinBtn) {
-        joinBtn.disabled = false;
-        const textSpan = document.getElementById('joinBtnText');
-        if (textSpan) textSpan.textContent = 'Enter Space';
-      }
+      console.error('Register error:', err);
+      if (errEl) errEl.textContent = 'Network error. Please try again.';
+      if (regBtn) regBtn.disabled = false;
+      if (textSpan) textSpan.textContent = 'Create Free Account';
     }
+  }
+
+  async function completeUserLogin(data) {
+    authToken = data.token;
+    myName = data.username;
+    myProfile.avatar = data.avatar || '🐱';
+    myProfile.nickname = data.nickname || data.username;
+    myProfile.statusBio = data.statusBio || 'Available';
+    myProfile.color = data.color || '#818cf8';
+
+    // Default to Saved Messages or last active room
+    myRoom = localStorage.getItem('bestieChatRoom') || `dm_${myName.toLowerCase()}_${myName.toLowerCase()}`;
+
+    localStorage.setItem('bestieChatName', myName);
+    localStorage.setItem('bestieChatToken', authToken);
+    localStorage.setItem('bestieChatRoom', myRoom);
+    localStorage.setItem('bestieChatProfile', JSON.stringify(myProfile));
+
+    // Hide offline banner on login
+    const banner = document.getElementById('offlineBanner');
+    if (banner) banner.style.display = 'none';
+
+    // Hide login and show chat space
+    const loginDiv = document.getElementById('login');
+    const chatDiv  = document.getElementById('chat');
+    if (loginDiv) loginDiv.setAttribute('style', 'display:none !important');
+    if (chatDiv)  chatDiv.setAttribute('style', 'display:flex !important');
+
+    applyRoomTheme(myRoom);
+    updateSidebarMyProfile();
+
+    await initOfflineDB();
+    loadCachedMessagesFromOfflineDB(myRoom).then(msgs => {
+      if (allMessagesCached.length === 0 && msgs.length > 0) {
+        allMessagesCached = msgs;
+        if (els.messages) els.messages.innerHTML = '';
+        lastDateLabel = '';
+        msgs.forEach(m => renderMessage(m, true));
+      }
+    });
+
+    if (!socket || !socket.connected) initSocket();
+    else doSocketJoin();
+
+    setTimeout(loadChatList, 400);
+  }
+
+  async function joinChat() {
+    return handleSignIn();
   }
 
   function leaveChat() {
@@ -2629,7 +2724,8 @@
     socket.on('disconnect', () => {
       setConnected(false);
       const banner = document.getElementById('offlineBanner');
-      if (banner) banner.style.display = 'flex';
+      if (banner && joined && !navigator.onLine) banner.style.display = 'flex';
+      else if (banner) banner.style.display = 'none';
     });
 
     socket.on('join-error', (msg) => {
@@ -5625,17 +5721,21 @@
     }
 
     const html = rooms.map(room => {
-      const name    = room.otherParticipant || room.name.replace('dm_', '').replace(/_/g, ', ');
+      const isSaved = room.isSaved;
+      const avatar  = (room.otherProfile && room.otherProfile.avatar) || (isSaved ? '🔖' : '✨');
+      const name    = isSaved ? 'Saved Messages' : (room.otherParticipant || room.name.replace('dm_', '').replace(/_/g, ', '));
+      const displayName = isSaved ? 'Saved Messages ⭐️' : (room.otherProfile && room.otherProfile.nickname ? `${room.otherProfile.nickname}` : `@${name}`);
       const preview = room.lastMessage
-        ? `${room.lastMessage.user === myName ? 'You: ' : ''}${room.lastMessage.text || (room.lastMessage.type === 'image' ? '📷 Photo' : room.lastMessage.type === 'voice' ? '🎤 Voice' : '💬')}`.slice(0, 30)
-        : 'No messages yet';
+        ? `${room.lastMessage.user === myName ? 'You: ' : ''}${room.lastMessage.text || (room.lastMessage.type === 'image' ? '📷 Photo' : room.lastMessage.type === 'voice' ? '🎤 Voice' : room.lastMessage.type === 'document' ? '📄 Document' : '💬')}`.slice(0, 28)
+        : (isSaved ? 'Your personal cloud notes' : 'No messages yet');
       const timeStr = room.lastActivity ? formatTimestamp(room.lastActivity) : '';
       const badge   = room.unread > 0 ? `<div class="dm-row-badge">${room.unread}</div>` : '';
       const active  = room.name === myRoom ? 'active' : '';
-      return `<div class="dm-row ${active}" onclick="BestieChat.switchRoom('${escapeHtml(room.name)}')">
-        <div class="dm-row-avatar">✨</div>
+      const savedBg = isSaved ? 'background:rgba(129,140,248,0.06);' : '';
+      return `<div class="dm-row ${active}" style="${savedBg}" onclick="BestieChat.switchRoom('${escapeHtml(room.name)}')">
+        <div class="dm-row-avatar">${avatar}</div>
         <div class="dm-row-info">
-          <div class="dm-row-name">@${escapeHtml(name)}</div>
+          <div class="dm-row-name">${escapeHtml(displayName)}</div>
           <div class="dm-row-preview">${escapeHtml(preview)}</div>
         </div>
         ${badge}
@@ -6114,6 +6214,7 @@
     startVideoNote, stopAndSendVideoNote, cancelVideoNote, toggleVideoNoteAudio,
     handleSendBtnClick, hideContextMenu, uploadDocumentFile, openViewOnceMedia,
     // Auth
+    switchAuthTab, handleSignIn, handleRegister, selectRegisterAvatar,
     setAuthMode, selectLoginAvatar, quickReentry, showFullLoginForm, copyInviteLink, togglePasswordVisibility, logout,
     // Multi-chat DMs
     loadChatList, switchRoom, openNewChatModal, closeNewChatModal, searchUsersForDM, startDMWith, openChatsModal, closeChatsModal, toggleStickerPanel,

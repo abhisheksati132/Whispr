@@ -928,66 +928,95 @@ async function saveDailyQuestionAnswer(roomName, username, answer) {
 
 // ── Multi-Room & DM queries ──────────────────────────────────────────────────
 async function listUserRooms(username) {
-  if (!isDbReady()) return [];
-  try {
-    const { data: rooms, error } = await supabase
-      .from('rooms')
-      .select('*')
-      .order('last_activity', { ascending: false })
-      .limit(30);
+  const clean = String(username || '').toLowerCase();
+  if (!clean) return [];
+  const savedRoomName = `dm_${clean}_${clean}`;
 
-    if (error || !rooms) return [];
-
-    const userRooms = rooms
-      .map(dbRoomToJs)
-      .filter(r => r.type === 'public' || (r.participants && r.participants.includes(username)));
-
-    const result = await Promise.all(userRooms.map(async (room) => {
-      // Get last active message
-      const { data: lastMsgs } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('room', room.name)
-        .eq('deleted', false)
-        .order('time', { ascending: false })
-        .limit(1);
-
-      const lastMsg = lastMsgs && lastMsgs[0] ? dbMsgToJs(lastMsgs[0]) : null;
-      const readTime = (room.readBy || {})[username] || 0;
-      
-      const { count: unread } = await supabase
-        .from('messages')
-        .select('*', { count: 'exact', head: true })
-        .eq('room', room.name)
-        .gt('time', readTime)
-        .eq('deleted', false);
-
-      const otherParticipant = room.type === 'dm'
-        ? (room.participants || []).find(p => p !== username)
-        : null;
-
-      return {
-        name: room.name,
-        type: room.type,
-        participants: room.participants,
-        otherParticipant,
-        lastMessage: lastMsg ? {
-          text: lastMsg.text || (lastMsg.type === 'image' ? '📷 Photo' : lastMsg.type === 'voice' ? '🎤 Voice note' : ''),
-          user: lastMsg.user,
-          time: lastMsg.time,
-          type: lastMsg.type
-        } : null,
-        unread: unread || 0,
-        mood: room.mood,
-        lastActivity: room.lastActivity || 0
-      };
-    }));
-
-    return result;
-  } catch (err) {
-    console.error('listUserRooms error:', err.message);
-    return [];
+  // Ensure Saved Messages room exists in memory
+  if (!memRooms.has(savedRoomName)) {
+    memRooms.set(savedRoomName, { ...defaultRoomMeta(savedRoomName), type: 'dm', participants: [clean, clean] });
   }
+
+  let allRooms = [];
+  if (isDbReady()) {
+    try {
+      const { data: rooms } = await supabase
+        .from('rooms')
+        .select('*')
+        .order('last_activity', { ascending: false })
+        .limit(60);
+      if (rooms) {
+        allRooms = rooms.map(dbRoomToJs).filter(r => (r.participants && r.participants.map(p => String(p).toLowerCase()).includes(clean)));
+      }
+    } catch (_) {}
+  }
+
+  // Fallback / merge with memRooms
+  for (const [rName, rMeta] of memRooms.entries()) {
+    if (rMeta.participants && rMeta.participants.map(p => String(p).toLowerCase()).includes(clean)) {
+      if (!allRooms.some(r => r.name === rName)) {
+        allRooms.push({ ...rMeta, name: rName });
+      }
+    }
+  }
+
+  // Ensure saved room is in list
+  if (!allRooms.some(r => r.name === savedRoomName)) {
+    allRooms.unshift({ ...defaultRoomMeta(savedRoomName), name: savedRoomName, type: 'dm', participants: [clean, clean] });
+  }
+
+  const result = await Promise.all(allRooms.map(async (room) => {
+    const isSaved = room.name === savedRoomName || (room.participants && room.participants.length === 2 && String(room.participants[0]).toLowerCase() === clean && String(room.participants[1]).toLowerCase() === clean);
+
+    let lastMsg = null;
+    const msgs = memMessages.get(room.name) || [];
+    if (msgs.length > 0) {
+      lastMsg = msgs[msgs.length - 1];
+    } else if (isDbReady()) {
+      try {
+        const { data: lastMsgs } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('room', room.name)
+          .eq('deleted', false)
+          .order('time', { ascending: false })
+          .limit(1);
+        if (lastMsgs && lastMsgs[0]) lastMsg = dbMsgToJs(lastMsgs[0]);
+      } catch (_) {}
+    }
+
+    const otherParticipant = isSaved
+      ? 'Saved Messages'
+      : ((room.participants || []).find(p => String(p).toLowerCase() !== clean) || room.name.replace('dm_', '').split('_').find(p => String(p).toLowerCase() !== clean) || 'Contact');
+
+    const otherProfile = isSaved ? { avatar: '🔖', nickname: 'Saved Messages' } : await getProfile(otherParticipant);
+
+    return {
+      name: room.name,
+      type: room.type || 'dm',
+      isSaved,
+      participants: room.participants || [clean],
+      otherParticipant,
+      otherProfile,
+      lastMessage: lastMsg ? {
+        text: lastMsg.text || (lastMsg.type === 'image' ? '📷 Photo' : lastMsg.type === 'voice' ? '🎤 Voice note' : lastMsg.type === 'document' ? '📄 Document' : '💬 Message'),
+        user: lastMsg.user,
+        time: lastMsg.time,
+        type: lastMsg.type
+      } : null,
+      unread: 0,
+      lastActivity: (lastMsg ? lastMsg.time : 0) || room.lastActivity || 0
+    };
+  }));
+
+  // Sort: Saved messages first, then by lastActivity DESC
+  result.sort((a, b) => {
+    if (a.isSaved) return -1;
+    if (b.isSaved) return 1;
+    return (b.lastActivity || 0) - (a.lastActivity || 0);
+  });
+
+  return result;
 }
 
 async function searchUsers(query, excludeUsername) {
