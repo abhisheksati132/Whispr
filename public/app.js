@@ -1006,39 +1006,67 @@
     if (users) currentOnlineUsers = users;
     if (lastSeen) lastSeenData = lastSeen;
 
-    const others = currentOnlineUsers.filter((u) => u !== myName);
-
-    // Elements: sidebar bestie card (legacy IDs still used)
     const avatarEl    = els.bestieAvatar;
     const nameEl      = els.bestieName;
     const statusEl    = els.bestieStatus;
-    // New header elements
     const hAvatarEl   = document.getElementById('headerBestieAvatar');
     const hNameEl     = document.getElementById('headerBestieName');
     const hStatusEl   = document.getElementById('headerBestieStatus');
 
-    let bestieDisplay = 'Chat';
+    let bestieDisplay = 'Our Space';
     let bestieAvatar  = '✨';
-    let bestieStatus  = 'Offline';
+    let bestieStatus  = 'Waiting for bestie…';
     let isOnline      = false;
 
-    if (others.length) {
-      const bestie = others[0];
-      const p = getProfile(bestie);
-      bestieAvatar  = p.avatar || '🐱';
-      bestieDisplay = p.nickname || bestie;
-      bestieStatus  = 'Online';
-      isOnline      = true;
-    } else {
-      const allOthers = Object.keys(lastSeenData || {}).filter((u) => u !== myName);
-      if (allOthers.length) {
-        const sorted = allOthers.sort((a, b) => (lastSeenData[b] || 0) - (lastSeenData[a] || 0));
-        const lastBestie = sorted[0];
-        const p = getProfile(lastBestie);
-        bestieAvatar  = p.avatar || '🐱';
-        bestieDisplay = p.nickname || lastBestie;
-        const ts = lastSeenData[lastBestie];
+    const cleanMyName = (myName || '').toLowerCase();
+
+    // 1. If currently in a DM room (e.g. dm_alex_sam)
+    if (myRoom && myRoom.startsWith('dm_')) {
+      const parts = myRoom.replace('dm_', '').split('_');
+      const otherUsername = parts.find(p => p.toLowerCase() !== cleanMyName) || parts[0] || 'bestie';
+      const p = getProfile(otherUsername);
+      bestieAvatar = p.avatar || '✨';
+      bestieDisplay = p.nickname ? `${p.nickname} (@${otherUsername})` : `@${otherUsername}`;
+
+      const isOtherOnline = currentOnlineUsers.some(u => (u || '').toLowerCase() === otherUsername.toLowerCase());
+      if (isOtherOnline) {
+        bestieStatus = 'Online 🟢';
+        isOnline = true;
+      } else {
+        const ts = lastSeenData[otherUsername] || lastSeenData[otherUsername.toLowerCase()];
         bestieStatus = ts ? formatLastSeen(ts) : 'Offline';
+      }
+    } else {
+      // 2. In shared space (our-private-space or custom room)
+      const others = currentOnlineUsers.filter((u) => (u || '').toLowerCase() !== cleanMyName);
+
+      if (others.length === 1) {
+        const bestie = others[0];
+        const p = getProfile(bestie);
+        bestieAvatar  = p.avatar || '🐱';
+        bestieDisplay = p.nickname ? `${p.nickname} (@${bestie})` : `@${bestie}`;
+        bestieStatus  = 'Online 🟢';
+        isOnline      = true;
+      } else if (others.length > 1) {
+        bestieAvatar  = '👥';
+        bestieDisplay = `${others.length} Besties Online`;
+        bestieStatus  = others.map(u => getDisplayName(u)).join(', ');
+        isOnline      = true;
+      } else {
+        const allOthers = Object.keys(lastSeenData || {}).filter((u) => (u || '').toLowerCase() !== cleanMyName);
+        if (allOthers.length) {
+          const sorted = allOthers.sort((a, b) => (lastSeenData[b] || 0) - (lastSeenData[a] || 0));
+          const lastBestie = sorted[0];
+          const p = getProfile(lastBestie);
+          bestieAvatar  = p.avatar || '🐱';
+          bestieDisplay = p.nickname ? `${p.nickname} (@${lastBestie})` : `@${lastBestie}`;
+          const ts = lastSeenData[lastBestie];
+          bestieStatus = ts ? formatLastSeen(ts) : 'Offline';
+        } else {
+          bestieDisplay = myRoom === 'our-private-space' ? 'Our Private Space' : `#${myRoom}`;
+          bestieAvatar  = '💭';
+          bestieStatus  = 'Share invite link to connect 🔗';
+        }
       }
     }
 
@@ -2807,6 +2835,17 @@
     socket.on('presence', ({ users, profiles: profs, lastSeen }) => {
       (profs || []).forEach((p) => { profiles[p.name] = p; });
       updateBestieHeaderState(users, lastSeen);
+    });
+
+    socket.on('global-presence', ({ lastSeen }) => {
+      if (lastSeen) {
+        lastSeenData = { ...lastSeenData, ...lastSeen };
+        updateBestieHeaderState(null, lastSeenData);
+      }
+    });
+
+    socket.on('chat-list-update', () => {
+      loadChatList();
     });
 
     socket.on('presence-status-update', ({ user, status }) => {
@@ -4960,35 +4999,32 @@
 
   function applyAppTheme(themeName) {
     document.body.classList.remove('theme-dark', 'theme-ios');
-    if (themeName === 'ios') {
-      document.body.classList.add('theme-ios');
-      if (els.msgInput) els.msgInput.placeholder = 'iMessage…';
-    } else if (themeName === 'dark') {
+    const valid = themeName === 'dark' ? 'dark' : 'light';
+    if (valid === 'dark') {
       document.body.classList.add('theme-dark');
-      if (els.msgInput) els.msgInput.placeholder = 'Message…';
-    } else {
-      if (els.msgInput) els.msgInput.placeholder = 'Message…';
     }
-    localStorage.setItem('bestieChatTheme', themeName);
+    if (els.msgInput) els.msgInput.placeholder = 'Message…';
+    localStorage.setItem('bestieChatTheme', valid);
     const select = document.getElementById('themeSelect');
-    if (select) select.value = themeName;
+    if (select) select.value = valid;
     const toggleBtn = document.getElementById('themeToggle');
     if (toggleBtn) {
-      toggleBtn.textContent = themeName === 'ios' ? '📱' : (themeName === 'dark' ? '☀️' : '🌙');
+      toggleBtn.textContent = valid === 'dark' ? '☀️' : '🌙';
+      toggleBtn.title = valid === 'dark' ? 'Switch to Day Mode (☀️)' : 'Switch to Night Mode (🌙)';
     }
   }
 
   function selectTheme(themeName) {
-    applyAppTheme(themeName);
-    showToast(`Switched to ${themeName === 'ios' ? 'Apple iMessage (iOS)' : themeName.toUpperCase()} theme ✨`);
+    const valid = themeName === 'dark' ? 'dark' : 'light';
+    applyAppTheme(valid);
+    showToast(`Switched to ${valid === 'dark' ? 'Night Mode 🌙' : 'Day Mode ☀️'}`);
   }
 
   function toggleTheme() {
     const current = localStorage.getItem('bestieChatTheme') || 'light';
-    const themes = ['light', 'dark', 'ios'];
-    const nextIdx = (themes.indexOf(current) + 1) % themes.length;
-    applyAppTheme(themes[nextIdx]);
-    showToast(`Theme: ${themes[nextIdx] === 'ios' ? 'Apple iMessage 📱' : (themes[nextIdx] === 'dark' ? 'Dark Mode 🌙' : 'Warm Paper ☀️')}`);
+    const next = current === 'dark' ? 'light' : 'dark';
+    applyAppTheme(next);
+    showToast(`Theme: ${next === 'dark' ? 'Night Mode 🌙' : 'Day Mode ☀️'}`);
   }
 
   let currentDailyQuestionState = null;

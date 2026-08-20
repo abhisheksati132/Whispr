@@ -183,10 +183,10 @@
 
       <!-- Bestie info -->
       <div class="header-bestie" onclick="BestieChat.openBestieProfile()" title="View Bestie's Profile">
-        <div id="headerBestieAvatar" class="header-avatar">🐱</div>
+        <div id="headerBestieAvatar" class="header-avatar">✨</div>
         <div class="header-bestie-info">
-          <div id="headerBestieName" class="header-bestie-name">Whispr</div>
-          <div id="headerBestieStatus" class="header-bestie-status bestie-status">Connecting…</div>
+          <div id="headerBestieName" class="header-bestie-name">Our Space</div>
+          <div id="headerBestieStatus" class="header-bestie-status bestie-status">Waiting for bestie…</div>
         </div>
       </div>
 
@@ -1042,9 +1042,8 @@
       <div class="extra-block">
         <label>App Theme & Aesthetic 🎨</label>
         <select id="themeSelect" onchange="BestieChat.selectTheme(this.value)">
-          <option value="light">☀️ Warm Paper (Cozy Editorial)</option>
-          <option value="dark">🌙 Dark Charcoal (Minimalist)</option>
-          <option value="ios">📱 Apple iMessage (iOS Messages)</option>
+          <option value="light">☀️ Day Mode (Classic Warm Paper)</option>
+          <option value="dark">🌙 Night Mode (Midnight Dark)</option>
         </select>
       </div>
       <div class="extra-block">
@@ -1267,11 +1266,11 @@
 <!-- Scripts -->
 <script src="/socket.io/socket.io.js"></script>
 <script src="/crypto-js.min.js"></script>
-<script src="/app.js?v=63"></script>
+<script src="/app.js?v=64"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js?v=12033').catch(console.error);
+      navigator.serviceWorker.register('/sw.js?v=12034').catch(console.error);
     });
   }
   function forceClearAppCache() {

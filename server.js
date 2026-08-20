@@ -354,7 +354,8 @@ async function broadcastPresence(room) {
   const users = getRoomUsers(room);
   const list = []; const profList = [];
   for (const { name, profile } of users.values()) { list.push(name); profList.push({ name, ...profile }); }
-  io.to(room).emit('presence', { users: list, profiles: profList, lastSeen: mStore.getLastSeen() });
+  io.to(room).emit('presence', { room, users: list, profiles: profList, lastSeen: mStore.getLastSeen() });
+  io.emit('global-presence', { lastSeen: mStore.getLastSeen() });
 }
 
 const MILESTONE_TEXTS = {
@@ -424,6 +425,7 @@ io.on('connection', (socket) => {
       }
 
       socket.join(currentRoom);
+      socket.join('user:' + username.toLowerCase());
       getRoomUsers(currentRoom).set(socket.id, { name: username, profile });
 
       const streak = mStore.recordActivity(username);
@@ -562,6 +564,13 @@ io.on('connection', (socket) => {
       }
       mStore.setLastSeen(username);
       io.to(currentRoom).emit('message', message);
+      if (currentRoom.startsWith('dm_')) {
+        const parts = currentRoom.replace('dm_', '').split('_');
+        for (const p of parts) {
+          io.to('user:' + p.toLowerCase()).emit('message', message);
+          io.to('user:' + p.toLowerCase()).emit('chat-list-update', { roomName: currentRoom });
+        }
+      }
       if (payload && payload.clientMsgId) {
         socket.emit('message-ack', { clientMsgId: payload.clientMsgId, id: message.id });
       }
