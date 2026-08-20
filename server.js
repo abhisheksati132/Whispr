@@ -509,8 +509,11 @@ io.on('connection', (socket) => {
   // ── Message ───────────────────────────────────────────────────────────────
   socket.on('message', async (payload) => {
     if (!username) username = normalizeName(payload && payload.user) || socket.data.authenticatedUser || 'Bestie';
-    if (!currentRoom) currentRoom = normalizeRoom(payload && payload.room) || 'our-private-space';
-    socket.join(currentRoom);
+    const targetRoom = normalizeRoom(payload && payload.room) || currentRoom || 'our-private-space';
+    currentRoom = targetRoom;
+    socket.join(targetRoom);
+    socket.join('user:' + username.toLowerCase());
+
     const _now = Date.now();
     if (_now > msgResetAt) { msgCount = 0; msgResetAt = _now + 5000; }
     msgCount++;
@@ -519,39 +522,39 @@ io.on('connection', (socket) => {
     let msgData;
     if (typeof payload === 'string') {
       const text = normalizeText(payload); if (!text) return;
-      msgData = { user: username, text, type: 'text' };
+      msgData = { user: username, text, type: 'text', room: targetRoom };
     } else if (payload && typeof payload === 'object') {
       const type = payload.type || 'text';
-      if (type === 'hug') msgData = { user: username, text: 'sent a hug 💌', type: 'hug' };
-      else if (type === 'image') { if (!payload.url) return; msgData = { user: username, text: payload.text||'', url: payload.url, type:'image', viewOnce: Boolean(payload.viewOnce) }; }
-      else if (type === 'media-group') { if (!payload.items || !payload.items.length) return; msgData = { user: username, text: payload.text||'', items: payload.items, type:'media-group' }; }
-      else if (type === 'document') { if (!payload.url) return; msgData = { user: username, url: payload.url, docName: payload.docName||'Document', docSize: payload.docSize||0, type:'document' }; }
-      else if (type === 'voice') { if (!payload.url) return; msgData = { user: username, text:'', url: payload.url, duration: payload.duration||0, type:'voice', viewOnce: Boolean(payload.viewOnce) }; }
-      else if (type === 'video-note') { if (!payload.url) return; msgData = { user: username, text:'', url: payload.url, duration: payload.duration||0, type:'video-note' }; }
+      if (type === 'hug') msgData = { user: username, text: 'sent a hug 💌', type: 'hug', room: targetRoom };
+      else if (type === 'image') { if (!payload.url) return; msgData = { user: username, text: payload.text||'', url: payload.url, type:'image', viewOnce: Boolean(payload.viewOnce), room: targetRoom }; }
+      else if (type === 'media-group') { if (!payload.items || !payload.items.length) return; msgData = { user: username, text: payload.text||'', items: payload.items, type:'media-group', room: targetRoom }; }
+      else if (type === 'document') { if (!payload.url) return; msgData = { user: username, url: payload.url, docName: payload.docName||'Document', docSize: payload.docSize||0, type:'document', room: targetRoom }; }
+      else if (type === 'voice') { if (!payload.url) return; msgData = { user: username, text:'', url: payload.url, duration: payload.duration||0, type:'voice', viewOnce: Boolean(payload.viewOnce), room: targetRoom }; }
+      else if (type === 'video-note') { if (!payload.url) return; msgData = { user: username, text:'', url: payload.url, duration: payload.duration||0, type:'video-note', room: targetRoom }; }
       else if (type === 'time-capsule') {
         msgData = {
           user: username,
           text: payload.text || '',
           url: payload.url || '',
           unlockAt: typeof payload.unlockAt === 'number' ? payload.unlockAt : (Date.now() + 86400000),
-          type: 'time-capsule'
+          type: 'time-capsule',
+          room: targetRoom
         };
       }
-      else if (type === 'music') { if (!payload.url) return; msgData = { user: username, text: payload.text||payload.url, url: payload.url, type:'music' }; }
+      else if (type === 'music') { if (!payload.url) return; msgData = { user: username, text: payload.text||payload.url, url: payload.url, type:'music', room: targetRoom }; }
       else {
         const text = normalizeText(payload.text||''); if (!text) return;
-        msgData = { user: username, text, type:'text', ...(payload.replyTo ? { replyTo: payload.replyTo } : {}) };
+        msgData = { user: username, text, type:'text', room: targetRoom, ...(payload.replyTo ? { replyTo: payload.replyTo } : {}) };
       }
       if (payload.replyTo && msgData && !msgData.replyTo) msgData.replyTo = payload.replyTo;
       if (payload.clientMsgId) msgData.clientMsgId = payload.clientMsgId;
     } else return;
 
     try {
-      let message, milestone;
+      let message;
       try {
-        const res = await mStore.addMessage(currentRoom, msgData);
+        const res = await mStore.addMessage(targetRoom, msgData);
         message = res.message;
-        milestone = res.milestone;
       } catch (err) {
         console.error('mStore.addMessage error, using fallback:', err.message);
         message = {
@@ -559,39 +562,39 @@ io.on('connection', (socket) => {
           ...msgData,
           time: Date.now(),
           reactions: {},
-          room: currentRoom
+          room: targetRoom
         };
       }
       mStore.setLastSeen(username);
-      io.to(currentRoom).emit('message', message);
-      if (currentRoom.startsWith('dm_')) {
-        const parts = currentRoom.replace('dm_', '').split('_');
+
+      io.to(targetRoom).emit('message', message);
+      if (targetRoom.startsWith('dm_')) {
+        const parts = targetRoom.replace('dm_', '').split('_');
         for (const p of parts) {
           io.to('user:' + p.toLowerCase()).emit('message', message);
-          io.to('user:' + p.toLowerCase()).emit('chat-list-update', { roomName: currentRoom });
+          io.to('user:' + p.toLowerCase()).emit('chat-list-update', { roomName: targetRoom });
         }
       }
       if (payload && payload.clientMsgId) {
         socket.emit('message-ack', { clientMsgId: payload.clientMsgId, id: message.id });
       }
+
       const profile = await mStore.getProfile(username);
-      sendPushToRoom(currentRoom, username, `${profile.nickname||username} 💌`, msgData.text || 'sent a message');
+      sendPushToRoom(targetRoom, username, `${profile.nickname||username} 💌`, msgData.text || 'sent a message');
 
       // Pictionary guess check
-      const pState = roomPictionaryState.get(currentRoom);
+      const pState = roomPictionaryState.get(targetRoom);
       if (pState && msgData.text && msgData.user !== pState.drawer) {
         if (msgData.text.trim().toLowerCase() === pState.word.toLowerCase()) {
-          roomPictionaryState.delete(currentRoom);
+          roomPictionaryState.delete(targetRoom);
           const display = profile.nickname || username;
-          const scores = await mStore.updateGameScore(currentRoom, username);
-          io.to(currentRoom).emit('score-update', scores);
-          io.to(currentRoom).emit('pictionary-correct', { winner: display, word: pState.word });
-          io.to(currentRoom).emit('system', `🎉 ${display} guessed the secret word: "${pState.word}"!! 🏆`);
+          const scores = await mStore.updateGameScore(targetRoom, username);
+          io.to(targetRoom).emit('score-update', scores);
+          io.to(targetRoom).emit('pictionary-correct', { winner: display, word: pState.word });
+          io.to(targetRoom).emit('system', `🎉 ${display} guessed the secret word: "${pState.word}"!! 🏆`);
         }
       }
-
-      if (milestone) io.to(currentRoom).emit('milestone', { count: milestone, text: MILESTONE_TEXTS[milestone] || `🎉 ${milestone} messages!` });
-    } catch (err) { console.error('message error:', err); }
+    } catch (err) { console.error('socket message handler error:', err); }
   });
 
   // ── View-Once Media Opened ───────────────────────────────────────────────

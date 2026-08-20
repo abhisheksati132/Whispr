@@ -1020,23 +1020,42 @@ async function listUserRooms(username) {
 }
 
 async function searchUsers(query, excludeUsername) {
-  const cleanQ = String(query || '').trim().toLowerCase();
-  if (!cleanQ || cleanQ.length < 2) return [];
-  if (!isDbReady()) {
-    return Array.from(memUsers.values())
-      .filter(u => u.username !== excludeUsername && u.username.includes(cleanQ))
-      .slice(0, 8)
-      .map(u => ({ username: u.username, avatar: u.avatar, color: u.color }));
-  }
-  try {
-    const { data } = await supabase
-      .from('users')
-      .select('username, avatar, color')
-      .ilike('username', `%${cleanQ}%`)
-      .neq('username', excludeUsername)
-      .limit(8);
+  const cleanQ = String(query || '').trim().toLowerCase().replace(/^@+/, '');
+  const exclude = String(excludeUsername || '').toLowerCase();
 
-    return data || [];
+  if (!isDbReady()) {
+    let all = Array.from(memUsers.values()).filter(u => u.username.toLowerCase() !== exclude);
+    if (cleanQ) {
+      all = all.filter(u => u.username.toLowerCase().includes(cleanQ) || (u.nickname && u.nickname.toLowerCase().includes(cleanQ)));
+    }
+    return all.slice(0, 15).map(u => ({
+      username: u.username,
+      nickname: u.nickname || u.username,
+      avatar: u.avatar || '✨',
+      color: u.color || '#818cf8',
+      statusBio: u.statusBio || ''
+    }));
+  }
+
+  try {
+    let builder = supabase
+      .from('users')
+      .select('username, nickname, avatar, color, status_bio')
+      .neq('username', exclude)
+      .limit(15);
+
+    if (cleanQ) {
+      builder = builder.or(`username.ilike.%${cleanQ}%,nickname.ilike.%${cleanQ}%`);
+    }
+
+    const { data } = await builder;
+    return (data || []).map(u => ({
+      username: u.username,
+      nickname: u.nickname || u.username,
+      avatar: u.avatar || '✨',
+      color: u.color || '#818cf8',
+      statusBio: u.status_bio || ''
+    }));
   } catch (_) {
     return [];
   }

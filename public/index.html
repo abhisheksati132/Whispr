@@ -83,25 +83,27 @@
 
       <!-- Create Account Form (Hidden by default) -->
       <div id="registerSection" class="login-form" style="display:none;">
-        <div class="login-field" style="margin-bottom: 10px;">
-          <label class="login-label" for="regUsernameInput" style="display:block; margin-bottom:4px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted);">Choose Username</label>
-          <input id="regUsernameInput" type="text" class="login-input" placeholder="e.g. alex, john_doe…" maxlength="25" autocomplete="off" autocapitalize="none" style="width:100%; box-sizing:border-box;" />
+        <div style="display:flex; gap:10px; margin-bottom:10px;">
+          <div class="login-field" style="flex:1;">
+            <label class="login-label" for="regUsernameInput" style="display:block; margin-bottom:4px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted);">Username</label>
+            <input id="regUsernameInput" type="text" class="login-input" placeholder="e.g. alex, john…" maxlength="25" autocomplete="off" autocapitalize="none" style="width:100%; box-sizing:border-box;" />
+          </div>
+
+          <div class="login-field" style="flex:1;">
+            <label class="login-label" for="regNicknameInput" style="display:block; margin-bottom:4px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted);">Display Name</label>
+            <input id="regNicknameInput" type="text" class="login-input" placeholder="e.g. Alex Rivera" maxlength="30" autocomplete="off" style="width:100%; box-sizing:border-box;" />
+          </div>
         </div>
 
         <div class="login-field" style="margin-bottom: 10px;">
-          <label class="login-label" for="regNicknameInput" style="display:block; margin-bottom:4px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted);">Display Name</label>
-          <input id="regNicknameInput" type="text" class="login-input" placeholder="e.g. Alex Rivera" maxlength="30" autocomplete="off" style="width:100%; box-sizing:border-box;" />
-        </div>
-
-        <div class="login-field" style="margin-bottom: 10px;">
-          <label class="login-label" for="regPasswordInput" style="display:block; margin-bottom:4px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted);">Create Password</label>
+          <label class="login-label" for="regPasswordInput" style="display:block; margin-bottom:4px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted);">Password</label>
           <input id="regPasswordInput" type="password" class="login-input" placeholder="At least 3 characters…" autocomplete="new-password" style="width:100%; box-sizing:border-box;" />
         </div>
 
         <!-- Avatar Selection -->
         <div class="login-field" style="margin-bottom: 10px;">
           <label class="login-label" style="display:block; margin-bottom:6px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted);">Choose Avatar</label>
-          <div id="avatarChipsRow" style="display:flex; gap:6px; flex-wrap:wrap;">
+          <div id="avatarChipsRow" style="display:flex; gap:6px; justify-content:space-between; flex-wrap:wrap;">
             <button type="button" class="avatar-chip selected" onclick="BestieChat.selectRegisterAvatar('🐱', this)" style="width:34px; height:34px; font-size:18px; border-radius:50%; border:2px solid var(--accent); background:var(--surface); cursor:pointer;">🐱</button>
             <button type="button" class="avatar-chip" onclick="BestieChat.selectRegisterAvatar('🚀', this)" style="width:34px; height:34px; font-size:18px; border-radius:50%; border:1px solid var(--border); background:var(--surface); cursor:pointer;">🚀</button>
             <button type="button" class="avatar-chip" onclick="BestieChat.selectRegisterAvatar('🌸', this)" style="width:34px; height:34px; font-size:18px; border-radius:50%; border:1px solid var(--border); background:var(--surface); cursor:pointer;">🌸</button>
@@ -113,9 +115,9 @@
           </div>
         </div>
 
-        <div id="regError" class="login-error" style="color:#f87171; font-size:12px; margin-bottom:12px; min-height:16px; text-align:center; font-weight:500;"></div>
+        <div id="regError" class="login-error" style="color:#f87171; font-size:12px; margin-bottom:10px; min-height:16px; text-align:center; font-weight:500;"></div>
 
-        <button id="registerBtn" type="button" class="login-btn" onclick="BestieChat.handleRegister()" style="width:100%; margin-bottom:10px;">
+        <button id="registerBtn" type="button" class="login-btn" onclick="BestieChat.handleRegister()" style="width:100%; margin-bottom:6px;">
           <span id="registerBtnText">Create Free Account</span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </button>
@@ -1312,11 +1314,11 @@
 <!-- Scripts -->
 <script src="/socket.io/socket.io.js"></script>
 <script src="/crypto-js.min.js"></script>
-<script src="/app.js?v=68"></script>
+<script src="/app.js?v=69"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js?v=12038').catch(console.error);
+      navigator.serviceWorker.register('/sw.js?v=12039').catch(console.error);
     });
   }
   function forceClearAppCache() {

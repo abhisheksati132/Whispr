@@ -176,7 +176,7 @@ select option {
 
 .login-container {
   width: 100%;
-  max-width: 340px;
+  max-width: 480px;
   margin: auto;
   display: flex;
   flex-direction: column;
@@ -188,12 +188,14 @@ select option {
   width: 100%;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 36px 28px;
+  border-radius: 20px;
+  padding: 26px 30px;
   box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 12px;
+  max-height: 92vh;
+  overflow-y: auto;
 }
 
 .login-field {

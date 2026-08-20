@@ -3347,6 +3347,11 @@
 
   async function startCall(type) {
     if (!joined) return;
+    const cleanMyName = (myName || '').toLowerCase();
+    if (myRoom === `dm_${cleanMyName}_${cleanMyName}`) {
+      showToast('🔖 Saved Messages is your private cloud notes.');
+      return;
+    }
     callType = type;
 
     const overlay = document.getElementById('callOverlay');
@@ -3365,7 +3370,6 @@
     if (audioWaves) audioWaves.style.display = 'none';
 
     // Target recipient
-    const cleanMyName = (myName || '').toLowerCase();
     if (myRoom && myRoom.startsWith('dm_')) {
       const parts = myRoom.replace('dm_', '').split('_');
       callPartner = parts.find(p => p.toLowerCase() !== cleanMyName) || parts[0] || 'bestie';
@@ -5772,9 +5776,11 @@
     const modal = document.getElementById('newChatModal');
     if (modal) { modal.style.display = 'flex'; modal.classList.add('open'); }
     const search = document.getElementById('newChatSearch');
-    if (search) { search.value = ''; setTimeout(() => search.focus(), 100); }
-    const results = document.getElementById('newChatResults');
-    if (results) results.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:0.82rem;padding:20px 0;">Type a username to search</div>';
+    if (search) {
+      search.value = '';
+      setTimeout(() => search.focus(), 100);
+    }
+    searchUsersForDM('');
   }
 
   function closeNewChatModal() {
@@ -5787,27 +5793,35 @@
     clearTimeout(_dmSearchTimeout);
     const results = document.getElementById('newChatResults');
     if (!results) return;
-    if (!query || query.length < 2) {
-      results.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:0.82rem;padding:16px 0;">Type at least 2 characters</div>';
-      return;
-    }
+
+    const cleanQ = String(query || '').trim().replace(/^@+/, '');
+
     _dmSearchTimeout = setTimeout(async () => {
       try {
-        const resp = await fetch(`/api/rooms/users/search?q=${encodeURIComponent(query)}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+        const resp = await fetch(`/api/rooms/users/search?q=${encodeURIComponent(cleanQ)}`, {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
         if (!resp.ok) return;
         const users = await resp.json();
-        if (!users.length) { results.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:0.82rem;padding:16px 0;">No users found</div>'; return; }
+        if (!users.length) {
+          results.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:0.82rem;padding:24px 0;">No users found. Try searching another username!</div>';
+          return;
+        }
         results.innerHTML = users.map(u =>
-          `<div class="user-result-row">
-            <div class="user-result-avatar">${u.avatar || '\u2728'}</div>
-            <div class="user-result-name">@${escapeHtml(u.username)}</div>
-            <button class="user-result-btn" onclick="BestieChat.startDMWith('${escapeHtml(u.username)}')">Message</button>
+          `<div class="user-result-row" style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-radius:12px; background:var(--surface); border:1px solid var(--border-soft); margin-bottom:6px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div style="width:36px; height:36px; border-radius:50%; background:var(--surface2); display:flex; align-items:center; justify-content:center; font-size:18px;">${u.avatar || '✨'}</div>
+              <div>
+                <div style="font-size:13px; font-weight:700; color:var(--text);">${escapeHtml(u.nickname || u.username)}</div>
+                <div style="font-size:11px; color:var(--muted);">@${escapeHtml(u.username)}</div>
+              </div>
+            </div>
+            <button type="button" class="user-result-btn" onclick="BestieChat.startDMWith('${escapeHtml(u.username)}')" style="background:linear-gradient(135deg, #4338ca, #818cf8); color:#fff; border:none; border-radius:8px; padding:6px 14px; font-size:12px; font-weight:600; cursor:pointer;">Message</button>
           </div>`
         ).join('');
       } catch (err) { console.error('search error:', err); }
-    }, 300);
+    }, 150);
   }
-
   async function startDMWith(username) {
     try {
       const resp = await fetch('/api/rooms/dm', {

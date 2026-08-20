@@ -1,5 +1,5 @@
 // Cache Version
-const CACHE = 'whispr-v12038-speed';
+const CACHE = 'whispr-v12039-speed';
 const IMMUTABLE_ASSETS = [
   '/icon-192.png',
   '/favicon.ico',
