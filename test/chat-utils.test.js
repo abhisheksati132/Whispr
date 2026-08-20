@@ -18,7 +18,8 @@ test('normalizeName trims and caps length', () => {
 
 test('normalizeRoom creates a safe room key', () => {
   assert.equal(normalizeRoom(' Bestie Room '), 'bestie-room');
-  assert.equal(normalizeRoom('!!!'), 'bestie');
+  assert.equal(normalizeRoom('dm_alex_sam'), 'dm_alex_sam');
+  assert.equal(normalizeRoom('!!!'), 'our-private-space');
 });
 
 test('normalizeText trims and caps message length', () => {

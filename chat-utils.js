@@ -112,9 +112,9 @@ function normalizeName(name) {
 }
 
 function normalizeRoom(room) {
-  const str = toStr(room) || 'bestie';
-  const cleaned = str.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-  return cleaned || 'bestie';
+  const str = toStr(room) || 'our-private-space';
+  const cleaned = str.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^[-_]+|[-_]+$/g, '');
+  return cleaned || 'our-private-space';
 }
 
 function normalizeText(text) {
