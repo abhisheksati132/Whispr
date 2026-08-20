@@ -168,50 +168,56 @@ function defaultRoomMeta(roomName = '') {
 // ── Room operations ──────────────────────────────────────────────────────────
 async function getRoomMeta(roomName) {
   if (!roomName) return defaultRoomMeta();
+  if (!memRooms.has(roomName)) memRooms.set(roomName, defaultRoomMeta(roomName));
+  const memRoom = memRooms.get(roomName);
+
   if (!isDbReady()) {
-    if (!memRooms.has(roomName)) memRooms.set(roomName, defaultRoomMeta(roomName));
-    return memRooms.get(roomName);
+    return memRoom;
   }
   try {
     const { data, error } = await supabase.from('rooms').select('*').eq('name', roomName).single();
     if (error && error.code === 'PGRST116') {
-      // Row not found -> create default
+      // Row not found -> create default in Supabase
       const newRoom = defaultRoomMeta(roomName);
-      await supabase.from('rooms').insert([jsRoomToDb(newRoom)]);
+      await supabase.from('rooms').insert([jsRoomToDb(newRoom)]).catch(() => {});
       return newRoom;
     }
-    if (error) throw error;
-    return dbRoomToJs(data);
+    if (error || !data) {
+      return memRoom;
+    }
+    const jsRoom = dbRoomToJs(data);
+    memRooms.set(roomName, jsRoom);
+    return jsRoom;
   } catch (err) {
     console.error('getRoomMeta error:', err.message);
-    if (!memRooms.has(roomName)) memRooms.set(roomName, defaultRoomMeta(roomName));
-    return memRooms.get(roomName);
+    return memRoom;
   }
 }
 
 async function updateRoomMeta(roomName, updates) {
   if (!roomName) return;
   const now = Date.now();
-  if (!isDbReady()) {
-    if (!memRooms.has(roomName)) memRooms.set(roomName, defaultRoomMeta(roomName));
-    Object.assign(memRooms.get(roomName), updates, { lastActivity: now });
-    return;
-  }
-  try {
-    const dbUpdates = jsRoomToDb({ ...updates, lastActivity: now });
-    const { error } = await supabase.from('rooms').upsert({ name: roomName, ...dbUpdates }, { onConflict: 'name' });
-    if (error) throw error;
-  } catch (err) {
-    console.error('updateRoomMeta error:', err.message);
-    if (!memRooms.has(roomName)) memRooms.set(roomName, defaultRoomMeta(roomName));
-    Object.assign(memRooms.get(roomName), updates, { lastActivity: now });
+  if (!memRooms.has(roomName)) memRooms.set(roomName, defaultRoomMeta(roomName));
+  Object.assign(memRooms.get(roomName), updates, { lastActivity: now });
+
+  if (isDbReady()) {
+    try {
+      const dbUpdates = jsRoomToDb({ ...updates, lastActivity: now });
+      const { error } = await supabase.from('rooms').upsert({ name: roomName, ...dbUpdates }, { onConflict: 'name' });
+      if (error) console.error('updateRoomMeta Supabase notice:', error.message);
+    } catch (err) {
+      console.error('updateRoomMeta error:', err.message);
+    }
   }
 }
 
 // ── Message operations ───────────────────────────────────────────────────────
 async function getMessages(roomName, limit = 100) {
+  if (!memMessages.has(roomName)) memMessages.set(roomName, []);
+  const memList = memMessages.get(roomName);
+
   if (!isDbReady()) {
-    return (memMessages.get(roomName) || []).slice(-limit);
+    return memList.slice(-limit);
   }
   try {
     const { data, error } = await supabase
@@ -221,11 +227,17 @@ async function getMessages(roomName, limit = 100) {
       .order('time', { ascending: false })
       .limit(limit);
 
-    if (error) throw error;
-    return (data || []).map(dbMsgToJs).reverse();
+    if (error || !data || data.length === 0) {
+      return memList.slice(-limit);
+    }
+    const dbList = data.map(dbMsgToJs).reverse();
+    if (memList.length < dbList.length) {
+      memMessages.set(roomName, dbList);
+    }
+    return dbList;
   } catch (err) {
     console.error('getMessages error:', err.message);
-    return (memMessages.get(roomName) || []).slice(-limit);
+    return memList.slice(-limit);
   }
 }
 
@@ -247,131 +259,124 @@ async function addMessage(roomName, msgData) {
     room: roomName
   };
 
-  if (!isDbReady()) {
-    if (!memMessages.has(roomName)) memMessages.set(roomName, []);
-    const msgs = memMessages.get(roomName);
-    msgs.push(message);
-    if (msgs.length > 200) msgs.shift();
-    const count = msgs.length;
-    if (!memRooms.has(roomName)) memRooms.set(roomName, defaultRoomMeta(roomName));
-    const room = memRooms.get(roomName);
-    room.messageCount = count;
-    room.lastActivity = Date.now();
+  // 1. Write to in-memory store immediately so messages NEVER fail or get dropped!
+  if (!memMessages.has(roomName)) memMessages.set(roomName, []);
+  const msgs = memMessages.get(roomName);
+  msgs.push(message);
+  if (msgs.length > 500) msgs.shift();
+  const count = msgs.length;
+  if (!memRooms.has(roomName)) memRooms.set(roomName, defaultRoomMeta(roomName));
+  const room = memRooms.get(roomName);
+  room.messageCount = count;
+  room.lastActivity = Date.now();
 
-    const milestone = MILESTONES.find(m => m === count && !(room.milestonesHit || []).includes(m));
-    if (milestone) {
-      if (!room.milestonesHit) room.milestonesHit = [];
-      room.milestonesHit.push(milestone);
-      return { message, milestone };
-    }
-    return { message, milestone: null };
+  const milestone = MILESTONES.find(m => m === count && !(room.milestonesHit || []).includes(m));
+  if (milestone) {
+    if (!room.milestonesHit) room.milestonesHit = [];
+    room.milestonesHit.push(milestone);
   }
 
-  try {
-    await supabase.from('messages').insert([jsMsgToDb(message)]);
-    
-    // Increment message count
-    const { count } = await supabase.from('messages').select('*', { count: 'exact', head: true }).eq('room', roomName);
-    const roomMeta = await getRoomMeta(roomName);
-    const currentHit = roomMeta.milestonesHit || [];
-    const milestone = MILESTONES.find(m => m === count && !currentHit.includes(m));
-    
-    const updates = { messageCount: count, lastActivity: Date.now() };
-    if (milestone) {
-      updates.milestonesHit = [...currentHit, milestone];
-    }
-    await updateRoomMeta(roomName, updates);
+  // 2. Also persist to Supabase if configured
+  if (isDbReady()) {
+    try {
+      const { error } = await supabase.from('messages').insert([jsMsgToDb(message)]);
+      if (error) console.error('Supabase message insert notice:', error.message);
 
-    return { message, milestone: milestone || null };
-  } catch (err) {
-    console.error('addMessage error:', err.message);
-    return { message, milestone: null };
+      const roomMeta = await getRoomMeta(roomName);
+      const updates = { messageCount: count, lastActivity: Date.now() };
+      if (milestone) {
+        updates.milestonesHit = [...(roomMeta.milestonesHit || []), milestone];
+      }
+      await updateRoomMeta(roomName, updates);
+    } catch (err) {
+      console.error('addMessage Supabase error:', err.message);
+    }
   }
+
+  return { message, milestone: milestone || null };
 }
 
 async function editMessage(roomName, messageId, text) {
   const editedAt = Date.now();
-  if (!isDbReady()) {
-    const msgs = memMessages.get(roomName) || [];
-    const msg = msgs.find(m => m.id === messageId);
-    if (msg) { msg.text = text; msg.editedAt = editedAt; return msg; }
-    return null;
-  }
-  try {
-    const { data, error } = await supabase
-      .from('messages')
-      .update({ text, edited_at: editedAt })
-      .eq('id', messageId)
-      .eq('room', roomName)
-      .select()
-      .single();
+  const msgs = memMessages.get(roomName) || [];
+  const msg = msgs.find(m => m.id === messageId);
+  if (msg) { msg.text = text; msg.editedAt = editedAt; }
 
-    if (error) throw error;
-    return dbMsgToJs(data);
-  } catch (err) {
-    console.error('editMessage error:', err.message);
-    return null;
+  if (isDbReady()) {
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .update({ text, edited_at: editedAt })
+        .eq('id', messageId)
+        .eq('room', roomName)
+        .select()
+        .single();
+
+      if (!error && data) return dbMsgToJs(data);
+    } catch (err) {
+      console.error('editMessage error:', err.message);
+    }
   }
+  return msg || null;
 }
 
 async function markViewOnceOpened(roomName, messageId) {
-  if (!isDbReady()) {
-    const msgs = memMessages.get(roomName) || [];
-    const msg = msgs.find(m => m.id === messageId);
-    if (msg) { msg.opened = true; msg.url = ''; }
-    return msg;
-  }
-  try {
-    const { data, error } = await supabase
-      .from('messages')
-      .update({ url: '' })
-      .eq('id', messageId)
-      .eq('room', roomName)
-      .select()
-      .single();
+  const msgs = memMessages.get(roomName) || [];
+  const msg = msgs.find(m => m.id === messageId);
+  if (msg) { msg.opened = true; msg.url = ''; }
 
-    if (error) throw error;
-    return dbMsgToJs(data);
-  } catch (err) {
-    console.error('markViewOnceOpened error:', err.message);
-    return null;
+  if (isDbReady()) {
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .update({ url: '' })
+        .eq('id', messageId)
+        .eq('room', roomName)
+        .select()
+        .single();
+
+      if (!error && data) return dbMsgToJs(data);
+    } catch (err) {
+      console.error('markViewOnceOpened error:', err.message);
+    }
   }
+  return msg || null;
 }
 
 async function deleteMessage(roomName, messageId) {
-  if (!isDbReady()) {
-    const msgs = memMessages.get(roomName) || [];
-    const msg = msgs.find(m => m.id === messageId);
-    if (msg) { msg.deleted = true; msg.text = '🗑️ Message deleted'; msg.url = ''; }
-    return;
-  }
-  try {
-    await supabase
-      .from('messages')
-      .update({ deleted: true, text: '🗑️ Message deleted', url: '' })
-      .eq('id', messageId)
-      .eq('room', roomName);
-  } catch (err) {
-    console.error('deleteMessage error:', err.message);
+  const msgs = memMessages.get(roomName) || [];
+  const msg = msgs.find(m => m.id === messageId);
+  if (msg) { msg.deleted = true; msg.text = '🗑️ Message deleted'; msg.url = ''; }
+
+  if (isDbReady()) {
+    try {
+      await supabase
+        .from('messages')
+        .update({ deleted: true, text: '🗑️ Message deleted', url: '' })
+        .eq('id', messageId)
+        .eq('room', roomName);
+    } catch (err) {
+      console.error('deleteMessage error:', err.message);
+    }
   }
 }
 
 async function clearHistory(roomName) {
-  if (!isDbReady()) {
-    memMessages.set(roomName, []);
-    if (memRooms.has(roomName)) {
-      const room = memRooms.get(roomName);
-      room.messageCount = 0;
-      room.milestonesHit = [];
-      room.pinnedMessageId = null;
-    }
-    return;
+  memMessages.set(roomName, []);
+  if (memRooms.has(roomName)) {
+    const room = memRooms.get(roomName);
+    room.messageCount = 0;
+    room.milestonesHit = [];
+    room.pinnedMessageId = null;
   }
-  try {
-    await supabase.from('messages').delete().eq('room', roomName);
-    await updateRoomMeta(roomName, { messageCount: 0, milestonesHit: [], pinnedMessageId: null });
-  } catch (err) {
-    console.error('clearHistory error:', err.message);
+
+  if (isDbReady()) {
+    try {
+      await supabase.from('messages').delete().eq('room', roomName);
+      await updateRoomMeta(roomName, { messageCount: 0, milestonesHit: [], pinnedMessageId: null });
+    } catch (err) {
+      console.error('clearHistory error:', err.message);
+    }
   }
 }
 
@@ -380,48 +385,48 @@ async function pinMessage(roomName, messageId) {
 }
 
 async function findMessage(roomName, messageId) {
-  if (!isDbReady()) {
-    const msgs = memMessages.get(roomName) || [];
-    return msgs.find(m => m.id === messageId) || null;
-  }
-  try {
-    const { data, error } = await supabase
-      .from('messages')
-      .select('*')
-      .eq('id', messageId)
-      .eq('room', roomName)
-      .single();
+  const msgs = memMessages.get(roomName) || [];
+  const local = msgs.find(m => m.id === messageId);
+  if (local) return local;
 
-    if (error) return null;
-    return dbMsgToJs(data);
-  } catch (err) {
-    return null;
+  if (isDbReady()) {
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('id', messageId)
+        .eq('room', roomName)
+        .single();
+
+      if (!error && data) return dbMsgToJs(data);
+    } catch (err) {
+      return null;
+    }
   }
+  return null;
 }
 
 async function updateReadReceipt(roomName, username, messageId) {
-  if (!isDbReady()) {
-    const msgs = memMessages.get(roomName) || [];
-    const msg = msgs.find(m => m.id === messageId);
-    if (!msg) return {};
-    if (!memRooms.has(roomName)) memRooms.set(roomName, defaultRoomMeta(roomName));
-    const room = memRooms.get(roomName);
-    if (!room.readBy) room.readBy = {};
-    room.readBy[username] = msg.time;
-    return room.readBy;
+  if (!memRooms.has(roomName)) memRooms.set(roomName, defaultRoomMeta(roomName));
+  const room = memRooms.get(roomName);
+  if (!room.readBy) room.readBy = {};
+  const msgs = memMessages.get(roomName) || [];
+  const msg = msgs.find(m => m.id === messageId);
+  if (msg) room.readBy[username] = msg.time;
+
+  if (isDbReady()) {
+    try {
+      const dbMsg = await findMessage(roomName, messageId);
+      const meta = await getRoomMeta(roomName);
+      const readBy = meta.readBy || {};
+      if (dbMsg) readBy[username] = dbMsg.time;
+      await updateRoomMeta(roomName, { readBy });
+      return readBy;
+    } catch (err) {
+      console.error('updateReadReceipt error:', err.message);
+    }
   }
-  try {
-    const msg = await findMessage(roomName, messageId);
-    if (!msg) return {};
-    const meta = await getRoomMeta(roomName);
-    const readBy = meta.readBy || {};
-    readBy[username] = msg.time;
-    await updateRoomMeta(roomName, { readBy });
-    return readBy;
-  } catch (err) {
-    console.error('updateReadReceipt error:', err.message);
-    return {};
-  }
+  return room.readBy;
 }
 
 async function updateMessageReaction(roomName, messageId, emoji, username, add) {
@@ -440,32 +445,29 @@ async function updateMessageReaction(roomName, messageId, emoji, username, add) 
   }
   msg.reactions = reactions;
 
-  if (!isDbReady()) {
-    return msg;
+  if (isDbReady()) {
+    try {
+      await supabase.from('messages').update({ reactions }).eq('id', messageId).eq('room', roomName);
+    } catch (err) {
+      console.error('updateMessageReaction error:', err.message);
+    }
   }
-  try {
-    await supabase.from('messages').update({ reactions }).eq('id', messageId).eq('room', roomName);
-    return msg;
-  } catch (err) {
-    console.error('updateMessageReaction error:', err.message);
-    return msg;
-  }
+  return msg;
 }
 
 async function updatePollVotes(roomName, messageId, votes) {
-  if (!isDbReady()) {
-    const msgs = memMessages.get(roomName) || [];
-    const msg = msgs.find(m => m.id === messageId);
-    if (msg) msg.votes = votes;
-    return votes;
+  const msgs = memMessages.get(roomName) || [];
+  const msg = msgs.find(m => m.id === messageId);
+  if (msg) msg.votes = votes;
+
+  if (isDbReady()) {
+    try {
+      await supabase.from('messages').update({ votes }).eq('id', messageId);
+    } catch (err) {
+      console.error('updatePollVotes error:', err.message);
+    }
   }
-  try {
-    await supabase.from('messages').update({ votes }).eq('id', messageId);
-    return votes;
-  } catch (err) {
-    console.error('updatePollVotes error:', err.message);
-    return votes;
-  }
+  return votes;
 }
 
 // ── Profile operations ───────────────────────────────────────────────────────

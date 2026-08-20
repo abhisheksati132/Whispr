@@ -1512,10 +1512,9 @@
     outboxQueue.push(payload);
     saveOutboxQueue();
 
-    if (socket && socket.connected) {
+    if (!socket) initSocket();
+    if (socket) {
       socket.emit('message', payload);
-    } else {
-      if (!socket) initSocket();
     }
   }
 
@@ -2546,9 +2545,9 @@
       setConnected(true);
       const banner = document.getElementById('offlineBanner');
       if (banner) banner.style.display = 'none';
+      if (joined || (myName && myRoom)) doSocketJoin();
       flushOfflineQueue();
       flushOutboxQueue();
-      if (joined || (myName && myRoom)) doSocketJoin();
     });
 
     socket.on('connect_error', (err) => {
