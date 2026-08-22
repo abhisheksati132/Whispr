@@ -147,6 +147,8 @@ app.get('/api/export-chat', async (req, res) => {
 
 // ── OpenGraph Link Preview ───────────────────────────────────────────────────
 const linkPreviewCache = new Map();
+const LINK_PREVIEW_TTL = 24 * 60 * 60 * 1000; // 24 hours
+const LINK_PREVIEW_MAX = 500;
 
 app.get('/api/link-preview', async (req, res) => {
   try {
@@ -180,8 +182,10 @@ app.get('/api/link-preview', async (req, res) => {
     }
 
     const cacheKey = targetUrl.href;
-    if (linkPreviewCache.has(cacheKey)) {
-      return res.json(linkPreviewCache.get(cacheKey));
+    const cached = linkPreviewCache.get(cacheKey);
+    if (cached && (Date.now() - cached.cachedAt < LINK_PREVIEW_TTL)) {
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      return res.json(cached.data);
     }
 
     const controller = new AbortController();
@@ -236,12 +240,13 @@ app.get('/api/link-preview', async (req, res) => {
       favicon
     };
 
-    if (linkPreviewCache.size > 200) {
+    if (linkPreviewCache.size > LINK_PREVIEW_MAX) {
       const firstKey = linkPreviewCache.keys().next().value;
       linkPreviewCache.delete(firstKey);
     }
-    linkPreviewCache.set(cacheKey, metaData);
+    linkPreviewCache.set(cacheKey, { data: metaData, cachedAt: Date.now() });
 
+    res.setHeader('Cache-Control', 'public, max-age=86400');
     res.json(metaData);
   } catch (err) {
     res.status(500).json({ error: 'Preview failed' });
@@ -318,6 +323,7 @@ app.post('/api/upload-multipart', uploadMiddleware.single('file'), async (req, r
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     const { size, mimetype, originalname } = req.file;
+    const kind = String(req.body.kind || '').trim() || (mimetype || '').split('/')[0];
     const cleanMime = String(mimetype || '').split(';')[0].trim().toLowerCase();
     const allowed = [
       'image/jpeg','image/png','image/gif','image/webp','image/svg+xml','image/heic','image/heif',
@@ -492,6 +498,7 @@ async function sendPushToRoom(room, senderName, title, body) {
     const m = rooms.get(room);
     if (m) for (const u of m.values()) online.add(u.name);
     const subs = await mStore.getPushSubs();
+    const tag = room ? `whispr-room-${room}` : 'whispr-default';
     for (const sub of subs) {
       if (sub.username === senderName || online.has(sub.username)) continue;
       if (room) {
@@ -502,7 +509,7 @@ async function sendPushToRoom(room, senderName, title, body) {
           .single();
         if (muted.data && muted.data.mute_until && muted.data.mute_until > Date.now()) continue;
       }
-      const payload = JSON.stringify({ title, body, icon:'/icon-192.png', url:'/' });
+      const payload = JSON.stringify({ title, body, icon:'/icon-192.png', url:'/', tag });
       webpush.sendNotification({ endpoint: sub.endpoint, keys: sub.keys || {} }, payload)
         .catch(err => { if (err.statusCode===410||err.statusCode===404) mStore.deletePushSub(sub.endpoint).catch(()=>{}); });
     }

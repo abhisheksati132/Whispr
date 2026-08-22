@@ -992,6 +992,7 @@
 
     if (!msg.deleted) {
       html += `<button class="ctx-item" onclick="BestieChat.replyToMessage('${msg.id}','${safeUser}','${safeText}','${msg.type||'text'}'); BestieChat.hideContextMenu();">↩ Reply</button>`;
+      html += `<button class="ctx-item" onclick="BestieChat.openThread('${msg.id}'); BestieChat.hideContextMenu();">🧵 View Thread</button>`;
       if (msg.text) {
         html += `<button class="ctx-item" onclick="BestieChat.copyText('${safeText}'); BestieChat.hideContextMenu();">📋 Copy Text</button>`;
       }
@@ -1265,6 +1266,32 @@
     });
     if (!res.ok) throw new Error('Upload failed');
     return res.json();
+  }
+
+  function uploadFileWithProgress(file, kind, onProgress) {
+    return new Promise((resolve, reject) => {
+      const form = new FormData();
+      form.append('file', file);
+      if (kind) form.append('kind', kind);
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/upload-multipart');
+      if (authToken) xhr.setRequestHeader('Authorization', `Bearer ${authToken}`);
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable && onProgress) {
+          onProgress(Math.round((e.loaded / e.total) * 100));
+        }
+      });
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try { resolve(JSON.parse(xhr.responseText)); }
+          catch (_) { reject(new Error('Invalid response')); }
+        } else {
+          reject(new Error(xhr.responseText || 'Upload failed'));
+        }
+      });
+      xhr.addEventListener('error', () => reject(new Error('Network error')));
+      xhr.send(form);
+    });
   }
 
   // ═══════════════════ SIDEBAR ═══════════════════
@@ -1779,8 +1806,9 @@
       showToast('Compressing & sending photo… 📸');
       try {
         const { dataUrl, mime } = await compressImage(file);
-        const { url } = await uploadFile(dataUrl, mime, 'image');
-        sendMessagePayload({ type: 'image', url, replyTo: replyingTo });
+        const blob = dataUrlToBlob(dataUrl, mime);
+        const result = await uploadFileWithProgress(blob, 'image', (pct) => showToast(`Uploading… ${pct}%`));
+        sendMessagePayload({ type: 'image', url: result.url, replyTo: replyingTo });
         cancelReply();
       } catch (err) {
         showToast('Could not upload photo');
@@ -1790,8 +1818,9 @@
       try {
         const uploadPromises = files.slice(0, 4).map(async (f) => {
           const { dataUrl, mime } = await compressImage(f);
-          const { url } = await uploadFile(dataUrl, mime, 'image');
-          return { url, name: f.name };
+          const blob = dataUrlToBlob(dataUrl, mime);
+          const result = await uploadFileWithProgress(blob, 'image', (pct) => showToast(`Uploading… ${pct}%`));
+          return { url: result.url, name: f.name };
         });
         const items = await Promise.all(uploadPromises);
         sendMessagePayload({ type: 'media-group', items, replyTo: replyingTo });
@@ -1800,6 +1829,16 @@
         showToast('Could not upload photo group');
       }
     }
+  }
+
+  function dataUrlToBlob(dataUrl, mime) {
+    const [header, base64] = dataUrl.split(',');
+    const mimeMatch = header.match(/:(.*?);/);
+    const mimeType = mime || (mimeMatch ? mimeMatch[1] : 'application/octet-stream');
+    const binary = atob(base64);
+    const arr = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) arr[i] = binary.charCodeAt(i);
+    return new Blob([arr], { type: mimeType });
   }
 
   async function uploadDocumentFile(input) {
@@ -1813,24 +1852,19 @@
       return;
     }
     showToast(`Uploading ${file.name}… 📄`);
-    const reader = new FileReader();
-    reader.onload = async () => {
-      try {
-        const mime = file.type || 'application/octet-stream';
-        const { url } = await uploadFile(reader.result, mime, 'document', file.name);
-        sendMessagePayload({
-          type: 'document',
-          url,
-          docName: file.name,
-          docSize: file.size,
-          replyTo: replyingTo
-        });
-        cancelReply();
-      } catch (err) {
-        showToast('Could not upload document');
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const result = await uploadFileWithProgress(file, 'document', (pct) => showToast(`Uploading… ${pct}%`));
+      sendMessagePayload({
+        type: 'document',
+        url: result.url,
+        docName: file.name,
+        docSize: file.size,
+        replyTo: replyingTo
+      });
+      cancelReply();
+    } catch (err) {
+      showToast('Could not upload document');
+    }
   }
 
   function openViewOnceMedia(messageId, url) {
@@ -1860,6 +1894,42 @@
     els.replyBar.style.display = 'none';
     els.replyBar.classList.remove('open');
     els.replyPreview.innerHTML = '';
+  }
+
+  function openThread(messageId) {
+    contextTarget = messageId;
+    const parent = allMessagesCached.find(m => m.id === messageId);
+    if (!parent) return;
+    const replies = allMessagesCached.filter(m => m.replyTo === messageId && !m.deleted);
+    const threadBody = document.getElementById('threadBody');
+    const threadTitle = document.getElementById('threadTitle');
+    if (threadTitle) threadTitle.textContent = `Thread · ${replies.length} ${replies.length === 1 ? 'reply' : 'replies'}`;
+    if (!threadBody) return;
+    if (!replies.length) {
+      threadBody.innerHTML = '<div style="padding:32px; text-align:center; color:var(--muted);">No replies yet — be the first! 💬</div>';
+    } else {
+      const temp = document.createElement('div');
+      replies.forEach(m => renderMessage(m, true, temp));
+      threadBody.innerHTML = temp.innerHTML;
+    }
+    showModal('threadModal');
+    hideContextMenu();
+  }
+
+  function closeThread() {
+    hideModal('threadModal');
+    contextTarget = null;
+  }
+
+  function sendThreadReply() {
+    if (!contextTarget || !socket || !joined) return;
+    const input = document.getElementById('threadReplyInput');
+    const text = input ? input.value.trim() : '';
+    if (!text) return;
+    const payload = { text, replyTo: contextTarget, room: myRoom };
+    socket.emit('message', payload);
+    if (input) input.value = '';
+    setTimeout(() => openThread(contextTarget), 300);
   }
 
   function scrollToMessage(msgId) {
@@ -2024,21 +2094,17 @@
         const duration = Math.max(1, Math.round((Date.now() - recordStartTime) / 1000));
         const mimeType = (recordChunks[0] && recordChunks[0].type) || chosenMime || 'audio/webm';
         const blob = new Blob(recordChunks, { type: mimeType });
-        const reader = new FileReader();
-        reader.onload = async () => {
-          try {
-            showToast('Sending voice note… 🎙️');
-            const { url } = await uploadFile(reader.result, mimeType, 'voice');
-            socket.emit('message', { type: 'voice', url, duration, replyTo: replyingTo });
-            cancelReply();
-            playSound('send');
-          } catch (err) {
-            console.error('Voice send error:', err);
-            renderSystem('Could not send voice note');
-            showToast('Voice note failed to upload');
-          }
-        };
-        reader.readAsDataURL(blob);
+        try {
+          showToast('Sending voice note… 🎙️');
+          const result = await uploadFileWithProgress(blob, 'voice', (pct) => showToast(`Sending voice… ${pct}%`));
+          socket.emit('message', { type: 'voice', url: result.url, duration, replyTo: replyingTo });
+          cancelReply();
+          playSound('send');
+        } catch (err) {
+          console.error('Voice send error:', err);
+          renderSystem('Could not send voice note');
+          showToast('Voice note failed to upload');
+        }
       };
 
       mediaRecorder.start();
@@ -2677,25 +2743,21 @@
   async function sendDoodle() {
     if (!joined || !doodleCtx) return;
     const canvas = els.doodleCanvas;
-    // Check if canvas is blank
     const data = doodleCtx.getImageData(0, 0, canvas.width, canvas.height).data;
     const blank = !data.some((v) => v !== 0);
     if (blank) { renderSystem('Draw something first! ✏️'); return; }
 
     canvas.toBlob(async (blob) => {
       if (!blob) return;
-      const reader = new FileReader();
-      reader.onload = async () => {
-        try {
-          const { url } = await uploadFile(reader.result, 'image/png', 'image');
-          socket.emit('message', { type: 'image', url, text: '✏️ Doodle', replyTo: replyingTo });
-          cancelReply();
-          closeDoodle();
-          clearDoodle();
-          playSound('send');
-        } catch { renderSystem('Could not send doodle — try again'); }
-      };
-      reader.readAsDataURL(blob);
+      try {
+        showToast('Sending doodle… ✏️');
+        const result = await uploadFileWithProgress(blob, 'image', (pct) => showToast(`Sending doodle… ${pct}%`));
+        socket.emit('message', { type: 'image', url: result.url, text: '✏️ Doodle', replyTo: replyingTo });
+        cancelReply();
+        closeDoodle();
+        clearDoodle();
+        playSound('send');
+      } catch { renderSystem('Could not send doodle — try again'); }
     }, 'image/png');
   }
 
@@ -4107,6 +4169,7 @@
     const current = localStorage.getItem('bestieAppPin');
     if (current) {
       localStorage.removeItem('bestieAppPin');
+      localStorage.removeItem('bestieBiometricEnabled');
       if (btn) btn.textContent = 'Enable';
       if (input) input.value = '';
       showToast('🔓 App Lock PIN disabled');
@@ -4114,6 +4177,7 @@
       localStorage.setItem('bestieAppPin', input.value);
       if (btn) btn.textContent = 'Disable';
       showToast('🔒 App Lock PIN enabled!');
+      setTimeout(enableBiometricLock, 500);
     } else {
       showToast('⚠️ Please enter a 4-digit PIN');
     }
@@ -4133,6 +4197,52 @@
     }
   }
 
+  async function enableBiometricLock() {
+    const pin = localStorage.getItem('bestieAppPin');
+    if (!pin) { showToast('Set a 4-digit PIN first'); return; }
+    try {
+      if (!navigator.credentials || !navigator.credentials.create) {
+        showToast('Biometrics not supported in this browser');
+        return;
+      }
+      const credential = await navigator.credentials.create({
+        password: {
+          id: `whispr-biometric-${myName || 'user'}`,
+          password: pin,
+          icon: '/icon-192.png'
+        }
+      });
+      if (credential) {
+        localStorage.setItem('bestieBiometricEnabled', 'true');
+        showToast('🔓 Biometric unlock enabled!');
+        const btn = document.getElementById('biometricUnlockBtn');
+        if (btn) btn.style.display = 'inline-block';
+      }
+    } catch (err) {
+      console.error('Biometric enable error:', err);
+      showToast('Could not enable biometrics');
+    }
+  }
+
+  async function verifyBiometricLock() {
+    try {
+      if (!navigator.credentials || !navigator.credentials.get) {
+        showToast('Biometrics not supported');
+        return;
+      }
+      const credential = await navigator.credentials.get({
+        password: true,
+        icon: '/icon-192.png'
+      });
+      if (credential && credential.password) {
+        verifyPinLock(credential.password);
+      }
+    } catch (err) {
+      console.error('Biometric verify error:', err);
+      if (err.name !== 'NotAllowedError') showToast('Biometric unlock failed');
+    }
+  }
+
   function checkPinLock() {
     const pin = localStorage.getItem('bestieAppPin');
     if (pin) {
@@ -4140,6 +4250,10 @@
       if (modal) modal.style.display = 'flex';
       const input = document.getElementById('pinLockInput');
       if (input) input.focus();
+      const bioBtn = document.getElementById('biometricUnlockBtn');
+      if (bioBtn && localStorage.getItem('bestieBiometricEnabled') === 'true') {
+        bioBtn.style.display = 'inline-block';
+      }
     }
   }
 
@@ -5796,22 +5910,19 @@
   function uploadCameraFile(input) {
     if (!input || !input.files || !input.files[0]) return;
     const file = input.files[0];
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const dataUrl = e.target.result;
-      const mime = file.type || 'image/jpeg';
+    showToast('📸 Uploading camera photo...');
+    (async () => {
       try {
-        showToast('📸 Uploading camera photo...');
-        const res = await fetch('/api/upload', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ data: dataUrl, mime, kind: 'image' })
-        });
-        const json = await res.json();
-        if (json.url) {
-          socket.emit('message', { user: myName, type: 'image', url: json.url });
+        const result = await uploadFileWithProgress(file, 'image', (pct) => showToast(`📸 Uploading… ${pct}%`));
+        if (result.url) {
+          socket.emit('message', { user: myName, type: 'image', url: result.url });
           showToast('📸 Camera Moment sent!');
         }
+      } catch (err) {
+        showToast('Could not upload camera photo');
+      }
+    })();
+  }
       } catch (err) {
         showToast('Could not upload photo');
       }
@@ -6283,20 +6394,16 @@
         const dur = Math.max(1, Math.round((Date.now() - videoNoteStartTime) / 1000));
         const finalMime = (videoNoteChunks[0] && videoNoteChunks[0].type) || mimeType || 'video/mp4';
         const blob = new Blob(videoNoteChunks, { type: finalMime });
-        const reader = new FileReader();
-        reader.onload = async () => {
-          try {
-            showToast('Sending circular video note… 🚀');
-            const { url } = await uploadFile(reader.result, finalMime, 'video');
-            socket.emit('message', { type: 'video-note', url, duration: dur, replyTo: replyingTo });
-            cancelReply();
-            playSound('send');
-          } catch (err) {
-            console.error('Video note send error:', err);
-            showToast('Failed to send video note');
-          }
-        };
-        reader.readAsDataURL(blob);
+        try {
+          showToast('Sending circular video note… 🚀');
+          const result = await uploadFileWithProgress(blob, 'video', (pct) => showToast(`Sending video… ${pct}%`));
+          socket.emit('message', { type: 'video-note', url: result.url, duration: dur, replyTo: replyingTo });
+          cancelReply();
+          playSound('send');
+        } catch (err) {
+          console.error('Video note send error:', err);
+          showToast('Failed to send video note');
+        }
       };
 
       videoNoteRecorder.start();
@@ -6393,6 +6500,8 @@
     setAuthMode, selectLoginAvatar, quickReentry, showFullLoginForm, copyInviteLink, togglePasswordVisibility, logout,
     // Multi-chat DMs
     loadChatList, switchRoom, deleteRoom, openNewChatModal, closeNewChatModal, searchUsersForDM, startDMWith, openChatsModal, closeChatsModal, toggleStickerPanel,
+    // Threading
+    openThread, closeThread, sendThreadReply,
     // Next-Gen Suite
     submitDailyAnswer, openTimeCapsuleModal, closeTimeCapsuleModal, setCapsulePreset, sendTimeCapsule, filterGallery, minimizeCall, restoreCall,
     scrollToBottom: scrollBottom

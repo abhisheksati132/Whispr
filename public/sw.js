@@ -61,7 +61,7 @@ self.addEventListener('fetch', (e) => {
 
 // Push Notification Handler
 self.addEventListener('push', (e) => {
-  let data = { title: 'Whispr', body: 'New message received 💬', icon: '/icon-192.png' };
+  let data = { title: 'Whispr', body: 'New message received 💬', icon: '/icon-192.png', tag: 'whispr-default' };
   if (e.data) {
     try {
       data = e.data.json();
@@ -73,8 +73,10 @@ self.addEventListener('push', (e) => {
     body: data.body,
     icon: data.icon || '/icon-192.png',
     badge: '/icon-192.png',
+    tag: data.tag || 'whispr-default',
     data: { url: data.url || '/' },
-    vibrate: [100, 50, 100]
+    vibrate: [100, 50, 100],
+    requireInteraction: false
   };
   e.waitUntil(self.registration.showNotification(data.title, options));
 });
