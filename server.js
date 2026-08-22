@@ -1,4 +1,5 @@
 'use strict';
+require('dotenv').config();
 const express  = require('express');
 const http     = require('http');
 const { Server } = require('socket.io');
@@ -8,6 +9,10 @@ const crypto   = require('crypto');
 const webpush  = require('web-push');
 const jwt      = require('jsonwebtoken');
 const multer   = require('multer');
+const helmet   = require('helmet');
+const cors     = require('cors');
+const rateLimit= require('express-rate-limit');
+const morgan   = require('morgan');
 
 const mStore = require('./supabaseStore');
 const { isConfigured, checkConnection, supabase } = require('./supabaseClient');
@@ -19,6 +24,23 @@ const {
 const CHAT_PASSWORD = process.env.CHAT_PASSWORD || '';
 const GIPHY_API_KEY = process.env.GIPHY_API_KEY || '';
 const JWT_SECRET    = process.env.JWT_SECRET || 'fallback-secret-change-me';
+
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  console.warn('⚠️  Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY — operating in memory-only mode.');
+}
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+  console.warn('⚠️  JWT_SECRET is missing or shorter than 32 characters. Set a strong secret in production.');
+}
+
+let sentryEnabled = false;
+try {
+  if (process.env.SENTRY_DSN) {
+    const Sentry = require('@sentry/node');
+    Sentry.init({ dsn: process.env.SENTRY_DSN, tracesSampleRate: 0.1, environment: process.env.NODE_ENV || 'development' });
+    sentryEnabled = true;
+    console.log('✅ Sentry error tracking initialized');
+  }
+} catch (_) {}
 
 // ── Supabase (PostgreSQL) ────────────────────────────────────────────────────
 (async () => {
@@ -60,15 +82,17 @@ const app    = express();
 const server = http.createServer(app);
 const io     = new Server(server);
 
-app.use((_req, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  next();
-});
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false
+}));
+app.use(cors({ origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : true, credentials: true }));
+app.use(morgan('combined'));
 app.use(express.json({ limit: '40mb' }));
 app.use(express.static(path.join(__dirname, 'public'), { index: 'index.html' }));
+
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: { error: 'Too many attempts, try again later.' } });
+const apiLimiter  = rateLimit({ windowMs: 60 * 1000, max: 120 });
 app.get('/uploads/:filename', async (req, res) => {
   const filename = path.basename(req.params.filename);
   const filePath = path.join(mStore.getUploadsDir(), filename);
@@ -310,6 +334,25 @@ app.post('/api/upload-multipart', uploadMiddleware.single('file'), async (req, r
     
     const ext = originalname.split('.').pop() || 'bin';
     const filename = `${crypto.randomUUID()}.${ext}`;
+    let thumbnailUrl = '';
+    
+    if (cleanMime.startsWith('image/')) {
+      try {
+        const sharp = require('sharp');
+        const thumbBuffer = await sharp(req.file.buffer)
+          .resize(200, 200, { fit: 'cover', withoutEnlargement: true })
+          .jpeg({ quality: 70 })
+          .toBuffer();
+        const thumbFilename = `thumb_${filename}.jpg`;
+        if (isConfigured()) {
+          await supabase.storage.from('uploads').upload(thumbFilename, thumbBuffer, { contentType: 'image/jpeg', upsert: true }).catch(() => {});
+          const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(thumbFilename);
+          thumbnailUrl = publicUrl;
+        } else {
+          thumbnailUrl = mStore.saveUpload(thumbBuffer, 'jpg');
+        }
+      } catch (_) {}
+    }
     
     if (isConfigured()) {
       try {
@@ -318,13 +361,13 @@ app.post('/api/upload-multipart', uploadMiddleware.single('file'), async (req, r
           .upload(filename, req.file.buffer, { contentType: cleanMime, upsert: true });
         if (!error && data) {
           const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(filename);
-          return res.json({ url: publicUrl, kind: cleanMime.split('/')[0], name: originalname, size });
+          return res.json({ url: publicUrl, kind: cleanMime.split('/')[0], name: originalname, size, thumbnailUrl });
         }
       } catch (_) {}
     }
     
     const url = mStore.saveUpload(req.file.buffer, ext);
-    res.json({ url, kind: cleanMime.split('/')[0], name: originalname, size });
+    res.json({ url, kind: cleanMime.split('/')[0], name: originalname, size, thumbnailUrl });
   } catch (err) { console.error('Upload error:', err); res.status(500).json({ error: 'Upload failed' }); }
 });
 
@@ -1171,6 +1214,14 @@ setInterval(async () => {
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 if (require.main === module) {
+  if (sentryEnabled) {
+    const Sentry = require('@sentry/node');
+    app.use(Sentry.Handlers.errorHandler());
+    app.use((err, req, res, next) => {
+      console.error('Unhandled error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    });
+  }
   const PORT = process.env.PORT || 3000;
   server.listen(PORT, '0.0.0.0', () => console.log(`✨ Whispr running on port ${PORT}`));
 }

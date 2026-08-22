@@ -8,6 +8,9 @@ const store   = require('../supabaseStore');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-me';
 
+const authLimiter = require('express-rate-limit')({ windowMs: 15 * 60 * 1000, max: 20, message: { error: 'Too many attempts, try again later.' } });
+router.use(authLimiter);
+
 function createSession(username, req) {
   const sessionId = crypto.randomUUID();
   const userAgent = req.headers['user-agent'] || '';
