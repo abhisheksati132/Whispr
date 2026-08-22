@@ -484,25 +484,21 @@ All critical decisions are resolved. The plan is ready for implementation.
 ### Completed
 - **Vite modularization:** `app.js` extracted to 39 ES modules in `src/` (`init.js` imports all and builds `window.BestieChat`)
 - **Cross-module dependencies:** Added `utils.js` imports to 10 modules (`escapeHtml`, `formatBytes`)
+- **Cross-module imports:** Added 137 ESM imports across 28 modules (smart-imports approach)
 - **Build system:** Vite configured, production build succeeds (`npm run build`)
 - **Tests:** 22/22 passing
-- **Dependency audit:** Mapped 454 cross-module calls; found that full resolution requires fixing incomplete module exports first
+- **Dependency audit:** Mapped 454 cross-module calls; resolved 137 via ESM imports; 182 unique external calls remain (mostly to functions not yet exported from modules)
 
 ### Not Started
 - Remove `public/app.js` and load only module entry point
-- Fix missing/incorrect exports in extracted modules before adding cross-module imports
-- Full dependency graph resolution (replace global calls with proper ESM imports)
+- Fix missing exports in extracted modules (many functions not exported)
+- Resolve remaining 182 cross-module global calls
 
 ### Blocker
-Full ESM dependency resolution is blocked by incomplete module extraction. Many functions are:
+Full ESM dependency resolution is partially blocked by incomplete module extraction. Many functions are:
 - Missing from extracted modules (not exported)
-- Duplicated across modules (extracted into wrong module)
+- In wrong modules (extracted by section header rather than function location)
 - Nested inside other functions (incorrectly exported as top-level)
-- Calling each other circularly
-
-Resolving this requires either:
-1. AST-based re-extraction of `app.js` into modules, or
-2. Manual review and fix of each module's exports before wiring imports
 
 ### Test Results
 ```
