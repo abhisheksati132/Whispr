@@ -482,17 +482,17 @@ All critical decisions are resolved. The plan is ready for implementation.
 - **Phase 3.x (Room Deletion):** Added `DELETE /api/rooms/:roomName` (owner only)
 
 ### In Progress
-- Frontend UI for block, forward, mute features
-- Vite modularization of `app.js`
+- Vite modularization of `app.js` — foundation created (`state.js`, `constants.js`, `utils.js`), full extraction in progress
 
 ### Not Started
-- Phase 3.2: Thumbnail generation (needs `sharp`)
-- Phase 3.6: CDN configuration (Supabase CDN is automatic)
-- Phase 4: Integration tests for Socket.io flows
-- Phase 5: Deployment to Railway/Render
+- Full Vite module extraction (`chat.js`, `ui.js`, `media.js`, `webrtc.js`, `games.js`, `extras.js`, `init.js`)
+- Phase 3.2: Thumbnail generation (needs `sharp`) — DONE
+- Phase 3.6: CDN configuration (Supabase CDN is automatic) — DONE
+- Phase 4: Integration tests for Socket.io flows — DONE
+- Phase 5: Deployment to Railway/Render — DONE (code pushed to Render)
 
 ### Test Results
 ```
 npm test
-✔ 21 tests passing (0 failures)
+✔ 22 tests passing (0 failures)
 ```
