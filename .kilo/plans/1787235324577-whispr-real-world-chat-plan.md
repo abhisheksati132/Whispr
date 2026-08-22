@@ -481,13 +481,15 @@ All critical decisions are resolved. The plan is ready for implementation.
 - **Phase 3.5 (Mute Chat):** Added mute/unmute endpoints, `mute_until` column, push notifications respect mute status
 - **Phase 3.x (Room Deletion):** Added `DELETE /api/rooms/:roomName` (owner only)
 
-### In Progress
-- Vite modularization — `app.js` extracted to 39 ES modules in `src/` (`init.js` imports all and builds `window.BestieChat`)
-- Cross-module dependency cleanup — added `utils.js` imports to 10 modules (`escapeHtml`, `formatBytes`)
+### Completed
+- **Vite modularization:** `app.js` extracted to 39 ES modules in `src/` (`init.js` imports all and builds `window.BestieChat`)
+- **Cross-module dependencies:** Added `utils.js` imports to 10 modules (`escapeHtml`, `formatBytes`)
+- **Build system:** Vite configured, production build succeeds (`npm run build`)
+- **Tests:** 22/22 passing
 
 ### Not Started
-- Remove `public/app.js` and load only module entry point
-- Full dependency graph resolution (replace remaining global calls with proper imports)
+- Remove `public/app.js` and load only module entry point (requires resolving ~327 cross-module global calls)
+- Full dependency graph resolution (replace global calls with proper ESM imports)
 
 ### Test Results
 ```
