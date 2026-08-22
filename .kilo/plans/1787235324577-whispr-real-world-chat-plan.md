@@ -486,10 +486,23 @@ All critical decisions are resolved. The plan is ready for implementation.
 - **Cross-module dependencies:** Added `utils.js` imports to 10 modules (`escapeHtml`, `formatBytes`)
 - **Build system:** Vite configured, production build succeeds (`npm run build`)
 - **Tests:** 22/22 passing
+- **Dependency audit:** Mapped 454 cross-module calls; found that full resolution requires fixing incomplete module exports first
 
 ### Not Started
-- Remove `public/app.js` and load only module entry point (requires resolving ~327 cross-module global calls)
+- Remove `public/app.js` and load only module entry point
+- Fix missing/incorrect exports in extracted modules before adding cross-module imports
 - Full dependency graph resolution (replace global calls with proper ESM imports)
+
+### Blocker
+Full ESM dependency resolution is blocked by incomplete module extraction. Many functions are:
+- Missing from extracted modules (not exported)
+- Duplicated across modules (extracted into wrong module)
+- Nested inside other functions (incorrectly exported as top-level)
+- Calling each other circularly
+
+Resolving this requires either:
+1. AST-based re-extraction of `app.js` into modules, or
+2. Manual review and fix of each module's exports before wiring imports
 
 ### Test Results
 ```
