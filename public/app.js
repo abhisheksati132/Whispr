@@ -61,6 +61,8 @@
   let contextTarget   = null;
   let longPressTimer  = null;
   let currentStreakDays = 0;
+  let blockedUsers    = [];     // [username, ...]
+  let mutedRooms      = {};     // { roomName: muteUntil }
 
   // E2EE state
   let e2eEnabled = localStorage.getItem('bestieChatE2EEActive') === 'true';
@@ -998,6 +1000,8 @@
       }
       html += `<button class="ctx-item" onclick="BestieChat.${isPinned ? 'unpinMessage()' : `pinMessageById('${msg.id}')`}; BestieChat.hideContextMenu();">📌 ${isPinned ? 'Unpin' : 'Pin'}</button>`;
       html += `<button class="ctx-item" onclick="BestieChat.toggleStarMessage('${msg.id}', ${!isStarred}); BestieChat.hideContextMenu();">⭐ ${isStarred ? 'Unstar' : 'Star'}</button>`;
+      html += `<button class="ctx-item" onclick="BestieChat.forwardMessage('${msg.id}', '${myRoom}'); BestieChat.hideContextMenu();">📨 Forward</button>`;
+      html += `<button class="ctx-item" onclick="BestieChat.muteRoom('${myRoom}', 3600000); BestieChat.hideContextMenu();">🔕 Mute 1h</button>`;
       if (mine) {
         html += `<div class="ctx-divider"></div>`;
         html += `<button class="ctx-item danger" onclick="BestieChat.deleteMessage('${msg.id}'); BestieChat.hideContextMenu();">🗑️ Delete</button>`;
@@ -1504,6 +1508,11 @@
     applyRoomTheme(myRoom);
     updateSidebarMyProfile();
 
+    try {
+      const res = await fetch('/api/rooms/blocks', { headers: { 'Authorization': `Bearer ${authToken}` } });
+      if (res.ok) { blockedUsers = await res.json(); }
+    } catch (_) {}
+
     await initOfflineDB();
     loadCachedMessagesFromOfflineDB(myRoom).then(msgs => {
       if (allMessagesCached.length === 0 && msgs.length > 0) {
@@ -1532,7 +1541,7 @@
   function doSocketJoin() {
     if (!socket) return;
     const nameToJoin = myName || localStorage.getItem('bestieChatName') || 'Bestie';
-    const roomToJoin = myRoom || localStorage.getItem('bestieChatRoom') || 'our-private-space';
+    const roomToJoin = myRoom || localStorage.getItem('bestieChatRoom') || `dm_${nameToJoin.toLowerCase()}_${nameToJoin.toLowerCase()}`;
     myName = nameToJoin;
     myRoom = roomToJoin;
     socket.emit('join', {
@@ -1555,7 +1564,7 @@
         try { myProfile = { ...myProfile, ...JSON.parse(profileStr) }; } catch(e){}
       }
       
-      myRoom = 'our-private-space';
+      myRoom = localStorage.getItem('bestieChatRoom') || `dm_${myName.toLowerCase()}_${myName.toLowerCase()}`;
       joined = true;
       
       if (els.login) els.login.setAttribute('style', 'display:none !important');
@@ -1592,7 +1601,7 @@
 
   function copyInviteLink() {
     const roomInputEl = document.getElementById('roomInput');
-    const room = (roomInputEl && roomInputEl.value.trim()) || 'our-private-space';
+    const room = (roomInputEl && roomInputEl.value.trim()) || myRoom || `dm_${(myName || localStorage.getItem('bestieChatName') || 'Bestie').toLowerCase()}_${(myName || localStorage.getItem('bestieChatName') || 'Bestie').toLowerCase()}`;
     const url = `${window.location.origin}?room=${encodeURIComponent(room)}`;
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(url).then(() => {
@@ -1660,7 +1669,7 @@
     const clientMsgId = 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     payload.clientMsgId = clientMsgId;
     payload.user = myName || localStorage.getItem('bestieChatName') || 'Bestie';
-    payload.room = myRoom || localStorage.getItem('bestieChatRoom') || 'our-private-space';
+    payload.room = myRoom || localStorage.getItem('bestieChatRoom') || `dm_${(myName || localStorage.getItem('bestieChatName') || 'Bestie').toLowerCase()}_${(myName || localStorage.getItem('bestieChatName') || 'Bestie').toLowerCase()}`;
 
     triggerHaptic(10);
 
@@ -1695,7 +1704,7 @@
       return;
     }
     if (!myName) myName = localStorage.getItem('bestieChatName') || 'Bestie';
-    if (!myRoom) myRoom = localStorage.getItem('bestieChatRoom') || 'our-private-space';
+    if (!myRoom) myRoom = localStorage.getItem('bestieChatRoom') || `dm_${myName.toLowerCase()}_${myName.toLowerCase()}`;
     if (!socket || !socket.connected) {
       initSocket();
       doSocketJoin();
@@ -1751,6 +1760,12 @@
     socket.emit('message', { type: 'hug' });
     playSound('hug'); confetti();
     localStorage.setItem('bestieLastMsgDate', new Date().toISOString().slice(0, 10));
+  }
+
+  function forwardMessage(messageId, targetRoom) {
+    if (!socket || !joined) return;
+    socket.emit('forward-message', { messageId, targetRoom });
+    showToast('Message forwarded 📨');
   }
 
   async function sendPhoto(filesInput) {
@@ -2892,12 +2907,34 @@
           if (pendingTick) {
             pendingTick.id = `tick-${id}`;
             pendingTick.className = 'msg-status-ticks sent';
-            pendingTick.innerHTML = `<svg viewBox="0 0 16 15" width="14" height="13" fill="none"><path d="M12.01 3.316l-7.92 8.56a.91.91 0 01-.67.3.91.91 0 01-.67-.3L.3 8.35a.96.96 0 010-1.34.93.93 0 011.33 0l2.79 2.99 7.26-7.85a.93.93 0 011.33 0 .96.96 0 010 1.166z" fill="currentColor"/></svg>`;
+            pendingTick.innerHTML = `<svg viewBox="0 0 16 15" width="14" height="13" fill="none"><path d="M12.01 3.316l-7.92 8.56a.91.91 0 01-.67.3.91.91 0 01-.67-.3L.3 8.35a.96.96 0 010-1.34.93.93 0 01.33 0l2.79 2.99 7.26-7.85a.93.93 0 011.33 0 .96.96 0 010 1.166z" fill="currentColor"/></svg>`;
           }
         }
         outboxQueue = outboxQueue.filter(item => item.clientMsgId !== clientMsgId);
         saveOutboxQueue();
       }
+    });
+
+    function rejectPendingMessage(clientMsgId, reason) {
+      const pendingWrap = document.querySelector(`.msg-wrap[data-id="${clientMsgId}"]`);
+      if (pendingWrap) {
+        pendingWrap.classList.add('msg-failed');
+        const statusText = pendingWrap.querySelector('.msg-status-text');
+        if (statusText) statusText.textContent = reason || 'Failed to send';
+        setTimeout(() => pendingWrap.remove(), 3000);
+      }
+      outboxQueue = outboxQueue.filter(item => item.clientMsgId !== clientMsgId);
+      saveOutboxQueue();
+    }
+
+    socket.on('rate-limited', ({ message }) => {
+      if (outboxQueue.length > 0) {
+        rejectPendingMessage(outboxQueue[outboxQueue.length - 1].clientMsgId, message || 'Slow down!');
+      }
+    });
+
+    socket.on('message-error', ({ clientMsgId, error }) => {
+      rejectPendingMessage(clientMsgId, error || 'Failed to send');
     });
 
     socket.on('view-once-opened', ({ messageId }) => {
@@ -3819,6 +3856,129 @@
 
   function closeBestieProfile() {
     hideModal('bestieProfileModal');
+  }
+
+  let bestieProfileTarget = null;
+  function openBestieProfile(targetUser) {
+    bestieProfileTarget = targetUser || bestieName || 'Bestie';
+    const friendName = bestieProfileTarget;
+    const profile = getProfile(friendName);
+
+    const titleEl = document.getElementById('bestieProfileCardTitle');
+    const avatarEl = document.getElementById('bestieProfileAvatarDisplay');
+    const nameEl = document.getElementById('bestieProfileNameDisplay');
+    const statusEl = document.getElementById('bestieProfileStatusDisplay');
+    const feelingRow = document.getElementById('bestieProfileFeelingRow');
+    const feelingText = document.getElementById('bestieProfileFeelingText');
+    const dotEl = document.getElementById('bestieProfileOnlineDot');
+    const msgsEl = document.getElementById('bestieStatMsgs');
+    const streakEl = document.getElementById('bestieStatStreak');
+    const blockBtn = document.getElementById('blockUserBtn');
+
+    if (titleEl) titleEl.textContent = `${friendName}'s Profile 👤`;
+    if (avatarEl) avatarEl.textContent = profile.avatar || '✨';
+    if (nameEl) nameEl.textContent = friendName;
+    if (statusEl) statusEl.textContent = profile.statusBio ? `"${profile.statusBio}"` : '"No bio set yet ✨"';
+    
+    const theirFeel = feelings[friendName];
+    if (feelingRow && feelingText) {
+      if (theirFeel && theirFeel.label) {
+        feelingRow.style.display = 'flex';
+        feelingText.textContent = `${theirFeel.emoji || ''} ${theirFeel.label}`;
+      } else {
+        feelingRow.style.display = 'none';
+      }
+    }
+
+    if (dotEl) {
+      const isOnline = Boolean(presenceUsers && presenceUsers.find(u => u.name === friendName));
+      dotEl.style.background = isOnline ? '#388E3C' : '#8e8e93';
+    }
+
+    if (msgsEl) {
+      const count = allMessagesCached.filter(m => m.user === friendName).length;
+      msgsEl.textContent = count;
+    }
+    if (streakEl) {
+      streakEl.textContent = `🔥 ${currentStreakDays || 0}`;
+    }
+
+    if (blockBtn) {
+      if (friendName.toLowerCase() === (myName || '').toLowerCase()) {
+        blockBtn.style.display = 'none';
+      } else {
+        blockBtn.style.display = 'inline-block';
+        blockBtn.textContent = blockedUsers && blockedUsers.includes(friendName.toLowerCase()) ? '✅ Unblock User' : '🚫 Block User';
+      }
+    }
+
+    showModal('bestieProfileModal');
+  }
+
+  function closeBestieProfile() {
+    hideModal('bestieProfileModal');
+  }
+
+  async function blockUser(targetUser) {
+    const user = targetUser || bestieProfileTarget;
+    if (!user || user.toLowerCase() === (myName || '').toLowerCase()) return;
+    try {
+      const res = await fetch('/api/rooms/blocks', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blockedUsername: user })
+      });
+      if (res.ok) {
+        if (!blockedUsers.includes(user.toLowerCase())) blockedUsers.push(user.toLowerCase());
+        showToast(`🚫 ${user} blocked`);
+        const blockBtn = document.getElementById('blockUserBtn');
+        if (blockBtn) blockBtn.textContent = '✅ Unblock User';
+      }
+    } catch (_) { showToast('Failed to block user'); }
+  }
+
+  async function unblockUser(targetUser) {
+    const user = targetUser || bestieProfileTarget;
+    if (!user) return;
+    try {
+      const res = await fetch(`/api/rooms/blocks/${encodeURIComponent(user)}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      if (res.ok) {
+        blockedUsers = blockedUsers.filter(u => u !== user.toLowerCase());
+        showToast(`✅ ${user} unblocked`);
+        const blockBtn = document.getElementById('blockUserBtn');
+        if (blockBtn) blockBtn.textContent = '🚫 Block User';
+      }
+    } catch (_) { showToast('Failed to unblock user'); }
+  }
+
+  async function muteRoom(roomName, durationMs) {
+    try {
+      const res = await fetch(`/api/rooms/${encodeURIComponent(roomName)}/mute`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ muteUntil: Date.now() + (durationMs || 3600000) })
+      });
+      if (res.ok) {
+        mutedRooms[roomName] = Date.now() + (durationMs || 3600000);
+        showToast('🔕 Chat muted');
+      }
+    } catch (_) { showToast('Failed to mute chat'); }
+  }
+
+  async function unmuteRoom(roomName) {
+    try {
+      const res = await fetch(`/api/rooms/${encodeURIComponent(roomName)}/mute`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      if (res.ok) {
+        delete mutedRooms[roomName];
+        showToast('🔔 Chat unmuted');
+      }
+    } catch (_) { showToast('Failed to unmute chat'); }
   }
 
   // ═══════════════════ UI HELPERS ═══════════════════
@@ -5776,6 +5936,27 @@
     document.querySelectorAll('.dm-row').forEach(r => { if (r.onclick && r.getAttribute('onclick') && r.getAttribute('onclick').includes(roomName)) r.classList.add('active'); });
   }
 
+  async function deleteRoom() {
+    if (!myRoom) return;
+    try {
+      const res = await fetch(`/api/rooms/${encodeURIComponent(myRoom)}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      if (res.ok) {
+        showToast('Room deleted');
+        myRoom = `dm_${(myName || '').toLowerCase()}_${(myName || '').toLowerCase()}`;
+        localStorage.setItem('bestieChatRoom', myRoom);
+        if (els.messages) els.messages.innerHTML = '';
+        allMessagesCached = []; lastDateLabel = '';
+        doSocketJoin();
+        loadChatList();
+      } else {
+        showToast('Failed to delete room');
+      }
+    } catch (_) { showToast('Failed to delete room'); }
+  }
+
   function openNewChatModal() {
     const modal = document.getElementById('newChatModal');
     if (modal) { modal.style.display = 'flex'; modal.classList.add('open'); }
@@ -5976,32 +6157,6 @@
     const base64  = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
     const rawData = window.atob(base64);
     return new Uint8Array([...rawData].map(c => c.charCodeAt(0)));
-  }
-
-  async function togglePushNotifications() {
-    const statusText = document.getElementById('pushStatusText');
-    const toggleBtn  = document.getElementById('pushToggleBtn');
-    if (!('Notification' in window)) { showToast('Push notifications not supported'); return; }
-    if (Notification.permission === 'denied') { showToast('\u26D4 Notifications blocked. Enable in browser settings.'); return; }
-    try {
-      const permission = await Notification.requestPermission();
-      if (permission !== 'granted') { showToast('Notifications permission denied'); return; }
-      const reg = await navigator.serviceWorker.ready;
-      const vapidResp = await fetch('/api/push-vapid-key');
-      const { publicKey } = await vapidResp.json();
-      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) });
-      await fetch('/api/push-subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: myName, subscription: sub.toJSON() })
-      });
-      if (statusText) statusText.textContent = '\u2705 Enabled';
-      if (toggleBtn)  toggleBtn.textContent = 'Disable';
-      localStorage.setItem('bestiePushEnabled', 'true');
-      showToast('\uD83D\uDD14 Push notifications enabled!');
-    } catch (err) {
-      showToast('Could not enable: ' + err.message);
-    }
   }
 
   function openChatsModal() {
@@ -6224,6 +6379,8 @@
     toggleTheme, selectTheme, applyAppTheme, dismissDailyQuestion, quickReact,
     togglePushNotifications,
     confirmClearHistory, exportChat, setRoomPassword, setDisappearingTimer, jumpToDate,
+    forwardMessage,
+    blockUser, unblockUser, muteRoom, unmuteRoom,
     openProfile, closeProfile, openBestieProfile, closeBestieProfile, selectAvatar, saveProfileStatus, saveProfileColor, saveNicknameFromProfile,
     toggleVoiceSpeed, openConnect4, closeConnect4, dropConnect4Token,
     sendQuickReply, captureDualCamera, uploadCameraFile, toggleQuickMenu,
@@ -6235,7 +6392,7 @@
     switchAuthTab, handleSignIn, handleRegister, selectRegisterAvatar,
     setAuthMode, selectLoginAvatar, quickReentry, showFullLoginForm, copyInviteLink, togglePasswordVisibility, logout,
     // Multi-chat DMs
-    loadChatList, switchRoom, openNewChatModal, closeNewChatModal, searchUsersForDM, startDMWith, openChatsModal, closeChatsModal, toggleStickerPanel,
+    loadChatList, switchRoom, deleteRoom, openNewChatModal, closeNewChatModal, searchUsersForDM, startDMWith, openChatsModal, closeChatsModal, toggleStickerPanel,
     // Next-Gen Suite
     submitDailyAnswer, openTimeCapsuleModal, closeTimeCapsuleModal, setCapsulePreset, sendTimeCapsule, filterGallery, minimizeCall, restoreCall,
     scrollToBottom: scrollBottom

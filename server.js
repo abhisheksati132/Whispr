@@ -7,9 +7,10 @@ const fs       = require('fs');
 const crypto   = require('crypto');
 const webpush  = require('web-push');
 const jwt      = require('jsonwebtoken');
+const multer   = require('multer');
 
 const mStore = require('./supabaseStore');
-const { isConfigured, checkConnection } = require('./supabaseClient');
+const { isConfigured, checkConnection, supabase } = require('./supabaseClient');
 const {
   normalizeName, normalizeRoom, normalizeText, normalizeNickname,
   randomJoinMessage, randomLeaveMessage, randomGamePrompt
@@ -104,7 +105,8 @@ app.get('/api/config', (_req, res) => res.json({ passwordRequired: Boolean(CHAT_
 app.get('/api/daily-question', (_req, res) => res.json({ question: mStore.getDailyQuestion() }));
 app.get('/api/export-chat', async (req, res) => {
   try {
-    const room = normalizeRoom(req.query.room || 'our-private-space');
+    const room = normalizeRoom(req.query.room);
+    if (!room) return res.status(400).json({ error: 'Room parameter required' });
     const messages = await mStore.getMessages(room, 5000);
     const meta = await mStore.getRoomMeta(room);
     res.json({
@@ -282,6 +284,50 @@ app.post('/api/upload', (req, res) => {
   } catch (err) { console.error('Upload error:', err); res.status(500).json({ error: 'Upload failed' }); }
 });
 
+// ── Multipart file upload ─────────────────────────────────────────────────────
+const uploadMiddleware = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 25 * 1024 * 1024 }
+});
+
+app.post('/api/upload-multipart', uploadMiddleware.single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    const { size, mimetype, originalname } = req.file;
+    const cleanMime = String(mimetype || '').split(';')[0].trim().toLowerCase();
+    const allowed = [
+      'image/jpeg','image/png','image/gif','image/webp','image/svg+xml','image/heic','image/heif',
+      'audio/webm','audio/ogg','audio/mp3','audio/wav','audio/mpeg','audio/mp4','audio/aac','audio/m4a','audio/x-m4a',
+      'video/mp4','video/webm','video/quicktime','video/3gpp','video/ogg',
+      'application/pdf','application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/zip','application/x-zip-compressed',
+      'text/plain','text/csv'
+    ];
+    if (!allowed.includes(cleanMime)) return res.status(400).json({ error: 'Unsupported type: ' + cleanMime });
+    
+    const ext = originalname.split('.').pop() || 'bin';
+    const filename = `${crypto.randomUUID()}.${ext}`;
+    
+    if (isConfigured()) {
+      try {
+        const { data, error } = await supabase.storage
+          .from('uploads')
+          .upload(filename, req.file.buffer, { contentType: cleanMime, upsert: true });
+        if (!error && data) {
+          const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(filename);
+          return res.json({ url: publicUrl, kind: cleanMime.split('/')[0], name: originalname, size });
+        }
+      } catch (_) {}
+    }
+    
+    const url = mStore.saveUpload(req.file.buffer, ext);
+    res.json({ url, kind: cleanMime.split('/')[0], name: originalname, size });
+  } catch (err) { console.error('Upload error:', err); res.status(500).json({ error: 'Upload failed' }); }
+});
+
 // ── GIF search endpoint (Tenor + Giphy with CORS fallback) ────────────────────
 app.get('/api/gifs', async (req, res) => {
   const query = (req.query.q || 'cute love').trim();
@@ -339,6 +385,7 @@ app.get('/api/gifs', async (req, res) => {
 // ── Online users in-memory ────────────────────────────────────────────────────
 const rooms = new Map(); // room → Map<socketId, {name, profile}>
 const roomPictionaryState = new Map();
+const rateLimitMap = new Map(); // username → { count, resetAt }
 
 const PICTIONARY_WORDS = [
   'cat','sun','pizza','tree','heart','coffee','star','cake','rainbow','moon',
@@ -350,12 +397,39 @@ function getRoomUsers(room) {
   return rooms.get(room);
 }
 
+async function updatePresence(username, socketId) {
+  if (!isConfigured() || !username) return;
+  try {
+    await supabase.from('user_presence').upsert({
+      username,
+      socket_id: socketId,
+      last_heartbeat: Date.now()
+    }).catch(() => {});
+  } catch (_) {}
+}
+
+async function getOnlineUsers() {
+  if (!isConfigured()) return [];
+  const cutoff = Date.now() - 60000;
+  try {
+    const { data } = await supabase
+      .from('user_presence')
+      .select('username')
+      .gt('last_heartbeat', cutoff);
+    return (data || []).map(r => r.username);
+  } catch (_) {
+    return [];
+  }
+}
+
 async function broadcastPresence(room) {
   const users = getRoomUsers(room);
   const list = []; const profList = [];
   for (const { name, profile } of users.values()) { list.push(name); profList.push({ name, ...profile }); }
-  io.to(room).emit('presence', { room, users: list, profiles: profList, lastSeen: mStore.getLastSeen() });
-  io.emit('global-presence', { lastSeen: mStore.getLastSeen() });
+  
+  const onlineUsers = await getOnlineUsers();
+  io.to(room).emit('presence', { room, users: list, profiles: profList, lastSeen: mStore.getLastSeen(), onlineUsers });
+  io.emit('global-presence', { lastSeen: mStore.getLastSeen(), onlineUsers });
 }
 
 const MILESTONE_TEXTS = {
@@ -377,6 +451,14 @@ async function sendPushToRoom(room, senderName, title, body) {
     const subs = await mStore.getPushSubs();
     for (const sub of subs) {
       if (sub.username === senderName || online.has(sub.username)) continue;
+      if (room) {
+        const muted = await mStore.supabase.from('room_participants')
+          .select('mute_until')
+          .eq('room_name', room)
+          .eq('username', sub.username.toLowerCase())
+          .single();
+        if (muted.data && muted.data.mute_until && muted.data.mute_until > Date.now()) continue;
+      }
       const payload = JSON.stringify({ title, body, icon:'/icon-192.png', url:'/' });
       webpush.sendNotification({ endpoint: sub.endpoint, keys: sub.keys || {} }, payload)
         .catch(err => { if (err.statusCode===410||err.statusCode===404) mStore.deletePushSub(sub.endpoint).catch(()=>{}); });
@@ -387,20 +469,22 @@ async function sendPushToRoom(room, senderName, title, body) {
 // ── Socket auth middleware ────────────────────────────────────────────────────
 io.use((socket, next) => {
   const token = socket.handshake.auth?.token;
-  if (token) {
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET);
-      socket.data.authenticatedUser = decoded.username;
-    } catch (_) { /* proceed without auth */ }
+  if (!token) {
+    return next(new Error('Authentication required'));
   }
-  next();
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    socket.data.authenticatedUser = decoded.username;
+    next();
+  } catch (_) {
+    next(new Error('Invalid token'));
+  }
 });
 
 // ── Socket.io ─────────────────────────────────────────────────────────────────
 io.on('connection', (socket) => {
   let username = null;
   let currentRoom = null;
-  let msgCount = 0, msgResetAt = Date.now() + 5000;
 
   // ── Join ──────────────────────────────────────────────────────────────────
   socket.on('join', async ({ name, room, nickname, password } = {}) => {
@@ -416,7 +500,7 @@ io.on('connection', (socket) => {
       }
 
       username = normalizeName(name) || socket.data.authenticatedUser || 'Bestie';
-      currentRoom = normalizeRoom(room || 'our-private-space');
+      currentRoom = normalizeRoom(room) || `dm_${username.toLowerCase()}_${username.toLowerCase()}`;
 
       const displayNick = normalizeNickname(nickname, username);
       let profile = await mStore.getProfile(username);
@@ -431,6 +515,7 @@ io.on('connection', (socket) => {
       const streak = mStore.recordActivity(username);
       mStore.setLastSeen(username);
       socket.to(currentRoom).emit('streak-update', streak);
+      await updatePresence(username, socket.id);
 
       const roomMeta = await mStore.getRoomMeta(currentRoom);
       const history = await mStore.getMessages(currentRoom, 100);
@@ -509,15 +594,24 @@ io.on('connection', (socket) => {
   // ── Message ───────────────────────────────────────────────────────────────
   socket.on('message', async (payload) => {
     if (!username) username = normalizeName(payload && payload.user) || socket.data.authenticatedUser || 'Bestie';
-    const targetRoom = normalizeRoom(payload && payload.room) || currentRoom || 'our-private-space';
+    const targetRoom = normalizeRoom(payload && payload.room) || currentRoom || `dm_${username.toLowerCase()}_${username.toLowerCase()}`;
     currentRoom = targetRoom;
     socket.join(targetRoom);
     socket.join('user:' + username.toLowerCase());
 
     const _now = Date.now();
-    if (_now > msgResetAt) { msgCount = 0; msgResetAt = _now + 5000; }
-    msgCount++;
-    if (msgCount > 60) { socket.emit('rate-limited', { message: 'Slow down! Take a breath.' }); return; }
+    const rl = rateLimitMap.get(username);
+    if (!rl || _now > rl.resetAt) {
+      rateLimitMap.set(username, { count: 1, resetAt: _now + 5000 });
+    } else {
+      rl.count++;
+      if (rl.count > 60) { socket.emit('rate-limited', { message: 'Slow down! Take a breath.' }); return; }
+    }
+
+    if (payload && typeof payload === 'object' && payload.user && payload.user !== username) {
+      const blocked = await mStore.isUserBlocked(username, payload.user);
+      if (blocked) return;
+    }
 
     let msgData;
     if (typeof payload === 'string') {
@@ -557,6 +651,9 @@ io.on('connection', (socket) => {
         message = res.message;
       } catch (err) {
         console.error('mStore.addMessage error, using fallback:', err.message);
+        if (payload && payload.clientMsgId) {
+          socket.emit('message-error', { clientMsgId: payload.clientMsgId, error: err.message || 'Failed to send message' });
+        }
         message = {
           id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : ('msg_' + Date.now()),
           ...msgData,
@@ -606,12 +703,66 @@ io.on('connection', (socket) => {
     } catch (err) { console.error('view-once-opened error:', err); }
   });
 
+  // ── Load Older Messages (pagination) ─────────────────────────────────────
+  socket.on('load-older-messages', async ({ before, limit } = {}) => {
+    try {
+      if (!currentRoom || !username) return;
+      const messages = await mStore.getRoomMessagesPaginated(currentRoom, before || Date.now(), limit || 50);
+      socket.emit('older-messages', { room: currentRoom, messages });
+    } catch (err) { console.error('load-older-messages error:', err); }
+  });
+
+  // ── Forward Message ──────────────────────────────────────────────────────
+  socket.on('forward-message', async ({ messageId, targetRoom, targetUser } = {}) => {
+    try {
+      if (!messageId || (!targetRoom && !targetUser)) return;
+      
+      let sourceRoom = currentRoom;
+      if (!sourceRoom) return;
+      
+      const original = await mStore.findMessage(sourceRoom, messageId);
+      if (!original) return;
+      
+      let destRoom = targetRoom;
+      if (!destRoom && targetUser) {
+        const dm = await mStore.getOrCreateDMRoom(username, targetUser);
+        destRoom = dm.roomName;
+      }
+      if (!destRoom) return;
+      
+      const forwarded = {
+        user: username,
+        text: original.text || '',
+        type: original.type || 'text',
+        url: original.url || '',
+        room: destRoom,
+        replyTo: null,
+        forwardedFrom: { user: original.user, messageId: original.id, type: original.type }
+      };
+      
+      const res = await mStore.addMessage(destRoom, forwarded);
+      const message = res.message;
+      io.to(destRoom).emit('message', message);
+      if (destRoom.startsWith('dm_')) {
+        const parts = destRoom.replace('dm_', '').split('_');
+        for (const p of parts) {
+          io.to('user:' + p.toLowerCase()).emit('message', message);
+        }
+      }
+    } catch (err) { console.error('forward-message error:', err); }
+  });
+
   // ── Granular Presence (typing, recording audio/video, sending media) ──────
   socket.on('presence-status', ({ status } = {}) => {
     try {
       if (!currentRoom || !username) return;
       socket.to(currentRoom).emit('presence-status-update', { user: username, status: status || 'idle' });
     } catch (err) { console.error('presence-status error:', err); }
+  });
+
+  // ── Heartbeat (update presence DB) ─────────────────────────────────────────
+  socket.on('heartbeat', async () => {
+    if (username) await updatePresence(username, socket.id);
   });
 
   // ── Star / Bookmark message ───────────────────────────────────────────────
@@ -845,8 +996,24 @@ io.on('connection', (socket) => {
   });
 
   // ── WebRTC Calling ────────────────────────────────────────────────────────
-  socket.on('call-invite', (payload = {}) => {
+  socket.on('call-invite', async (payload = {}) => {
     try {
+      if (!payload.targetUser && !currentRoom) return;
+      
+      let blocked = false;
+      if (payload.targetUser) {
+        blocked = await mStore.isUserBlocked(payload.targetUser.toLowerCase(), username);
+      } else if (currentRoom && currentRoom.startsWith('dm_')) {
+        const parts = currentRoom.replace('dm_', '').split('_');
+        for (const p of parts) {
+          if (p.toLowerCase() !== (username || '').toLowerCase()) {
+            if (await mStore.isUserBlocked(p.toLowerCase(), username)) { blocked = true; break; }
+          }
+        }
+      }
+      
+      if (blocked) return;
+      
       const data = {
         from: username,
         offer: payload.offer,
@@ -976,7 +1143,10 @@ io.on('connection', (socket) => {
   });
 
   // ── Disconnect ────────────────────────────────────────────────────────────
-  socket.on('disconnect', () => {
+  socket.on('disconnect', async () => {
+    if (username) {
+      await updatePresence(username, '').catch(() => {});
+    }
     if (username && currentRoom) {
       const roomUsers = getRoomUsers(currentRoom);
       roomUsers.delete(socket.id);
@@ -991,6 +1161,13 @@ io.on('connection', (socket) => {
 // ── Periodic cleanup ──────────────────────────────────────────────────────────
 setInterval(() => mStore.cleanExpiredRooms().catch(()=>{}), 24 * 60 * 60 * 1000).unref();
 setInterval(() => mStore.cleanDisappearingMessages().catch(()=>{}), 60 * 1000).unref();
+setInterval(async () => {
+  if (!isConfigured()) return;
+  const cutoff = Date.now() - 60000;
+  try {
+    await supabase.from('user_presence').delete().lt('last_heartbeat', cutoff).catch(() => {});
+  } catch (_) {}
+}, 60 * 1000).unref();
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 if (require.main === module) {

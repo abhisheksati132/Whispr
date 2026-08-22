@@ -7,7 +7,9 @@ const {
   normalizeNickname,
   randomJoinMessage,
   randomGamePrompt,
-  isImageUrl
+  isImageUrl,
+  escapeRegex,
+  formatMarkdown
 } = require('../chat-utils');
 const store = require('../store');
 
@@ -19,7 +21,7 @@ test('normalizeName trims and caps length', () => {
 test('normalizeRoom creates a safe room key', () => {
   assert.equal(normalizeRoom(' Bestie Room '), 'bestie-room');
   assert.equal(normalizeRoom('dm_alex_sam'), 'dm_alex_sam');
-  assert.equal(normalizeRoom('!!!'), 'our-private-space');
+  assert.equal(normalizeRoom('!!!'), '');
 });
 
 test('normalizeText trims and caps message length', () => {
@@ -102,4 +104,12 @@ test('store daily question locks answers until both reply', () => {
   const room = store.getRoom('test-room');
   assert.ok(room.diary && room.diary.length >= 1);
   assert.ok(room.diary[0].text.includes('Drinking matcha!'));
+});
+
+test('formatMarkdown converts basic markdown to HTML', () => {
+  assert.equal(formatMarkdown('**bold**'), '<strong>bold</strong>');
+  assert.equal(formatMarkdown('*italic*'), '<em>italic</em>');
+  assert.equal(formatMarkdown('`code`'), '<code>code</code>');
+  assert.equal(formatMarkdown('[link](https://example.com)'), '<a href="https://example.com" target="_blank" rel="noopener">link</a>');
+  assert.equal(formatMarkdown('~~strikethrough~~'), '<del>strikethrough</del>');
 });

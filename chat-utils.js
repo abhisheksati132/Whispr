@@ -112,9 +112,9 @@ function normalizeName(name) {
 }
 
 function normalizeRoom(room) {
-  const str = toStr(room) || 'our-private-space';
+  const str = toStr(room) || '';
   const cleaned = str.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^[-_]+|[-_]+$/g, '');
-  return cleaned || 'our-private-space';
+  return cleaned;
 }
 
 function normalizeText(text) {
@@ -163,6 +163,22 @@ function escapeRegex(str) {
   return toStr(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+function formatMarkdown(text) {
+  const str = toStr(text);
+  if (!str) return '';
+  let html = str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  html = html.replace(/~~([^~]+)~~/g, '<del>$1</del>');
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  return html.replace(/\n/g, '<br>');
+}
+
 module.exports = {
   normalizeName,
   normalizeRoom,
@@ -173,6 +189,7 @@ module.exports = {
   randomGamePrompt,
   isImageUrl,
   escapeRegex,
+  formatMarkdown,
   JOIN_MESSAGES,
   GAME_PROMPTS
 };

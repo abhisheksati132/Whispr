@@ -144,6 +144,15 @@ function getRoom(room) {
   return data.rooms[room];
 }
 
+function getRoomMeta(room) {
+  return getRoom(room);
+}
+
+function getMessages(room, limit = 100) {
+  const state = getRoom(room);
+  return (state.messages || []).slice(-limit);
+}
+
 function newMessageId() {
   return crypto.randomUUID();
 }
@@ -193,6 +202,11 @@ function markViewOnceOpened(room, messageId) {
   msg.url = '';
   persist();
   return msg;
+}
+
+function findMessage(room, messageId) {
+  const state = getRoom(room);
+  return state.messages.find((m) => m.id === messageId) || null;
 }
 
 function checkMilestone(state) {
@@ -424,7 +438,7 @@ function cleanExpiredRooms() {
   const cutoff = Date.now() - EXPIRY_DAYS * 24 * 60 * 60 * 1000;
   let cleaned = 0;
   for (const [roomName, room] of Object.entries(data.rooms)) {
-    if (roomName === 'our-private-space' || roomName === 'default') continue;
+    if (roomName === 'default') continue;
     const lastMsgTime = room.messages.length > 0
       ? room.messages[room.messages.length - 1].time
       : 0;
@@ -555,29 +569,122 @@ function cleanDisappearingMessages() {
   if (changed) persist();
 }
 
+function isDbReady() { return true; }
+
+function getUserByUsername(username) {
+  return data.profiles[username] || null;
+}
+
+function getUserByEmailOrUsername(identifier) {
+  for (const u of Object.values(data.profiles)) {
+    if (u.username === identifier || u.email === identifier) return u;
+  }
+  return null;
+}
+
+function createUser({ username, pinHash, email, avatar, color, statusBio, nickname }) {
+  data.profiles[username] = {
+    username, pinHash, email, avatar: avatar || '✨', color: color || '#818cf8',
+    statusBio: statusBio || '', nickname: nickname || username, createdAt: Date.now()
+  };
+  persist();
+  return data.profiles[username];
+}
+
+function updateMessageReaction(room, messageId, emoji, username, add) {
+  const state = getRoom(room);
+  const msg = state.messages.find((m) => m.id === messageId);
+  if (!msg) return null;
+  if (!msg.reactions) msg.reactions = {};
+  if (add) {
+    if (!msg.reactions[emoji]) msg.reactions[emoji] = [];
+    if (!msg.reactions[emoji].includes(username)) msg.reactions[emoji].push(username);
+  } else {
+    msg.reactions[emoji] = (msg.reactions[emoji] || []).filter((u) => u !== username);
+    if (msg.reactions[emoji].length === 0) delete msg.reactions[emoji];
+  }
+  persist();
+  return msg;
+}
+
+function updatePollVotes(room, messageId, optionIndex, username) {
+  const state = getRoom(room);
+  const msg = state.messages.find((m) => m.id === messageId);
+  if (!msg) return null;
+  if (!msg.votes) msg.votes = {};
+  msg.votes[username] = optionIndex;
+  persist();
+  return msg;
+}
+
+function getUploadsDir() { return UPLOADS_DIR; }
+
+function saveUpload(buffer, ext) {
+  ensureDirs();
+  const id = crypto.randomUUID();
+  const filename = `${id}.${ext}`;
+  fs.writeFileSync(path.join(UPLOADS_DIR, filename), buffer);
+  return `/uploads/${filename}`;
+}
+
+function getMedia() { return []; }
+
+function savePushSub(username, subscription) { return; }
+function deletePushSub(endpoint) { return; }
+function getPushSubs(username) { return []; }
+
+function listUserRooms(username) {
+  const clean = String(username || '').toLowerCase();
+  if (!clean) return [];
+  const savedRoomName = `dm_${clean}_${clean}`;
+  const result = [];
+  for (const [name, room] of Object.entries(data.rooms)) {
+    if (room.participants && room.participants.map(p => String(p).toLowerCase()).includes(clean)) {
+      result.push({ name, type: room.type || 'dm', participants: room.participants, lastActivity: room.lastActivity || 0 });
+    }
+  }
+  if (!result.some(r => r.name === savedRoomName)) {
+    result.unshift({ name: savedRoomName, type: 'dm', participants: [clean, clean], lastActivity: 0 });
+  }
+  return result;
+}
+
+function searchUsers(query, excludeUsername) {
+  const q = String(query || '').toLowerCase().trim();
+  if (!q) return [];
+  return Object.values(data.profiles)
+    .filter(u => u.username !== excludeUsername && (u.username.includes(q) || (u.nickname && u.nickname.toLowerCase().includes(q))))
+    .map(u => ({ username: u.username, nickname: u.nickname || u.username, avatar: u.avatar || '✨', color: u.color || '#818cf8', statusBio: u.statusBio || '' }));
+}
+
+function getOrCreateDMRoom(user1, user2) {
+  const sorted = [user1.toLowerCase(), user2.toLowerCase()].sort();
+  const dmName = `dm_${sorted.join('_')}`;
+  if (!data.rooms[dmName]) {
+    data.rooms[dmName] = { ...defaultRoom(), type: 'dm', participants: sorted };
+    persist();
+  }
+  return { roomName: dmName, participants: sorted };
+}
+
+function getRoomMessagesPaginated(roomName, beforeTime, limit = 50) {
+  const state = getRoom(roomName);
+  let msgs = state.messages || [];
+  if (beforeTime) msgs = msgs.filter(m => m.time < beforeTime);
+  return msgs.slice(-limit);
+}
+
 module.exports = {
-  getProfile,
-  updateProfile,
-  getRoom,
-  addMessage,
-  editMessage,
-  deleteMessage,
-  markViewOnceOpened,
-  updateMessageReaction,
-  updateRoomMeta,
-  pinMessage,
-  updateReadReceipt,
-  recordActivity,
-  getStreak,
-  setLastSeen,
-  getLastSeen,
-  getMotd,
-  saveUpload,
-  getUploadsDir,
-  resetForTests,
-  setFeeling,
-  clearFeeling,
-  getFeelings,
+  FEELINGS,
+  MILESTONES,
+  MOTD_PROMPTS,
+  isDbReady,
+  getRoomMeta, getRoom, updateRoomMeta,
+  getMessages, addMessage, editMessage, deleteMessage, markViewOnceOpened, clearHistory,
+  pinMessage, findMessage, updateReadReceipt, updateMessageReaction, updatePollVotes,
+  getProfile, updateProfile, getUserByUsername, getUserByEmailOrUsername, createUser,
+  setLastSeen, getLastSeen, recordActivity, getStreak,
+  setFeeling, clearFeeling, getFeelings,
   getDailyQuestion,
   cleanExpiredRooms,
   updateGameScore,
@@ -589,7 +696,8 @@ module.exports = {
   getStarredMessages,
   getDailyQuestionState,
   saveDailyQuestionAnswer,
-  MOTD_PROMPTS,
-  MILESTONES,
-  FEELINGS
+  getUploadsDir, saveUpload, getMedia,
+  savePushSub, deletePushSub, getPushSubs,
+  listUserRooms, searchUsers, getOrCreateDMRoom, getRoomMessagesPaginated,
+  resetForTests
 };

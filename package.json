@@ -5,7 +5,10 @@
   "main": "server.js",
   "scripts": {
     "test": "node --test test/chat-utils.test.js test/supabase-store.test.js test/server.test.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "node server.js",
+    "db:setup": "node -e \"const fs=require('fs'); const sql=fs.readFileSync('supabase_schema.sql','utf8'); console.log('Run this SQL in Supabase Dashboard -> SQL Editor:\\n\\n' + sql)\"",
+    "db:verify": "node -e \"const {isConfigured}=require('./supabaseClient'); console.log('Supabase configured:', isConfigured())\""
   },
   "keywords": [],
   "author": "",
@@ -15,6 +18,7 @@
     "bcryptjs": "^3.0.3",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
+    "multer": "^1.4.5-lts.2",
     "socket.io": "^4.8.3",
     "web-push": "^3.6.7"
   }

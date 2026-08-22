@@ -80,6 +80,50 @@ CREATE TABLE IF NOT EXISTS media (
   created_at BIGINT DEFAULT (EXTRACT(EPOCH FROM NOW()) * 1000)::BIGINT
 );
 
+-- 6. ROOM PARTICIPANTS (join table for multi-user groups/channels)
+CREATE TABLE IF NOT EXISTS room_participants (
+  room_name TEXT NOT NULL REFERENCES rooms(name) ON DELETE CASCADE,
+  username TEXT NOT NULL REFERENCES users(username) ON DELETE CASCADE,
+  role TEXT DEFAULT 'member',
+  joined_at BIGINT DEFAULT (EXTRACT(EPOCH FROM NOW()) * 1000)::BIGINT,
+  PRIMARY KEY (room_name, username)
+);
+CREATE INDEX IF NOT EXISTS idx_room_participants_username ON room_participants(username);
+
+-- 7. USER PRESENCE (heartbeat-based online status)
+CREATE TABLE IF NOT EXISTS user_presence (
+  username TEXT PRIMARY KEY REFERENCES users(username) ON DELETE CASCADE,
+  last_heartbeat BIGINT DEFAULT (EXTRACT(EPOCH FROM NOW()) * 1000)::BIGINT,
+  socket_id TEXT DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_user_presence_heartbeat ON user_presence(last_heartbeat DESC);
+
+-- 8. USER BLOCKS (blocking relationships)
+CREATE TABLE IF NOT EXISTS user_blocks (
+  blocker TEXT NOT NULL REFERENCES users(username) ON DELETE CASCADE,
+  blocked TEXT NOT NULL REFERENCES users(username) ON DELETE CASCADE,
+  created_at BIGINT DEFAULT (EXTRACT(EPOCH FROM NOW()) * 1000)::BIGINT,
+  PRIMARY KEY (blocker, blocked)
+);
+
+-- 9. USER SESSIONS (for session management)
+CREATE TABLE IF NOT EXISTS user_sessions (
+  id TEXT PRIMARY KEY,
+  username TEXT NOT NULL REFERENCES users(username) ON DELETE CASCADE,
+  user_agent TEXT DEFAULT '',
+  ip TEXT DEFAULT '',
+  created_at BIGINT DEFAULT (EXTRACT(EPOCH FROM NOW()) * 1000)::BIGINT,
+  last_active BIGINT DEFAULT (EXTRACT(EPOCH FROM NOW()) * 1000)::BIGINT,
+  revoked BOOLEAN DEFAULT FALSE
+);
+CREATE INDEX IF NOT EXISTS idx_user_sessions_username ON user_sessions(username);
+
+-- Add phone column to users for hybrid auth
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT DEFAULT '';
+
+-- Add mute_until to room_participants for per-user mute
+ALTER TABLE room_participants ADD COLUMN IF NOT EXISTS mute_until BIGINT DEFAULT 0;
+
 -- ── INDEXES FOR MAXIMUM QUERY SPEED ───────────────────────────────────────────
 CREATE INDEX IF NOT EXISTS idx_messages_room_time ON messages(room, time DESC);
 CREATE INDEX IF NOT EXISTS idx_rooms_last_activity ON rooms(last_activity DESC);

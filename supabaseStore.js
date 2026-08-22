@@ -33,6 +33,19 @@ const FEELINGS = {
   bored:   { emoji: '😑', label: 'Bored' }
 };
 
+const MILESTONES = [10, 25, 50, 100, 200, 500, 1000];
+
+const MOTD_PROMPTS = [
+  'Tell them one thing you appreciated today 💛',
+  'Send a random memory you love 🫶',
+  'Share something that made you smile today 😊',
+  'Ask your bestie how they really feel right now 💭',
+  'Send a song lyric that reminds you of them 🎵',
+  'Drop your current mood in one emoji 🎭',
+  'Share a photo from your camera roll 📸',
+  'Tell them something you are proud of them for ⭐'
+];
+
 // ── Data Transform Helpers (CamelCase <-> SnakeCase) ─────────────────────────
 function dbRoomToJs(r) {
   if (!r) return null;
@@ -240,8 +253,6 @@ async function getMessages(roomName, limit = 100) {
     return memList.slice(-limit);
   }
 }
-
-const MILESTONES = [10, 25, 50, 100, 200, 500, 1000];
 
 async function addMessage(roomName, msgData) {
   const message = {
@@ -777,7 +788,7 @@ async function cleanExpiredRooms() {
       .select('name')
       .lt('last_activity', cutoff)
       .eq('type', 'temp')
-      .not('name', 'in', '("our-private-space","default")');
+      .not('name', 'in', '("default")');
 
     if (oldRooms && oldRooms.length) {
       for (const r of oldRooms) {
@@ -803,7 +814,6 @@ async function cleanDisappearingMessages() {
           .from('messages')
           .delete()
           .eq('room', r.name)
-          .eq('type', 'text')
           .lt('time', cutoff);
       }
     }
@@ -887,26 +897,31 @@ async function getDailyQuestionState(roomName, username) {
       answeredUsers: []
     };
   }
-  const hasMyAnswer = dq.answers && dq.answers[username];
-  const isRevealed = dq.revealed || (dq.answers && Object.keys(dq.answers).length >= 2);
-  if (!isRevealed && !hasMyAnswer) {
+
+  const userCount = Object.keys(dq.answers || {}).length;
+  if (userCount >= 2 && !dq.revealed) {
+    dq.revealed = true;
+    await updateRoomMeta(roomName, { dailyQuestionState: dq });
+  }
+
+  if (!dq.revealed) {
+    const maskedAnswers = {};
+    for (const [user, val] of Object.entries(dq.answers || {})) {
+      if (user === username) {
+        maskedAnswers[user] = val;
+      } else {
+        maskedAnswers[user] = { locked: true, time: val.time };
+      }
+    }
     return {
       date: dq.date,
       question: dq.question,
-      answers: {},
+      answers: maskedAnswers,
       revealed: false,
       answeredUsers: Object.keys(dq.answers || {})
     };
   }
-  if (!isRevealed && hasMyAnswer) {
-    return {
-      date: dq.date,
-      question: dq.question,
-      answers: { [username]: dq.answers[username] },
-      revealed: false,
-      answeredUsers: Object.keys(dq.answers || {})
-    };
-  }
+
   return {
     date: dq.date,
     question: dq.question,
@@ -962,8 +977,22 @@ async function listUserRooms(username) {
     memRooms.set(savedRoomName, { ...defaultRoomMeta(savedRoomName), type: 'dm', participants: [clean, clean] });
   }
 
-  let allRooms = [];
+  let roomNames = [];
   if (isDbReady()) {
+    try {
+      const { data: parts } = await supabase
+        .from('room_participants')
+        .select('room_name')
+        .eq('username', clean);
+      if (parts && parts.length) {
+        roomNames = parts.map(p => p.room_name);
+      }
+    } catch (_) {}
+  }
+
+  // Fallback to old JSONB filtering if join table is empty (during migration)
+  let allRooms = [];
+  if (roomNames.length === 0 && isDbReady()) {
     try {
       const { data: rooms } = await supabase
         .from('rooms')
@@ -972,29 +1001,45 @@ async function listUserRooms(username) {
         .limit(60);
       if (rooms) {
         allRooms = rooms.map(dbRoomToJs).filter(r => (r.participants && r.participants.map(p => String(p).toLowerCase()).includes(clean)));
+        roomNames = allRooms.map(r => r.name);
       }
     } catch (_) {}
   }
 
-  // Fallback / merge with memRooms
+  // Merge with memRooms
   for (const [rName, rMeta] of memRooms.entries()) {
     if (rMeta.participants && rMeta.participants.map(p => String(p).toLowerCase()).includes(clean)) {
-      if (!allRooms.some(r => r.name === rName)) {
-        allRooms.push({ ...rMeta, name: rName });
+      if (!roomNames.includes(rName)) {
+        roomNames.push(rName);
       }
     }
   }
 
   // Ensure saved room is in list
-  if (!allRooms.some(r => r.name === savedRoomName)) {
-    allRooms.unshift({ ...defaultRoomMeta(savedRoomName), name: savedRoomName, type: 'dm', participants: [clean, clean] });
+  if (!roomNames.includes(savedRoomName)) {
+    roomNames.unshift(savedRoomName);
   }
 
-  const result = await Promise.all(allRooms.map(async (room) => {
-    const isSaved = room.name === savedRoomName || (room.participants && room.participants.length === 2 && String(room.participants[0]).toLowerCase() === clean && String(room.participants[1]).toLowerCase() === clean);
+  const result = await Promise.all(roomNames.map(async (roomName) => {
+    const isSaved = roomName === savedRoomName;
+    let roomMeta = memRooms.get(roomName);
+    if (!roomMeta || !roomMeta.participants) {
+      if (isDbReady()) {
+        try {
+          roomMeta = await getRoomMeta(roomName);
+        } catch (_) {
+          roomMeta = defaultRoomMeta(roomName);
+        }
+      } else {
+        roomMeta = defaultRoomMeta(roomName);
+      }
+    }
+    if (isSaved) {
+      roomMeta = { ...roomMeta, type: 'dm', participants: [clean, clean] };
+    }
 
     let lastMsg = null;
-    const msgs = memMessages.get(room.name) || [];
+    const msgs = memMessages.get(roomName) || [];
     if (msgs.length > 0) {
       lastMsg = msgs[msgs.length - 1];
     } else if (isDbReady()) {
@@ -1002,7 +1047,7 @@ async function listUserRooms(username) {
         const { data: lastMsgs } = await supabase
           .from('messages')
           .select('*')
-          .eq('room', room.name)
+          .eq('room', roomName)
           .eq('deleted', false)
           .order('time', { ascending: false })
           .limit(1);
@@ -1012,15 +1057,15 @@ async function listUserRooms(username) {
 
     const otherParticipant = isSaved
       ? 'Saved Messages'
-      : ((room.participants || []).find(p => String(p).toLowerCase() !== clean) || room.name.replace('dm_', '').split('_').find(p => String(p).toLowerCase() !== clean) || 'Contact');
+      : ((roomMeta.participants || []).find(p => String(p).toLowerCase() !== clean) || roomName.replace('dm_', '').split('_').find(p => String(p).toLowerCase() !== clean) || 'Contact');
 
     const otherProfile = isSaved ? { avatar: '🔖', nickname: 'Saved Messages' } : await getProfile(otherParticipant);
 
     return {
-      name: room.name,
-      type: room.type || 'dm',
+      name: roomName,
+      type: roomMeta.type || 'dm',
       isSaved,
-      participants: room.participants || [clean],
+      participants: roomMeta.participants || [clean],
       otherParticipant,
       otherProfile,
       lastMessage: lastMsg ? {
@@ -1030,7 +1075,7 @@ async function listUserRooms(username) {
         type: lastMsg.type
       } : null,
       unread: 0,
-      lastActivity: (lastMsg ? lastMsg.time : 0) || room.lastActivity || 0
+      lastActivity: (lastMsg ? lastMsg.time : 0) || roomMeta.lastActivity || 0
     };
   }));
 
@@ -1101,6 +1146,9 @@ async function getOrCreateDMRoom(user1, user2) {
     if (!meta || meta.type !== 'dm') {
       await updateRoomMeta(dmName, { type: 'dm', participants: sorted });
     }
+    for (const p of sorted) {
+      await supabase.from('room_participants').upsert({ room_name: dmName, username: p, role: p === user1.toLowerCase() ? 'owner' : 'member' }).catch(() => {});
+    }
     return { roomName: dmName, participants: sorted };
   } catch (_) {
     return { roomName: dmName, participants: sorted };
@@ -1133,22 +1181,163 @@ async function getRoomMessagesPaginated(roomName, beforeTime, limit = 50) {
   }
 }
 
+async function isUserBlocked(blocker, blocked) {
+  if (!isDbReady()) return false;
+  try {
+    const { data } = await supabase
+      .from('user_blocks')
+      .select('blocker')
+      .eq('blocker', blocker.toLowerCase())
+      .eq('blocked', blocked.toLowerCase())
+      .limit(1);
+    return (data || []).length > 0;
+  } catch (_) {
+    return false;
+  }
+}
+
+async function getBlockedUsers(username) {
+  if (!isDbReady()) return [];
+  try {
+    const { data } = await supabase
+      .from('user_blocks')
+      .select('blocked, created_at')
+      .eq('blocker', username.toLowerCase());
+    return (data || []).map(b => ({ username: b.blocked, createdAt: b.created_at }));
+  } catch (_) {
+    return [];
+  }
+}
+
+async function blockUser(blocker, blocked) {
+  if (!isDbReady()) return { ok: true };
+  try {
+    await supabase.from('user_blocks').upsert({
+      blocker: blocker.toLowerCase(),
+      blocked: blocked.toLowerCase(),
+      created_at: Date.now()
+    }).catch(() => {});
+    return { ok: true };
+  } catch (_) {
+    return { ok: true };
+  }
+}
+
+async function unblockUser(blocker, blocked) {
+  if (!isDbReady()) return { ok: true };
+  try {
+    await supabase.from('user_blocks').delete()
+      .eq('blocker', blocker.toLowerCase())
+      .eq('blocked', blocked.toLowerCase())
+      .catch(() => {});
+    return { ok: true };
+  } catch (_) {
+    return { ok: true };
+  }
+}
+
+// ── Streak & Activity ─────────────────────────────────────────────────────────
+function getStreak() {
+  return {
+    days: activityCache.size ? Math.max(...Array.from(activityCache.values()).map(a => a.streakDays || 0)) : 0,
+    lastDate: activityCache.size ? Array.from(activityCache.values()).some(a => a.lastDate === new Date().toISOString().slice(0, 10)) ? new Date().toISOString().slice(0, 10) : null : null,
+    usersToday: Array.from(activityCache.entries()).filter(([_, a]) => a.lastDate === new Date().toISOString().slice(0, 10)).map(([u, _]) => u)
+  };
+}
+
+// ── Room helpers ──────────────────────────────────────────────────────────────
+function getRoom(roomName) {
+  return getRoomMeta(roomName);
+}
+
+function clearFeeling(username) {
+  feelingsCache.delete(username);
+}
+
+function resetForTests() {
+  profileCache.clear();
+  lastSeenCache.clear();
+  feelingsCache.clear();
+  activityCache.clear();
+  memRooms.clear();
+  memMessages.clear();
+  memUsers.clear();
+  memPushSubs.clear();
+  memMedia.clear();
+}
+
 function persist() {} // no-op, Supabase auto-persists
+
+async function createSession(username, userAgent, ip) {
+  if (!isDbReady()) return 'local-session';
+  try {
+    const sessionId = crypto.randomUUID();
+    await supabase.from('user_sessions').insert({
+      id: sessionId,
+      username: username.toLowerCase(),
+      user_agent: String(userAgent || '').slice(0, 200),
+      ip: String(ip || '').slice(0, 45),
+      created_at: Date.now(),
+      last_active: Date.now(),
+      revoked: false
+    }).catch(() => {});
+    return sessionId;
+  } catch (_) {
+    return 'local-session';
+  }
+}
+
+async function getSessions(username) {
+  if (!isDbReady()) return [];
+  try {
+    const { data } = await supabase
+      .from('user_sessions')
+      .select('id, user_agent, ip, created_at, last_active')
+      .eq('username', username.toLowerCase())
+      .eq('revoked', false)
+      .order('last_active', { ascending: false });
+    return (data || []).map(s => ({
+      id: s.id,
+      userAgent: s.user_agent,
+      ip: s.ip,
+      createdAt: s.created_at,
+      lastActive: s.last_active
+    }));
+  } catch (_) {
+    return [];
+  }
+}
+
+async function revokeSession(username, sessionId) {
+  if (!isDbReady()) return;
+  try {
+    await supabase.from('user_sessions')
+      .update({ revoked: true })
+      .eq('id', sessionId)
+      .eq('username', username.toLowerCase())
+      .catch(() => {});
+  } catch (_) {}
+}
 
 module.exports = {
   FEELINGS,
+  MILESTONES,
+  MOTD_PROMPTS,
   isDbReady,
-  getRoomMeta, updateRoomMeta,
+  getRoomMeta, getRoom, updateRoomMeta,
   getMessages, addMessage, editMessage, deleteMessage, markViewOnceOpened, clearHistory,
   pinMessage, findMessage, updateReadReceipt, updateMessageReaction, updatePollVotes,
   getProfile, updateProfile, getUserByUsername, getUserByEmailOrUsername, createUser,
-  setLastSeen, getLastSeen, recordActivity,
-  setFeeling, getFeelings,
+  setLastSeen, getLastSeen, recordActivity, getStreak,
+  setFeeling, clearFeeling, getFeelings,
   updateGameScore,
   getDailyQuestion, getDailyQuestionState, saveDailyQuestionAnswer, getMotd,
   getUploadsDir, saveUpload, getMedia,
   cleanExpiredRooms, cleanDisappearingMessages, persist,
   savePushSub, deletePushSub, getPushSubs,
   markMessageDelivered, markMessageRead, starMessage, getStarredMessages,
-  listUserRooms, searchUsers, getOrCreateDMRoom, getRoomMessagesPaginated
+  listUserRooms, searchUsers, getOrCreateDMRoom, getRoomMessagesPaginated,
+  isUserBlocked, getBlockedUsers, blockUser, unblockUser,
+  createSession, getSessions, revokeSession,
+  resetForTests
 };

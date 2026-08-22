@@ -257,6 +257,9 @@
         <button class="icon-btn options-btn" title="More options" onclick="BestieChat.toggleQuickMenu()">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
         </button>
+        <button class="icon-btn" id="muteRoomBtn" title="Mute chat" onclick="if(BestieChat.mutedRooms && BestieChat.mutedRooms[BestieChat.myRoom]){ BestieChat.unmuteRoom(BestieChat.myRoom); }else{ BestieChat.muteRoom(BestieChat.myRoom, 3600000); }" style="display:none;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+        </button>
       </div>
     </header>
 
@@ -907,6 +910,7 @@
           <span>💓</span> Pulse
         </button>
       </div>
+      <button id="blockUserBtn" onclick="if(BestieChat.blockedUsers && BestieChat.blockedUsers.includes((BestieChat.bestieProfileTarget||'').toLowerCase())){ BestieChat.unblockUser(); }else{ BestieChat.blockUser(); }" style="display:none; padding:8px 16px; background:#fee2e2; border:1px solid #fecaca; border-radius:14px; color:#dc2626; font-weight:600; font-size:0.85rem; margin-bottom:16px; cursor:pointer;">🚫 Block User</button>
 
       <!-- Friend Stats -->
       <div class="profile-stats" style="display:flex; gap:10px; justify-content:center;">
@@ -947,6 +951,8 @@
       <button onclick="BestieChat.toggleQuickMenu(); BestieChat.captureDualCamera();">📸 Camera</button>
       <button onclick="BestieChat.toggleQuickMenu(); BestieChat.exportChat();">📥 Export</button>
       <button onclick="BestieChat.toggleQuickMenu(); BestieChat.confirmClearHistory();" class="danger">🗑️ Clear Chat</button>
+      <button onclick="BestieChat.toggleQuickMenu(); if(confirm('Delete this chat permanently?')) BestieChat.deleteRoom();" class="danger">❌ Delete Room</button>
+      <button onclick="BestieChat.toggleQuickMenu(); BestieChat.muteRoom(BestieChat.myRoom, 3600000);">🔕 Mute 1h</button>
     </div>
   </div>
 </div>

@@ -3,9 +3,26 @@ const express = require('express');
 const router  = express.Router();
 const bcrypt  = require('bcryptjs');
 const jwt     = require('jsonwebtoken');
+const crypto  = require('crypto');
 const store   = require('../supabaseStore');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-me';
+
+function createSession(username, req) {
+  const sessionId = crypto.randomUUID();
+  const userAgent = req.headers['user-agent'] || '';
+  const ip = req.headers['x-forwarded-for'] || req.connection?.remoteAddress || '';
+  store.supabase.from('user_sessions').upsert({
+    id: sessionId,
+    username: username.toLowerCase(),
+    user_agent: userAgent.slice(0, 200),
+    ip: String(ip).slice(0, 45),
+    created_at: Date.now(),
+    last_active: Date.now(),
+    revoked: false
+  }).catch(() => {});
+  return sessionId;
+}
 
 // POST /api/auth/register — create new account
 router.post('/register', async (req, res) => {
@@ -54,8 +71,10 @@ router.post('/register', async (req, res) => {
     await store.getOrCreateDMRoom(clean, clean);
 
     const token = jwt.sign({ username: clean }, JWT_SECRET, { expiresIn: '60d' });
+    const sessionId = createSession(clean, req);
     return res.status(201).json({
       token,
+      sessionId,
       username: clean,
       avatar: user.avatar || avatarEmoji,
       color: user.color || '#3390ec',
@@ -93,8 +112,10 @@ router.post('/login', async (req, res) => {
     await store.getOrCreateDMRoom(user.username, user.username);
 
     const token = jwt.sign({ username: user.username }, JWT_SECRET, { expiresIn: '60d' });
+    const sessionId = createSession(user.username, req);
     res.json({
       token,
+      sessionId,
       username: user.username,
       avatar: user.avatar || '✨',
       color: user.color || '#3390ec',
@@ -147,6 +168,53 @@ router.post('/profile', async (req, res) => {
     res.json(updated);
   } catch (err) {
     res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+// GET /api/auth/sessions — list active sessions
+router.get('/sessions', async (req, res) => {
+  try {
+    const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
+    if (!token) return res.status(401).json({ error: 'No token provided' });
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    const { data, error } = await store.supabase
+      .from('user_sessions')
+      .select('id, user_agent, ip, created_at, last_active')
+      .eq('username', decoded.username)
+      .eq('revoked', false)
+      .order('last_active', { ascending: false });
+
+    if (error) throw error;
+    res.json((data || []).map(s => ({
+      id: s.id,
+      userAgent: s.user_agent,
+      ip: s.ip,
+      createdAt: s.created_at,
+      lastActive: s.last_active
+    })));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/auth/sessions/:sessionId — revoke a session
+router.delete('/sessions/:sessionId', async (req, res) => {
+  try {
+    const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
+    if (!token) return res.status(401).json({ error: 'No token provided' });
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    const { sessionId } = req.params;
+    await store.supabase.from('user_sessions')
+      .update({ revoked: true })
+      .eq('id', sessionId)
+      .eq('username', decoded.username)
+      .catch(() => {});
+
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

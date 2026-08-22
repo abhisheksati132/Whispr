@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: whispr
+    env: node
+    buildCommand: npm install
+    startCommand: node server.js
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
