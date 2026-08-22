@@ -1,4 +1,5 @@
 import { state } from './state.js';
+import { escapeHtml } from './utils.js';
 
   // ═══════════════════ CONTEXT MENU ═══════════════════
   export function showContextMenu(e, msg) {

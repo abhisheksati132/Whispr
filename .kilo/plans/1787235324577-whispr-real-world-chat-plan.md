@@ -483,10 +483,11 @@ All critical decisions are resolved. The plan is ready for implementation.
 
 ### In Progress
 - Vite modularization — `app.js` extracted to 39 ES modules in `src/` (`init.js` imports all and builds `window.BestieChat`)
+- Cross-module dependency cleanup — added `utils.js` imports to 10 modules (`escapeHtml`, `formatBytes`)
 
 ### Not Started
-- Cross-module dependency cleanup (replace global function calls with proper imports)
 - Remove `public/app.js` and load only module entry point
+- Full dependency graph resolution (replace remaining global calls with proper imports)
 
 ### Test Results
 ```

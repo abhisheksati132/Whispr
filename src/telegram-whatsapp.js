@@ -1,4 +1,5 @@
 import { state } from './state.js';
+import { escapeHtml } from './utils.js';
 
   // ═══════════════════ TELEGRAM & WHATSAPP SUITE ═══════════════════
   export function triggerDoubleTapHeart(wrap, msgId) {

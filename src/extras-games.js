@@ -1,4 +1,5 @@
 import { state } from './state.js';
+import { escapeHtml } from './utils.js';
 
   // ═══════════════════ EXTRAS & GAMES ═══════════════════
   export function toggleExtras()   { toggleModal('extrasPanel'); }

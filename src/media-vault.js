@@ -1,4 +1,5 @@
 import { state } from './state.js';
+import { escapeHtml, formatBytes } from './utils.js';
 
   // ═══════════════════ CATEGORIZED MEDIA VAULT ═══════════════════
   let activeVaultTab = 'photos';

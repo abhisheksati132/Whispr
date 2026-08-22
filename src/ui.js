@@ -1,4 +1,5 @@
 import { state } from './state.js';
+import { escapeHtml, formatBytes } from './utils.js';
 
   // ═══════════════════ RENDER HELPERS ═══════════════════
   export function renderReactionBar(msgId) {

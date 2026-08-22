@@ -1,4 +1,5 @@
 import { state } from './state.js';
+import { escapeHtml } from './utils.js';
 
   // ═══════════════════ REPLY ═══════════════════
   export function replyToMessage(msgId, user, text, type) {
