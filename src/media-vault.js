@@ -1,4 +1,9 @@
 import { state } from './state.js';
+import { getDisplayName } from './helpers.js';
+import { showModal, hideModal } from './modals.js';
+import { scrollToMessage } from './reply.js';
+import { openLightbox } from './time-capsule.js';
+import { decryptE2EE } from './ultimate-features.js';
 import { escapeHtml, formatBytes } from './utils.js';
 
   // ═══════════════════ CATEGORIZED MEDIA VAULT ═══════════════════

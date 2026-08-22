@@ -1,4 +1,10 @@
 import { state } from './state.js';
+import { playSound } from './sounds.js';
+import { cancelReply } from './reply.js';
+import { uploadFileWithProgress } from './media.js';
+import { showModal, hideModal } from './modals.js';
+import { renderSystem } from './ui.js';
+import { showToast } from './ultimate-features.js';
 
   // ═══════════════════ DOODLE PAD ═══════════════════
   export function openDoodle() {

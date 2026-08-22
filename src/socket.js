@@ -1,4 +1,16 @@
 import { state } from './state.js';
+import { loadChatList } from './dm-chat-list.js';
+import { restoreDraft } from './send-message.js';
+import { renderMessage, renderReactions, renderEmptyWelcome, updateReactions, renderSystem } from './ui.js';
+import { scrollBottom, getProfile, getDisplayName } from './helpers.js';
+import { playSound, confetti } from './sounds.js';
+import { setConnected } from './connection.js';
+import { buildFeelingsGrid, renderTheirFeeling, playPulseAnimation } from './extras-games.js';
+import { saveMessageToOfflineDB, saveMessagesHistoryToOfflineDB, clearRoomHistoryInOfflineDB, flushOfflineQueue } from './offline.js';
+import { applyReadReceipts } from './read-receipts.js';
+import { updateBestieHeaderState, updateStreak, updateUnreadBadge, clearUnread, updateCountdown, sendDesktopNotification, updatePinnedBanner, startIntervals } from './ui-updates.js';
+import { renderDiaryList, renderCalendarList, renderBucketList, renderGlossaryList, refreshMessagesLayout, renderHeatmap, fetchWeatherForCity, renderBonsai, openCoDraw, closeCoDraw, drawCoDrawStrokeLocal, clearCoDraw, syncWatchTogetherPlayer, handleTTTMoveLocal, triggerHapticPulseLocal, triggerScreenNudge, triggerEmojiReactionBurst, showToast, renderDailyQuestionCard, fetchDailyQuestion, updateScoreboardDisplay, updateE2EEFingerprint, dropConnect4Token } from './ultimate-features.js';
+import { startCallTimer, endCall } from './webrtc.js';
 
   // ═══════════════════ SOCKET.IO ═══════════════════
   export function initSocket() {

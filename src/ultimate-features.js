@@ -1,4 +1,23 @@
 import { state } from './state.js';
+import { joinChat, quickReentry } from './auth.js';
+import { sendMessage, autoExpandMsgInput, sendPhoto } from './send-message.js';
+import { toggleSendMicIcons } from './ui-helpers.js';
+import { initSocket } from './socket.js';
+import { renderMessage } from './ui.js';
+import { scrollBottom, getProfile, getDisplayName } from './helpers.js';
+import { playSound, playTone, initAmbience, confetti, applyNightGlow } from './sounds.js';
+import { cancelReply } from './reply.js';
+import { hideContextMenu } from './context-menu.js';
+import { updateSidebarMyProfile } from './sidebar.js';
+import { buildEmojiPicker } from './emoji-picker.js';
+import { uploadFileWithProgress } from './media.js';
+import { showModal, hideModal } from './modals.js';
+import { urlBase64ToUint8Array } from './push.js';
+import { react } from './reactions.js';
+import { emitReadReceiptForLastVisible } from './read-receipts.js';
+import { toggleSearch, clearSearch } from './search.js';
+import { clearUnread } from './ui-updates.js';
+import { changeWallpaper } from './wallpaper.js';
 import { escapeHtml } from './utils.js';
 
   // ═══════════════════ ULTIMATE FEATURES SET ═══════════════════

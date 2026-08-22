@@ -1,4 +1,5 @@
 import { state } from './state.js';
+import { updateBestieHeaderState } from './ui-updates.js';
 
   // ═══════════════════ CONNECTION STATUS ═══════════════════
   export function setConnected(online) {

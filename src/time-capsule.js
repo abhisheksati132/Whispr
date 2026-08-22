@@ -1,4 +1,7 @@
 import { state } from './state.js';
+import { playSound } from './sounds.js';
+import { showModal, hideModal } from './modals.js';
+import { showToast } from './ultimate-features.js';
 
   // ═══════════════════ TIME CAPSULE ═══════════════════
   export function openTimeCapsuleModal() {

@@ -1,4 +1,8 @@
 import { state } from './state.js';
+import { playSound } from './sounds.js';
+import { getDisplayName } from './helpers.js';
+import { showModal, hideModal, toggleModal } from './modals.js';
+import { switchExtrasTab } from './ultimate-features.js';
 import { escapeHtml } from './utils.js';
 
   // ═══════════════════ EXTRAS & GAMES ═══════════════════

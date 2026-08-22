@@ -1,4 +1,14 @@
 import { state } from './state.js';
+import { encryptE2EE, showToast } from './ultimate-features.js';
+import { isMusicUrl, scrollBottom, triggerHaptic } from './helpers.js';
+import { toggleRecord } from './copy.js';
+import { toggleSendMicIcons } from './ui-helpers.js';
+import { initSocket } from './socket.js';
+import { renderMessage } from './ui.js';
+import { playSound, confetti } from './sounds.js';
+import { cancelReply } from './reply.js';
+import { uploadFileWithProgress } from './media.js';
+import { openLightbox } from './time-capsule.js';
 
   // ═══════════════════ SEND MESSAGE ═══════════════════
   export function findUrl(text) {

@@ -1,4 +1,5 @@
 import { state } from './state.js';
+import { updateCountdown } from './ui-updates.js';
 
   // ═══════════════════ ROOM META ═══════════════════
   export function saveMood()     { socket.emit('update-mood', els.moodInput.value); }

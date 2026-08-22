@@ -1,4 +1,5 @@
 import { state } from './state.js';
+import { triggerHaptic } from './helpers.js';
 
   // ═══════════════════ REACTIONS ═══════════════════
   export function react(messageId, emoji) {

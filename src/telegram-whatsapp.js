@@ -1,4 +1,11 @@
 import { state } from './state.js';
+import { playSound } from './sounds.js';
+import { cancelReply, scrollToMessage } from './reply.js';
+import { hideContextMenu } from './context-menu.js';
+import { getDisplayName } from './helpers.js';
+import { uploadFileWithProgress } from './media.js';
+import { react } from './reactions.js';
+import { decryptE2EE, showToast } from './ultimate-features.js';
 import { escapeHtml } from './utils.js';
 
   // ═══════════════════ TELEGRAM & WHATSAPP SUITE ═══════════════════

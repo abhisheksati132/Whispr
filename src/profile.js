@@ -1,4 +1,7 @@
 import { state } from './state.js';
+import { getProfile } from './helpers.js';
+import { showModal, hideModal } from './modals.js';
+import { showToast } from './ultimate-features.js';
 
   // ═══════════════════ BESTIE PROFILE VIEWER ═══════════════════
   export function openBestieProfile(targetUser) {

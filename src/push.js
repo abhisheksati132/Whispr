@@ -1,4 +1,6 @@
 import { state } from './state.js';
+import { loadChatList } from './dm-chat-list.js';
+import { showModal, hideModal, toggleModal } from './modals.js';
 
   // ═══════════════════ PUSH NOTIFICATIONS ═══════════════════
   export function urlBase64ToUint8Array(base64String) {

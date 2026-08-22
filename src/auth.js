@@ -1,4 +1,10 @@
 import { state } from './state.js';
+import { initSocket } from './socket.js';
+import { renderMessage } from './ui.js';
+import { updateSidebarMyProfile } from './sidebar.js';
+import { initOfflineDB, loadCachedMessagesFromOfflineDB } from './offline.js';
+import { applyRoomTheme } from './sounds.js';
+import { showToast } from './ultimate-features.js';
 
   // ═══════════════════ JOIN / LEAVE ═══════════════════
   let selectedLoginAvatar = '✨';

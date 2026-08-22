@@ -1,4 +1,6 @@
 import { state } from './state.js';
+import { getProfile, getDisplayName, formatLastSeen } from './helpers.js';
+import { applyNightGlow } from './sounds.js';
 
   // ═══════════════════ UI UPDATES ═══════════════════
   let lastSeenData = {};

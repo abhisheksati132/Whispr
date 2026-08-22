@@ -1,4 +1,7 @@
 import { state } from './state.js';
+import { renderMessage } from './ui.js';
+import { hideContextMenu } from './context-menu.js';
+import { showModal, hideModal } from './modals.js';
 import { escapeHtml } from './utils.js';
 
   // ═══════════════════ REPLY ═══════════════════

@@ -1,4 +1,7 @@
 import { state } from './state.js';
+import { getProfile, getDisplayName } from './helpers.js';
+import { openExtras, openGamesHub } from './extras-games.js';
+import { hideModal } from './modals.js';
 
   // ═══════════════════ SIDEBAR ═══════════════════
   export function toggleSidebar() {

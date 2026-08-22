@@ -1,4 +1,6 @@
 import { state } from './state.js';
+import { closeSidebar } from './sidebar.js';
+import { showToast } from './ultimate-features.js';
 import { escapeHtml } from './utils.js';
 
   // ═══════════════════ DM CHAT LIST ═══════════════════

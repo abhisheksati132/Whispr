@@ -1,4 +1,7 @@
 import { state } from './state.js';
+import { sendMessage } from './send-message.js';
+import { toggleRecord } from './copy.js';
+import { startVideoNote } from './telegram-whatsapp.js';
 
   // ═══════════════════ UI HELPERS ═══════════════════
   let inputSendMode = 'voice'; // 'voice' or 'video'

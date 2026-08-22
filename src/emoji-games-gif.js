@@ -1,4 +1,8 @@
 import { state } from './state.js';
+import { toggleSendMicIcons } from './ui-helpers.js';
+import { playSound } from './sounds.js';
+import { spawnFloatingEmoji } from './copy.js';
+import { buildEmojiPicker } from './emoji-picker.js';
 import { escapeHtml } from './utils.js';
 
   // ═══════════════════ EMOJI / GAMES / GIF ═══════════════════

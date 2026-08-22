@@ -1,4 +1,7 @@
 import { state } from './state.js';
+import { toggleSendMicIcons } from './ui-helpers.js';
+import { hideContextMenu } from './context-menu.js';
+import { decryptE2EE } from './ultimate-features.js';
 
   // ═══════════════════ EDIT / DELETE ═══════════════════
   export function startEditMessage(msgId, text) {

@@ -1,4 +1,8 @@
 import { state } from './state.js';
+import { playSound } from './sounds.js';
+import { getProfile } from './helpers.js';
+import { renderSystem } from './ui.js';
+import { showToast } from './ultimate-features.js';
 
   // ═══════════════════ WEBRTC CALLING ═══════════════════
   export async function getUserMediaStream(type) {

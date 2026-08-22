@@ -1,4 +1,16 @@
 import { state } from './state.js';
+import { copyInviteLink } from './auth.js';
+import { scrollBottom, triggerHaptic, getProfile, getDisplayName, maybeAddDateDivider, getMusicPlatform } from './helpers.js';
+import { playSound, confetti } from './sounds.js';
+import { showContextMenu } from './context-menu.js';
+import { cycleAudioSpeed } from './copy.js';
+import { react, votePoll } from './reactions.js';
+import { emitReadReceipt, updateReadTickForMessage } from './read-receipts.js';
+import { replyToMessage, scrollToMessage } from './reply.js';
+import { openViewOnceMedia } from './send-message.js';
+import { triggerDoubleTapHeart, toggleVideoNoteAudio } from './telegram-whatsapp.js';
+import { openLightbox } from './time-capsule.js';
+import { decryptE2EE, playWaveform, seekWaveform, transcribeAudio, highlightInsideJokes, refreshMessagesLayout, showToast, sendQuickReply } from './ultimate-features.js';
 import { escapeHtml, formatBytes } from './utils.js';
 
   // ═══════════════════ RENDER HELPERS ═══════════════════
