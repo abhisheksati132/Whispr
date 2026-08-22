@@ -482,14 +482,11 @@ All critical decisions are resolved. The plan is ready for implementation.
 - **Phase 3.x (Room Deletion):** Added `DELETE /api/rooms/:roomName` (owner only)
 
 ### In Progress
-- Vite modularization of `app.js` — foundation created (`state.js`, `constants.js`, `utils.js`), full extraction in progress
+- Vite modularization — `app.js` extracted to 39 ES modules in `src/` (`init.js` imports all and builds `window.BestieChat`)
 
 ### Not Started
-- Full Vite module extraction (`chat.js`, `ui.js`, `media.js`, `webrtc.js`, `games.js`, `extras.js`, `init.js`)
-- Phase 3.2: Thumbnail generation (needs `sharp`) — DONE
-- Phase 3.6: CDN configuration (Supabase CDN is automatic) — DONE
-- Phase 4: Integration tests for Socket.io flows — DONE
-- Phase 5: Deployment to Railway/Render — DONE (code pushed to Render)
+- Cross-module dependency cleanup (replace global function calls with proper imports)
+- Remove `public/app.js` and load only module entry point
 
 ### Test Results
 ```
