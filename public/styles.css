@@ -2551,3 +2551,78 @@ button:active, .dm-row:active, .icon-btn:active, .filter-pill:active, .pill-btn:
     padding-bottom: max(12px, env(safe-area-inset-bottom, 12px));
   }
 }
+
+/* ═══════════════════ STRICT VIEWPORT STATE MACHINE ═══════════════════ */
+#welcomeDashboard {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+}
+
+#chatMain.chat-active #welcomeDashboard {
+  display: none !important;
+}
+
+#chatMain:not(.chat-active) #messages,
+#chatMain:not(.chat-active) #inputBarContainer,
+#chatMain:not(.chat-active) header,
+#chatMain:not(.chat-active) #inChatSearchBar,
+#chatMain:not(.chat-active) #pinnedBanner {
+  display: none !important;
+}
+
+#chatMain.chat-active #messages {
+  display: flex !important;
+  flex: 1 !important;
+}
+
+#chatMain.chat-active #inputBarContainer {
+  display: block !important;
+}
+
+#chatMain.chat-active header {
+  display: flex !important;
+}
+
+/* Fix Mobile Active Chat Overlap with Bottom Bar */
+@media (max-width: 768px) {
+  body.mobile-chat-active .mobile-bottom-nav,
+  #chat:has(#chatMain.mobile-chat-open) .mobile-bottom-nav {
+    display: none !important;
+  }
+
+  .mobile-chat-active #chatMain {
+    display: flex !important;
+    height: 100dvh !important;
+    position: relative;
+    z-index: 200;
+  }
+
+  .mobile-chat-active #sidebar {
+    display: none !important;
+  }
+
+  /* Compact header on mobile */
+  header {
+    padding: 0 10px !important;
+    gap: 6px !important;
+  }
+
+  .header-actions .icon-btn[title*="Search"],
+  .header-actions .icon-btn[title*="Details"] {
+    display: none !important;
+  }
+
+  .header-details {
+    max-width: 130px;
+    overflow: hidden;
+  }
+
+  .header-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 14px !important;
+  }
+}

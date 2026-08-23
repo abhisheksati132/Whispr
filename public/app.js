@@ -1600,7 +1600,7 @@
       if (els.callAvatar) els.callAvatar.textContent = getInitial(otherUser);
 
       if (type === 'video' && els.callRemoteVideoWrap) {
-        els.callRemoteVideoWrap.style.display = 'block';
+        els.callRemoteVideoWrap.style.display = 'block'; const sec = document.getElementById('callUserSection'); if (sec) sec.style.display = 'none';
         if (els.callLocalVideo) {
           els.callLocalVideo.srcObject = localStream;
           els.callLocalVideo.play().catch(() => {});
@@ -1613,16 +1613,23 @@
       localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
       peerConnection.ontrack = e => {
-        if (e.streams && e.streams[0]) {
-          const remoteAudio = document.getElementById('callRemoteAudio');
-          if (remoteAudio) {
-            remoteAudio.srcObject = e.streams[0];
-            remoteAudio.play().catch(() => {});
+        let remoteStream = (e.streams && e.streams[0]) ? e.streams[0] : null;
+        if (!remoteStream) {
+          if (!peerConnection._remoteStream) {
+            peerConnection._remoteStream = new MediaStream();
           }
-          if (els.callRemoteVideo) {
-            els.callRemoteVideo.srcObject = e.streams[0];
-            els.callRemoteVideo.play().catch(() => {});
-          }
+          peerConnection._remoteStream.addTrack(e.track);
+          remoteStream = peerConnection._remoteStream;
+        }
+
+        const remoteAudio = document.getElementById('callRemoteAudio');
+        if (remoteAudio) {
+          remoteAudio.srcObject = remoteStream;
+          remoteAudio.play().catch(() => {});
+        }
+        if (els.callRemoteVideo) {
+          els.callRemoteVideo.srcObject = remoteStream;
+          els.callRemoteVideo.play().catch(() => {});
         }
       };
 
@@ -1713,16 +1720,23 @@
       localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
       peerConnection.ontrack = e => {
-        if (e.streams && e.streams[0]) {
-          const remoteAudio = document.getElementById('callRemoteAudio');
-          if (remoteAudio) {
-            remoteAudio.srcObject = e.streams[0];
-            remoteAudio.play().catch(() => {});
+        let remoteStream = (e.streams && e.streams[0]) ? e.streams[0] : null;
+        if (!remoteStream) {
+          if (!peerConnection._remoteStream) {
+            peerConnection._remoteStream = new MediaStream();
           }
-          if (els.callRemoteVideo) {
-            els.callRemoteVideo.srcObject = e.streams[0];
-            els.callRemoteVideo.play().catch(() => {});
-          }
+          peerConnection._remoteStream.addTrack(e.track);
+          remoteStream = peerConnection._remoteStream;
+        }
+
+        const remoteAudio = document.getElementById('callRemoteAudio');
+        if (remoteAudio) {
+          remoteAudio.srcObject = remoteStream;
+          remoteAudio.play().catch(() => {});
+        }
+        if (els.callRemoteVideo) {
+          els.callRemoteVideo.srcObject = remoteStream;
+          els.callRemoteVideo.play().catch(() => {});
         }
       };
 
@@ -3107,10 +3121,17 @@
   }
 
   function backToChatList() {
+    myRoom = null;
     const sidebar = document.getElementById('sidebar');
     const chatMain = document.getElementById('chatMain');
+    const welcome = document.getElementById('welcomeDashboard');
     if (sidebar) sidebar.classList.remove('mobile-chat-open');
-    if (chatMain) chatMain.classList.remove('mobile-chat-open');
+    if (chatMain) {
+      chatMain.classList.remove('chat-active', 'mobile-chat-open');
+    }
+    document.body.classList.remove('mobile-chat-active');
+    if (welcome) welcome.style.display = 'flex';
+    renderChatList(cachedUserRooms);
   }
 
   function mobileSwitchTab(tab) {
