@@ -854,6 +854,58 @@ io.on('connection', (socket) => {
     } catch (err) { console.error('delete-message error:', err); }
   });
 
+  // ── Toggle task checkbox ───────────────────────────────────────────────────
+  socket.on('toggle-task', async ({ messageId, taskIndex, checked } = {}) => {
+    try {
+      if (!username || !currentRoom || !messageId) return;
+      const msg = await mStore.findMessage(currentRoom, messageId);
+      if (!msg || !msg.text) return;
+      
+      const lines = msg.text.split('\n');
+      let currentTaskIdx = 0;
+      for (let i = 0; i < lines.length; i++) {
+        if (/^-\s*\[([ xX])\]\s*(.*)/.test(lines[i])) {
+          if (currentTaskIdx === taskIndex) {
+            const taskContent = lines[i].replace(/^-\s*\[([ xX])\]\s*/, '');
+            lines[i] = `- [${checked ? 'x' : ' '}] ${taskContent}`;
+            break;
+          }
+          currentTaskIdx++;
+        }
+      }
+      const newText = lines.join('\n');
+      const updated = await mStore.editMessage(currentRoom, messageId, newText);
+      if (updated) {
+        io.to(currentRoom).emit('task-toggled', { messageId, text: newText, taskIndex, checked, user: username });
+      }
+    } catch (err) { console.error('toggle-task error:', err); }
+  });
+
+  // ── Vote on Poll ───────────────────────────────────────────────────────────
+  socket.on('vote-poll', async ({ messageId, optionIndex } = {}) => {
+    try {
+      if (!username || !currentRoom || !messageId || optionIndex === undefined) return;
+      const msg = await mStore.findMessage(currentRoom, messageId);
+      if (!msg || msg.type !== 'poll' || !Array.isArray(msg.options)) return;
+
+      const votes = Array.isArray(msg.votes) ? [...msg.votes] : [];
+      const userVote = votes.find(v => v.user === username);
+      if (userVote) {
+        if (userVote.optionIndex === optionIndex) {
+          const idx = votes.indexOf(userVote);
+          if (idx !== -1) votes.splice(idx, 1);
+        } else {
+          userVote.optionIndex = optionIndex;
+        }
+      } else {
+        votes.push({ user: username, optionIndex });
+      }
+
+      await mStore.updatePollVotes(currentRoom, messageId, votes);
+      io.to(currentRoom).emit('poll-voted', { messageId, votes });
+    } catch (err) { console.error('vote-poll error:', err); }
+  });
+
   // ── Read & Delivery Receipts ──────────────────────────────────────────────
   socket.on('mark-read', async ({ messageIds } = {}) => {
     try {

@@ -1437,3 +1437,146 @@ mark.search-highlight {
   border: 1px solid var(--border);
   color: var(--text-muted);
 }
+
+/* ═══════════════════ 11. PRODUCTIVITY SUITE (TASKS, POLLS, SLASH) ═══════════════════ */
+.task-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 4px 0;
+  font-size: 13.5px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.task-item input[type="checkbox"] {
+  margin-top: 3px;
+  accent-color: #ffffff;
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+.task-item.completed span {
+  text-decoration: line-through;
+  opacity: 0.55;
+}
+
+/* Poll Cards */
+.poll-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin: 6px 0;
+  min-width: 240px;
+  max-width: 320px;
+}
+
+.poll-question {
+  font-weight: 700;
+  font-size: 14px;
+  color: #ffffff;
+  margin-bottom: 10px;
+}
+
+.poll-option-row {
+  position: relative;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  margin-bottom: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.03);
+  transition: var(--transition);
+}
+
+.poll-option-row:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.poll-option-row.voted {
+  border-color: #ffffff;
+}
+
+.poll-bar-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background: rgba(255, 255, 255, 0.14);
+  transition: width 0.3s ease;
+  pointer-events: none;
+}
+
+.poll-option-content {
+  position: relative;
+  z-index: 1;
+  padding: 8px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: #ffffff;
+}
+
+.poll-footer {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Slash Command Autocomplete */
+#slashMenu {
+  position: absolute;
+  bottom: 68px;
+  left: 16px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 6px;
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 240px;
+}
+
+.slash-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-muted);
+  transition: var(--transition);
+}
+
+.slash-item:hover, .slash-item.active {
+  background: var(--bg-surface-hover);
+  color: #ffffff;
+}
+
+.slash-cmd {
+  font-family: monospace;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+/* Scheduled Pill */
+.scheduled-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: 4px;
+}

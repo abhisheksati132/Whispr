@@ -19,6 +19,7 @@
   let isScreenSharing = false;
   let screenStream = null;
   let currentPinnedMessage = null;
+  let offlineOutbox = [];
 
   // WebRTC Call State
   let peerConnection = null;
@@ -248,6 +249,7 @@
       els.msgInput.addEventListener('input', () => {
         autoExpandMsgInput();
         updateSendBtnIcon();
+        handleSlashInput();
         if (socket && socket.connected) socket.emit('typing', { room: myRoom, user: myName });
       });
       els.msgInput.addEventListener('focus', () => {
@@ -618,6 +620,32 @@
       }
     });
 
+        socket.on('task-toggled', data => {
+      if (!data || !data.messageId) return;
+      const el = document.querySelector(`[data-msg-id="${data.messageId}"]`);
+      if (el) {
+        const textSpan = el.querySelector('.msg-text-content');
+        if (textSpan) {
+          textSpan.innerHTML = formatMessageContent(data.text, data.messageId);
+        }
+      }
+    });
+
+    socket.on('poll-voted', data => {
+      if (!data || !data.messageId) return;
+      const pollCard = document.querySelector(`[data-poll-id="${data.messageId}"]`);
+      if (pollCard && pollCard.parentElement) {
+        const parentMsg = pollCard.closest('.msg-wrap');
+        if (parentMsg) {
+          const fakeMsg = { id: data.messageId, type: 'poll', question: pollCard.querySelector('.poll-question').textContent.replace('📊 ', ''), options: [], votes: data.votes };
+          // parse options from DOM
+          const optRows = pollCard.querySelectorAll('.poll-option-content > span:first-child');
+          fakeMsg.options = Array.from(optRows).map(span => ({ text: span.textContent }));
+          pollCard.outerHTML = renderPollHtml(fakeMsg);
+        }
+      }
+    });
+
     socket.on('chat-list-update', () => {
       loadChatList();
     });
@@ -961,6 +989,39 @@
       return;
     }
 
+    // Slash command parsers
+    if (text.startsWith('/poll ')) {
+      const pollParts = text.replace('/poll ', '').split('|').map(s => s.trim()).filter(Boolean);
+      if (pollParts.length >= 2) {
+        const question = pollParts[0];
+        const options = pollParts.slice(1).map(opt => ({ text: opt, votes: [] }));
+        const pollPayload = {
+          id: 'poll_' + Date.now(),
+          type: 'poll',
+          question,
+          options,
+          votes: [],
+          user: myName,
+          room: myRoom,
+          time: Date.now()
+        };
+        sendDirectPayload(pollPayload);
+        els.msgInput.value = '';
+        hideSlashMenu();
+        return;
+      }
+    } else if (text.startsWith('/todo ')) {
+      const taskText = text.replace('/todo ', '').trim();
+      if (taskText) {
+        els.msgInput.value = '- [ ] ' + taskText;
+      }
+    } else if (text === '/clear') {
+      els.msgInput.value = '';
+      hideSlashMenu();
+      deleteRoom();
+      return;
+    }
+
     const clientMsgId = 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
     const payload = {
       id: clientMsgId,
@@ -1018,6 +1079,8 @@
         <div style="font-size:12px;">Voice note (${msg.duration || 0}s)</div>
         <button type="button" class="voice-speed-btn" onclick="BestieChat.cycleAudioSpeed(this, '${escapeHtml(msg.url)}')">1x</button>
       </div>`;
+    } else if (msg.type === 'poll') {
+      contentHtml += renderPollHtml(msg);
     } else if (msg.type === 'document' && msg.url) {
       contentHtml += `<a href="${escapeHtml(msg.url)}" download class="doc-card" style="text-decoration:none; color:inherit;">
         <div class="doc-icon">📄</div>
@@ -1027,7 +1090,7 @@
         </div>
       </a>`;
     } else {
-      const formatted = formatMessageContent(msg.text || '');
+      const formatted = formatMessageContent(msg.text || '', msg.id || '');
       const editedTag = msg.edited ? '<span class="edited-tag">(edited)</span>' : '';
       contentHtml += `<span class="msg-text-content">${formatted}${editedTag}</span>`;
     }
@@ -1049,6 +1112,7 @@
       <div class="msg-action-bar">
         <button type="button" class="msg-action-btn" onclick="BestieChat.replyToMessage('${escapeHtml(msg.id || '')}', '${escapeHtml(msg.user || '')}', '${escapeHtml(msg.text || 'Media')}')" title="Reply">↩️</button>
         <button type="button" class="msg-action-btn" onclick="BestieChat.copyMessageText('${escapeHtml(msg.text || msg.url || '')}')" title="Copy">📋</button>
+        <button type="button" class="msg-action-btn" onclick="BestieChat.openReminderModal('${escapeHtml(msg.id)}', '${escapeHtml(msg.text || 'Message')}')" title="Remind Me">🔔</button>
         ${(isMe && msg.type === 'text') ? `<button type="button" class="msg-action-btn" onclick="BestieChat.openEditModal('${escapeHtml(msg.id)}', '${escapeHtml(msg.text || '')}')" title="Edit">✏️</button>` : ''}
         <button type="button" class="msg-action-btn" onclick="BestieChat.pinMessage('${escapeHtml(msg.id)}')" title="Pin">📌</button>
         <button type="button" class="msg-action-btn" onclick="BestieChat.starMessage('${escapeHtml(msg.id)}')" title="Star">⭐</button>
@@ -1939,7 +2003,7 @@
     return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
-  function formatMessageContent(rawText) {
+  function formatMessageContent(rawText, msgId) {
     if (!rawText) return '';
     let str = escapeHtml(rawText);
     const triple = String.fromCharCode(96, 96, 96);
@@ -1950,7 +2014,20 @@
     if (str.includes(single)) {
       str = str.replace(new RegExp(single + '([^' + single + ']+)' + single, 'g'), '<code style="background:rgba(255,255,255,0.15); padding:1px 4px; border-radius:3px; font-size:12px;">$1</code>');
     }
-    return str;
+
+    // Interactive Checklists
+    const lines = str.split('\n');
+    let taskIdx = 0;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (/^-\s*\[([ xX])\]\s*(.*)/.test(line)) {
+        const isDone = /^-\s*\[[xX]\]/.test(line);
+        const taskText = line.replace(/^-\s*\[[ xX]\]\s*/, '');
+        lines[i] = `<label class="task-item ${isDone ? 'completed' : ''}"><input type="checkbox" ${isDone ? 'checked' : ''} onchange="BestieChat.toggleTaskItem(this, '${msgId || ''}', ${taskIdx})" /><span>${taskText}</span></label>`;
+        taskIdx++;
+      }
+    }
+    return lines.join('\n');
   }
 
   async function toggleScreenShare() {
@@ -2112,6 +2189,281 @@
     }
   }
 
+  function sendDirectPayload(payload) {
+    const intro = els.messages ? els.messages.querySelector('.chat-intro-card') : null;
+    if (intro) intro.remove();
+
+    renderMessage(payload, true);
+    scrollBottom();
+    idbSaveMessages(myRoom, [payload]);
+
+    if (socket && socket.connected) {
+      socket.emit('message', payload);
+    } else {
+      offlineOutbox.push(payload);
+      showToast('Offline — message queued');
+    }
+
+    playSendTone();
+    autoExpandMsgInput();
+    cancelReply();
+    updateSendBtnIcon();
+  }
+
+
+  // ═══════════════════ PRODUCTIVITY: TASKS, POLLS, SLASH & SCHEDULE ═══════════════════
+  function handleSlashInput() {
+    const slashMenu = document.getElementById('slashMenu');
+    if (!slashMenu || !els.msgInput) return;
+    const val = els.msgInput.value;
+    if (val.startsWith('/')) {
+      slashMenu.style.display = 'flex';
+    } else {
+      slashMenu.style.display = 'none';
+    }
+  }
+
+  function hideSlashMenu() {
+    const slashMenu = document.getElementById('slashMenu');
+    if (slashMenu) slashMenu.style.display = 'none';
+  }
+
+  function applySlashCommand(cmd) {
+    if (!els.msgInput) return;
+    if (cmd === '/clear') {
+      deleteRoom();
+      hideSlashMenu();
+      return;
+    }
+    els.msgInput.value = cmd;
+    els.msgInput.focus();
+    hideSlashMenu();
+    updateSendBtnIcon();
+  }
+
+  function toggleTaskItem(input, messageId, taskIndex) {
+    if (!messageId || !socket) return;
+    const isChecked = input.checked;
+    const label = input.closest('.task-item');
+    if (label) {
+      if (isChecked) label.classList.add('completed');
+      else label.classList.remove('completed');
+    }
+    socket.emit('toggle-task', { messageId, taskIndex, checked: isChecked });
+  }
+
+  function renderPollHtml(msg) {
+    const question = escapeHtml(msg.question || 'Poll');
+    const options = Array.isArray(msg.options) ? msg.options : [];
+    const votes = Array.isArray(msg.votes) ? msg.votes : [];
+    const totalVotes = votes.length;
+
+    let optionsHtml = '';
+    options.forEach((opt, idx) => {
+      const optVotes = votes.filter(v => v.optionIndex === idx);
+      const percent = totalVotes > 0 ? Math.round((optVotes.length / totalVotes) * 100) : 0;
+      const hasMyVote = votes.some(v => v.optionIndex === idx && (v.user || '').toLowerCase() === (myName || '').toLowerCase());
+      
+      optionsHtml += `
+        <div class="poll-option-row ${hasMyVote ? 'voted' : ''}" onclick="BestieChat.votePoll('${escapeHtml(msg.id)}', ${idx})">
+          <div class="poll-bar-fill" style="width:${percent}%;"></div>
+          <div class="poll-option-content">
+            <span>${escapeHtml(opt.text)}</span>
+            <span style="font-size:12px; opacity:0.8;">${percent}% (${optVotes.length})</span>
+          </div>
+        </div>
+      `;
+    });
+
+    return `
+      <div class="poll-card" data-poll-id="${escapeHtml(msg.id)}">
+        <div class="poll-question">📊 ${question}</div>
+        <div class="poll-options">${optionsHtml}</div>
+        <div class="poll-footer">
+          <span>${totalVotes} vote${totalVotes === 1 ? '' : 's'}</span>
+          <span>Tap option to vote</span>
+        </div>
+      </div>
+    `;
+  }
+
+  function votePoll(messageId, optionIndex) {
+    if (socket && messageId) {
+      socket.emit('vote-poll', { messageId, optionIndex });
+    }
+  }
+
+  // Scheduled Messages
+  function openScheduleModal() {
+    if (!els.msgInput || !els.msgInput.value.trim()) {
+      showToast('Type a message in the input box first to schedule it');
+      return;
+    }
+    const modal = document.getElementById('scheduleModal');
+    if (modal) modal.style.display = 'flex';
+  }
+
+  function closeScheduleModal() {
+    const modal = document.getElementById('scheduleModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function scheduleMessageIn(delayMs) {
+    const text = els.msgInput ? els.msgInput.value.trim() : '';
+    if (!text) return;
+    const sendTime = Date.now() + delayMs;
+    const targetRoom = myRoom;
+
+    setTimeout(() => {
+      if (socket && socket.connected) {
+        const payload = {
+          id: 'msg_sched_' + Date.now(),
+          text,
+          user: myName,
+          room: targetRoom,
+          time: Date.now(),
+          type: 'text'
+        };
+        if (targetRoom === myRoom) {
+          renderMessage(payload, true);
+          scrollBottom();
+        }
+        socket.emit('message', payload);
+        idbSaveMessages(targetRoom, [payload]);
+        showToast('⏰ Scheduled message sent!');
+      }
+    }, delayMs);
+
+    els.msgInput.value = '';
+    closeScheduleModal();
+    updateSendBtnIcon();
+    showToast(`⏰ Message scheduled for ${new Date(sendTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
+  }
+
+  function scheduleMessageTomorrowMorning() {
+    const now = new Date();
+    const tomorrow9am = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 9, 0, 0);
+    const delay = Math.max(tomorrow9am.getTime() - now.getTime(), 60000);
+    scheduleMessageIn(delay);
+  }
+
+  // Reminders
+  let targetReminderMsg = null;
+  function openReminderModal(messageId, text) {
+    targetReminderMsg = { id: messageId, text };
+    const modal = document.getElementById('reminderModal');
+    const preview = document.getElementById('reminderPreviewText');
+    if (modal) {
+      if (preview) preview.textContent = `Remind me about: "${text.slice(0, 30)}..."`;
+      modal.style.display = 'flex';
+    }
+  }
+
+  function closeReminderModal() {
+    targetReminderMsg = null;
+    const modal = document.getElementById('reminderModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function setReminderIn(delayMs) {
+    if (!targetReminderMsg) return;
+    const saved = { ...targetReminderMsg };
+    setTimeout(() => {
+      playNotificationTone();
+      showToast(`🔔 Reminder: "${saved.text.slice(0, 35)}"`);
+      if (saved.id) scrollToMessage(saved.id);
+    }, delayMs);
+
+    closeReminderModal();
+    showToast(`🔔 Reminder set for ${new Date(Date.now() + delayMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
+  }
+
+  // Shared Files & Tasks Drawer
+  let _currentSharedTab = 'docs';
+  async function openSharedDrawer() {
+    const drawer = document.getElementById('sharedDrawer');
+    if (drawer) {
+      drawer.style.display = 'flex';
+      await renderSharedDrawerContent();
+    }
+  }
+
+  function closeSharedDrawer() {
+    const drawer = document.getElementById('sharedDrawer');
+    if (drawer) drawer.style.display = 'none';
+  }
+
+  function switchSharedTab(tab) {
+    _currentSharedTab = tab;
+    ['sharedTabDocs', 'sharedTabMedia', 'sharedTabTasks'].forEach(id => {
+      const btn = document.getElementById(id);
+      if (btn) btn.classList.remove('active');
+    });
+    const activeBtn = document.getElementById('sharedTab' + tab.charAt(0).toUpperCase() + tab.slice(1));
+    if (activeBtn) activeBtn.classList.add('active');
+
+    const docsList = document.getElementById('sharedDocsList');
+    const mediaGrid = document.getElementById('sharedMediaGrid');
+    const tasksList = document.getElementById('sharedTasksList');
+
+    if (docsList) docsList.style.display = tab === 'docs' ? 'flex' : 'none';
+    if (mediaGrid) mediaGrid.style.display = tab === 'media' ? 'grid' : 'none';
+    if (tasksList) tasksList.style.display = tab === 'tasks' ? 'flex' : 'none';
+  }
+
+  async function renderSharedDrawerContent() {
+    if (!myRoom) return;
+    const msgs = await idbGetMessages(myRoom);
+
+    const docsList = document.getElementById('sharedDocsList');
+    const mediaGrid = document.getElementById('sharedMediaGrid');
+    const tasksList = document.getElementById('sharedTasksList');
+
+    const docs = msgs.filter(m => m.type === 'document' && m.url);
+    const photos = msgs.filter(m => m.type === 'image' && m.url);
+    const taskMsgs = msgs.filter(m => m.text && /^-\s*\[([ xX])\]/.test(m.text));
+
+    if (docsList) {
+      if (!docs.length) docsList.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-muted); font-size:12.5px;">No documents shared yet</div>';
+      else {
+        docsList.innerHTML = docs.map(d => `
+          <a href="${escapeHtml(d.url)}" download class="doc-card" style="text-decoration:none; color:inherit;">
+            <div class="doc-icon">📄</div>
+            <div style="flex:1; overflow:hidden;">
+              <div class="doc-name" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(d.docName || 'Document')}</div>
+              <div class="doc-size">${d.docSize ? Math.round(d.docSize / 1024) + ' KB' : 'Download'} · ${formatTimestamp(d.time)}</div>
+            </div>
+          </a>
+        `).join('');
+      }
+    }
+
+    if (mediaGrid) {
+      if (!photos.length) mediaGrid.innerHTML = '<div style="grid-column:1/-1; padding:20px; text-align:center; color:var(--text-muted); font-size:12.5px;">No photos shared yet</div>';
+      else {
+        mediaGrid.innerHTML = photos.map(p => `
+          <img src="${escapeHtml(p.url)}" style="width:100%; height:80px; object-fit:cover; border-radius:6px; cursor:pointer;" onclick="BestieChat.openLightbox('${escapeHtml(p.url)}')" loading="lazy" />
+        `).join('');
+      }
+    }
+
+    if (tasksList) {
+      if (!taskMsgs.length) tasksList.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-muted); font-size:12.5px;">No tasks created in this chat. Type /todo to create one!</div>';
+      else {
+        tasksList.innerHTML = taskMsgs.map(t => `
+          <div class="starred-item-card" onclick="BestieChat.closeSharedDrawer(); BestieChat.scrollToMessage('${t.id}');">
+            <div class="starred-item-header">
+              <span style="font-weight:700; color:#fff;">@${escapeHtml(t.user)}</span>
+              <span>${formatTimestamp(t.time)}</span>
+            </div>
+            <div style="font-size:13px; color:#fff;">${formatMessageContent(t.text, t.id)}</div>
+          </div>
+        `).join('');
+      }
+    }
+  }
+
+
 // ═══════════════════ EXPORTS ═══════════════════
   window.BestieChat = {
     switchAuthTab, handleSignIn, handleRegister, joinChat: handleAuthSubmit, logout,
@@ -2124,6 +2476,10 @@
     openProfile, closeProfile, saveProfile,
     openLightbox, closeLightbox, replyToMessage, cancelReply,
     startCall, acceptCall, declineCall, endCall, toggleMuteAudio, toggleCamera, toggleScreenShare, cycleAudioSpeed, openEditModal, closeEditModal, submitEditMessage, openDisappearingModal, closeDisappearingModal, setDisappearingTimer, exportChatHistory,
+    applySlashCommand, toggleTaskItem, votePoll,
+    openScheduleModal, closeScheduleModal, scheduleMessageIn, scheduleMessageTomorrowMorning,
+    openReminderModal, closeReminderModal, setReminderIn,
+    openSharedDrawer, closeSharedDrawer, switchSharedTab,
     playAudio, scrollBottom,
     toggleInChatSearch, closeInChatSearch, searchInChat,
     pinMessage, unpinCurrentMessage, scrollToPinned, scrollToMessage,
