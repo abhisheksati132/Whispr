@@ -3,19 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Whispr 🔒</title>
-  <meta name="description" content="Private, fast, minimal, end-to-end encrypted messaging." />
-  <link rel="manifest" href="/manifest.json?v=5000" />
-  <link rel="icon" type="image/x-icon" href="/favicon.ico?v=5000" />
-  <link rel="apple-touch-icon" href="/icon-192.png?v=5000" />
+  <title>Whispr</title>
+  <meta name="description" content="Simple, fast, private messaging in black and white." />
+  <link rel="manifest" href="/manifest.json?v=6000" />
+  <link rel="icon" type="image/x-icon" href="/favicon.ico?v=6000" />
+  <link rel="apple-touch-icon" href="/icon-192.png?v=6000" />
   <meta name="theme-color" content="#000000" />
   <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   <meta name="apple-mobile-web-app-title" content="Whispr" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles.css?v=5000" />
+  <link rel="stylesheet" href="/styles.css?v=6000" />
 </head>
 <body>
 
@@ -27,36 +27,36 @@
     <img id="lightboxImg" src="" alt="Full view" />
   </div>
 
-  <!-- ═══════════════════ AUTH / LOGIN SCREEN ═══════════════════ -->
+  <!-- ═══════════════════ AUTH / SIGN IN SCREEN ═══════════════════ -->
   <div id="login">
     <div class="login-card">
       <div class="login-brand">
         <div class="login-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
             <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
           </svg>
         </div>
         <h1 class="login-title">Whispr</h1>
-        <p class="login-subtitle">Private, minimal, end-to-end messaging</p>
+        <p class="login-subtitle">Simple, private text messaging</p>
       </div>
 
-      <!-- Auth Mode Switcher -->
+      <!-- Auth Switcher -->
       <div class="auth-tabs" id="authModeToggle">
         <button type="button" class="auth-tab-btn active" id="authTabSignIn" onclick="BestieChat.switchAuthTab('signin')">Sign In</button>
         <button type="button" class="auth-tab-btn" id="authTabRegister" onclick="BestieChat.switchAuthTab('register')">Create Account</button>
       </div>
 
-      <!-- Sign In / Register Form -->
+      <!-- Form -->
       <div class="login-form">
         <div class="login-field">
           <label class="login-label" for="nameInput">Username</label>
-          <input id="nameInput" type="text" class="login-input" placeholder="Enter username..." maxlength="30" autocomplete="username" autocapitalize="none" />
+          <input id="nameInput" type="text" class="login-input" placeholder="e.g. john" maxlength="30" autocomplete="username" autocapitalize="none" />
         </div>
 
         <div id="nicknameField" class="login-field" style="display:none;">
-          <label class="login-label" for="regNicknameInput">Display Name</label>
-          <input id="regNicknameInput" type="text" class="login-input" placeholder="Your name (e.g. Alex)..." maxlength="30" autocomplete="name" />
+          <label class="login-label" for="regNicknameInput">Your Name</label>
+          <input id="regNicknameInput" type="text" class="login-input" placeholder="e.g. John Doe" maxlength="30" autocomplete="name" />
         </div>
 
         <div class="login-field">
@@ -66,19 +66,16 @@
 
         <div id="confirmPasswordField" class="login-field" style="display:none;">
           <label class="login-label" for="regPasswordConfirmInput">Confirm Password</label>
-          <input id="regPasswordConfirmInput" type="password" class="login-input" placeholder="Repeat password..." autocomplete="new-password" />
+          <input id="regPasswordConfirmInput" type="password" class="login-input" placeholder="Re-enter password..." autocomplete="new-password" />
         </div>
 
         <!-- Hidden compat elements -->
         <input id="nicknameInput" type="hidden" />
 
-        <div id="loginError" class="login-error"></div>
+        <div id="loginError" class="login-error" style="display:none;"></div>
 
         <button id="joinBtn" class="login-btn" onclick="BestieChat.joinChat()">
-          <span id="joinBtnText">Enter Whispr</span>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
-          </svg>
+          <span id="joinBtnText">Sign In</span>
         </button>
       </div>
     </div>
@@ -90,65 +87,57 @@
     <!-- Mobile Sidebar Backdrop Overlay -->
     <div id="sidebarOverlay" onclick="BestieChat.closeSidebar()"></div>
 
-    <!-- ── LEFT SIDEBAR (CONVERSATIONS) ── -->
+    <!-- ── LEFT SIDEBAR (CHATS & CONTACTS) ── -->
     <aside id="sidebar">
       
-      <!-- Top Profile & Quick Actions -->
+      <!-- Top Profile Header -->
       <div class="sidebar-header">
-        <div class="sidebar-user" onclick="BestieChat.openProfile()" title="Click to edit profile">
-          <div id="sidebarMyAvatar" class="sidebar-avatar">✨</div>
+        <div class="sidebar-user" onclick="BestieChat.openProfile()" title="Click to view profile">
+          <div id="sidebarMyAvatar" class="sidebar-avatar">Y</div>
           <div class="sidebar-user-details">
             <div id="sidebarMyName" class="sidebar-name">You</div>
-            <div id="sidebarMyBio" class="sidebar-status">● online</div>
+            <div id="sidebarMyBio" class="sidebar-status">Online</div>
           </div>
         </div>
 
         <div class="sidebar-actions">
-          <button type="button" class="icon-btn primary" onclick="BestieChat.openNewChatModal()" title="New Chat">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          <button type="button" class="icon-btn primary" onclick="BestieChat.openNewChatModal()" title="Start New Chat">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M12 5v14M5 12h14"/>
             </svg>
           </button>
-          <button type="button" class="icon-btn" onclick="BestieChat.openStarredModal()" title="Starred Messages">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          <button type="button" class="icon-btn" onclick="BestieChat.openProfile()" title="My Profile">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
             </svg>
           </button>
-          <button type="button" class="icon-btn" onclick="BestieChat.openPrefsModal()" title="Settings">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="3"/>
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-            </svg>
-          </button>
-          <button type="button" class="icon-btn" onclick="BestieChat.logout()" title="Logout" style="color:var(--danger);">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <button type="button" class="icon-btn" onclick="BestieChat.logout()" title="Log Out">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
             </svg>
           </button>
         </div>
       </div>
 
-      <!-- Search Bar -->
+      <!-- Search Box -->
       <div class="sidebar-search-wrap">
         <div class="sidebar-search-box">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
-          <input id="sidebarSearchInput" class="sidebar-search-input" type="text" placeholder="Search or start new chat..." autocomplete="off" oninput="BestieChat.handleSidebarSearch(this.value)" />
+          <input id="sidebarSearchInput" class="sidebar-search-input" type="text" placeholder="Search people or chats..." autocomplete="off" oninput="BestieChat.handleSidebarSearch(this.value)" />
           <button id="sidebarSearchClear" type="button" class="sidebar-search-clear" onclick="BestieChat.clearSidebarSearch()" style="display:none;">✕</button>
         </div>
       </div>
 
-      <!-- Quick Filter Chips -->
+      <!-- Quick Filter Buttons -->
       <div class="sidebar-filters">
-        <button type="button" class="filter-pill active" onclick="BestieChat.filterChatList('all', this)">All</button>
+        <button type="button" class="filter-pill active" onclick="BestieChat.filterChatList('all', this)">All Chats</button>
         <button type="button" class="filter-pill" onclick="BestieChat.filterChatList('unread', this)">Unread</button>
-        <button type="button" class="filter-pill" onclick="BestieChat.filterChatList('direct', this)">Direct</button>
-        <button type="button" class="filter-pill" onclick="BestieChat.openNewChatModal()">+ New</button>
+        <button type="button" class="filter-pill" onclick="BestieChat.openNewChatModal()">+ New Message</button>
       </div>
 
-      <!-- Scrollable Conversation & Search Results List -->
+      <!-- Conversations List -->
       <div id="sidebarDmList" class="sidebar-chats-list"></div>
 
       <!-- Hidden compat elements for legacy JS hooks -->
@@ -164,7 +153,7 @@
       </div>
     </aside>
 
-    <!-- ── RIGHT MAIN CHAT VIEWPORT ── -->
+    <!-- ── RIGHT MAIN CHAT AREA ── -->
     <div id="chatMain">
 
       <!-- Active Chat Header -->
@@ -175,10 +164,10 @@
               <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
             </svg>
           </button>
-          <div id="headerBestieAvatar" class="header-avatar">✨</div>
+          <div id="headerBestieAvatar" class="header-avatar">B</div>
           <div class="header-details">
-            <div id="headerBestieName" class="header-title">Bestie</div>
-            <div id="headerBestieStatus" class="header-subtitle online">Connecting...</div>
+            <div id="headerBestieName" class="header-title">Select a Chat</div>
+            <div id="headerBestieStatus" class="header-subtitle">Online</div>
           </div>
         </div>
 
@@ -193,12 +182,7 @@
               <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
             </svg>
           </button>
-          <button type="button" class="icon-btn" onclick="BestieChat.toggleSearch()" title="Search in chat">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-          </button>
-          <button type="button" class="icon-btn" onclick="BestieChat.deleteRoom()" title="Delete / Clear Chat">
+          <button type="button" class="icon-btn" onclick="BestieChat.deleteRoom()" title="Clear Chat">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
             </svg>
@@ -206,51 +190,45 @@
         </div>
       </header>
 
-      <!-- Search in Chat Overlay Bar -->
-      <div id="searchBar" style="display:none; padding:8px 16px; background:var(--surface); border-bottom:1px solid var(--border); align-items:center; gap:8px;">
-        <input id="searchInput" type="text" placeholder="Find in this chat..." style="flex:1; background:none; border:none; color:#fff; font-size:13.5px;" />
-        <button type="button" onclick="BestieChat.clearSearch()" style="color:var(--muted);">✕</button>
-      </div>
-
-      <!-- Messages Stream -->
+      <!-- Messages Viewport -->
       <div id="messages"></div>
 
-      <!-- Quoted Reply Ribbon -->
+      <!-- Reply Bar -->
       <div id="replyBar">
         <div class="reply-bar-text">
-          <span style="color:var(--accent); font-weight:700;">Replying to: </span>
+          <span style="font-weight:700;">Replying to: </span>
           <span id="replyPreviewText"></span>
         </div>
-        <button type="button" onclick="BestieChat.cancelReply()" style="color:var(--muted); font-size:14px; padding:4px;">✕</button>
+        <button type="button" onclick="BestieChat.cancelReply()" style="color:#ffffff; font-size:14px; padding:4px;">✕</button>
       </div>
 
-      <!-- Live Voice Recording Bar -->
+      <!-- Recording Bar -->
       <div id="recordingWaveformBar">
         <div style="display:flex; align-items:center; gap:8px;">
-          <span style="width:10px; height:10px; border-radius:50%; background:var(--danger); animation:pulse 1s infinite alternate;"></span>
-          <span id="recordingTimer" style="font-size:13px; font-weight:700; color:var(--danger);">0:00</span>
+          <span style="width:10px; height:10px; border-radius:50%; background:#ffffff;"></span>
+          <span id="recordingTimer" style="font-size:13px; font-weight:700; color:#ffffff;">0:00</span>
         </div>
-        <canvas id="recordingCanvas" width="120" height="24" style="border-radius:4px;"></canvas>
+        <div style="font-size:12px; color:var(--muted);">Recording voice note...</div>
         <div style="display:flex; align-items:center; gap:10px;">
-          <button type="button" onclick="BestieChat.cancelRecording()" style="color:var(--muted); font-size:16px;">🗑️</button>
-          <button type="button" onclick="BestieChat.toggleRecord()" style="background:var(--accent); color:#fff; border-radius:50%; width:32px; height:32px; font-size:13px;">✈️</button>
+          <button type="button" onclick="BestieChat.cancelRecording()" style="color:#ffffff; font-size:13px; font-weight:600; padding:4px 8px; border:1px solid var(--border); border-radius:6px;">Cancel</button>
+          <button type="button" onclick="BestieChat.toggleRecord()" style="background:#ffffff; color:#000000; font-weight:700; border-radius:6px; padding:4px 12px; font-size:13px;">Send</button>
         </div>
       </div>
 
-      <!-- Attachment Dropdown Menu -->
+      <!-- Attachment Dropdown -->
       <div id="attachMenu" class="attach-menu" style="display:none;">
-        <label class="attach-item" title="Photos & Videos">
-          <span class="attach-icon" style="background:#8b5cf6;">📷</span>
-          <span class="attach-label">Photos</span>
+        <label class="attach-item" title="Photos">
+          <span class="attach-icon">📷</span>
+          <span class="attach-label">Photo</span>
           <input type="file" id="photoInput" accept="image/*,video/*" multiple style="display:none;" onchange="BestieChat.sendPhoto(this.files)" />
         </label>
-        <label class="attach-item" title="Documents & Files">
-          <span class="attach-icon" style="background:#3b82f6;">📄</span>
+        <label class="attach-item" title="Documents">
+          <span class="attach-icon">📄</span>
           <span class="attach-label">Document</span>
           <input type="file" id="docInput" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip" style="display:none;" onchange="BestieChat.uploadDocumentFile(this)" />
         </label>
-        <label class="attach-item" title="Camera Moment">
-          <span class="attach-icon" style="background:#ec4899;">📸</span>
+        <label class="attach-item" title="Camera">
+          <span class="attach-icon">📸</span>
           <span class="attach-label">Camera</span>
           <input type="file" id="cameraFileInput" accept="image/*" capture="environment" style="display:none;" onchange="BestieChat.uploadCameraFile(this)" />
         </label>
@@ -268,20 +246,19 @@
             </svg>
           </button>
           <button type="button" class="pill-btn" onclick="BestieChat.toggleAttachMenu()" title="Attach file">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
             </svg>
           </button>
-          <textarea id="msgInput" rows="1" placeholder="Type a message..." autocomplete="off" maxlength="2000"></textarea>
-          <span id="charCount" style="font-size:11px; color:var(--accent); font-weight:600;"></span>
+          <textarea id="msgInput" rows="1" placeholder="Write a message..." autocomplete="off" maxlength="2000"></textarea>
         </div>
 
-        <!-- Send / Voice Record Button -->
-        <button id="sendBtn" type="button" onclick="BestieChat.handleSendBtnClick()" title="Send / Record voice note">
-          <svg id="sendIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <!-- Send / Mic Button -->
+        <button id="sendBtn" type="button" onclick="BestieChat.handleSendBtnClick()" title="Send Message">
+          <svg id="sendIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
           </svg>
-          <svg id="micIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+          <svg id="micIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
             <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/>
           </svg>
         </button>
@@ -290,16 +267,16 @@
     </div>
   </div>
 
-  <!-- ═══════════════════ ESSENTIAL MODALS ═══════════════════ -->
+  <!-- ═══════════════════ MODALS ═══════════════════ -->
 
-  <!-- New Chat / Global User Search Modal -->
+  <!-- New Chat Modal -->
   <div id="newChatModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this) BestieChat.closeNewChatModal()">
     <div class="modal-card">
       <div class="modal-header">
         <h3 class="modal-title">New Conversation</h3>
         <button type="button" class="modal-close" onclick="BestieChat.closeNewChatModal()">✕</button>
       </div>
-      <input id="newChatSearch" type="text" class="login-input" placeholder="Search by username or display name..." oninput="BestieChat.searchUsersForDM(this.value)" autocomplete="off" />
+      <input id="newChatSearch" type="text" class="login-input" placeholder="Type username or name to search..." oninput="BestieChat.searchUsersForDM(this.value)" autocomplete="off" />
       <div id="newChatResults" style="display:flex; flex-direction:column; gap:6px; max-height:300px; overflow-y:auto;"></div>
     </div>
   </div>
@@ -311,87 +288,38 @@
         <h3 class="modal-title">My Profile</h3>
         <button type="button" class="modal-close" onclick="BestieChat.closeProfile()">✕</button>
       </div>
-      <div style="display:flex; flex-direction:column; align-items:center; gap:12px;">
-        <div id="profileBigAvatar" style="width:72px; height:72px; border-radius:50%; background:var(--surface2); display:flex; align-items:center; justify-content:center; font-size:36px; border:2px solid var(--accent);">✨</div>
-        <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
-          <button type="button" onclick="BestieChat.selectAvatar('🐱')" style="font-size:24px; padding:4px;">🐱</button>
-          <button type="button" onclick="BestieChat.selectAvatar('🐶')" style="font-size:24px; padding:4px;">🐶</button>
-          <button type="button" onclick="BestieChat.selectAvatar('🦊')" style="font-size:24px; padding:4px;">🦊</button>
-          <button type="button" onclick="BestieChat.selectAvatar('🐼')" style="font-size:24px; padding:4px;">🐼</button>
-          <button type="button" onclick="BestieChat.selectAvatar('🚀')" style="font-size:24px; padding:4px;">🚀</button>
-          <button type="button" onclick="BestieChat.selectAvatar('✨')" style="font-size:24px; padding:4px;">✨</button>
-        </div>
-      </div>
       <div class="login-field">
         <label class="login-label" for="profileNickname">Display Name</label>
-        <input id="profileNickname" type="text" class="login-input" placeholder="Your display name..." />
+        <input id="profileNickname" type="text" class="login-input" placeholder="Your name..." />
       </div>
       <div class="login-field">
-        <label class="login-label" for="profileStatus">Status Bio</label>
-        <input id="profileStatus" type="text" class="login-input" placeholder="What's your vibe? (e.g. Available)" />
+        <label class="login-label" for="profileStatus">Status</label>
+        <input id="profileStatus" type="text" class="login-input" placeholder="e.g. Available, At work..." />
       </div>
-      <button type="button" class="login-btn" onclick="BestieChat.saveProfile()">Save Profile</button>
+      <button type="button" class="login-btn" onclick="BestieChat.saveProfile()">Save Changes</button>
     </div>
   </div>
 
-  <!-- Preferences Modal -->
-  <div id="prefsModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this) BestieChat.closePrefsModal()">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3 class="modal-title">Settings</h3>
-        <button type="button" class="modal-close" onclick="BestieChat.closePrefsModal()">✕</button>
-      </div>
-      <div class="login-field">
-        <label class="login-label">Theme</label>
-        <select id="themeSelect" class="login-input" onchange="BestieChat.selectTheme(this.value)">
-          <option value="signal-dark">🔒 Signal Deep AMOLED Black</option>
-          <option value="telegram-dark">✈️ Telegram Slate Dark</option>
-          <option value="whatsapp-dark">💬 WhatsApp Dark</option>
-        </select>
-      </div>
-      <button type="button" class="login-btn" onclick="BestieChat.closePrefsModal()">Done</button>
-    </div>
-  </div>
-
-  <!-- Starred Messages Modal -->
-  <div id="starredModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this) BestieChat.closeStarredModal()">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3 class="modal-title">⭐ Starred Messages</h3>
-        <button type="button" class="modal-close" onclick="BestieChat.closeStarredModal()">✕</button>
-      </div>
-      <div id="starredList" style="display:flex; flex-direction:column; gap:8px; max-height:360px; overflow-y:auto;"></div>
-      <div id="starredEmpty" style="display:none; padding:24px; text-align:center; color:var(--muted); font-size:13px;">No starred messages yet</div>
-    </div>
-  </div>
-
-  <!-- WebRTC Call Overlay -->
+  <!-- Call Overlay -->
   <div id="callOverlay">
-    <div id="callRemoteVideoWrap" style="position:relative; width:100%; max-width:480px; height:280px; background:#111; border-radius:16px; overflow:hidden; display:none;">
+    <div id="callRemoteVideoWrap" style="position:relative; width:100%; max-width:480px; height:280px; background:#111; border-radius:12px; overflow:hidden; display:none;">
       <video id="callRemoteVideo" autoplay playsinline style="width:100%; height:100%; object-fit:cover;"></video>
-      <video id="callLocalVideo" autoplay playsinline muted style="position:absolute; bottom:12px; right:12px; width:90px; height:120px; border-radius:10px; object-fit:cover; border:2px solid #fff;"></video>
+      <video id="callLocalVideo" autoplay playsinline muted style="position:absolute; bottom:12px; right:12px; width:90px; height:120px; border-radius:8px; object-fit:cover; border:2px solid #fff;"></video>
     </div>
     <div id="callUserSection" style="text-align:center; display:flex; flex-direction:column; align-items:center; gap:12px;">
-      <div id="callAvatar" class="call-user-avatar">✨</div>
+      <div id="callAvatar" class="call-user-avatar">C</div>
       <h2 id="callUserName" style="font-size:22px; font-weight:700; color:#fff;">Calling...</h2>
-      <p id="callStatus" style="font-size:14px; color:var(--muted);">Ringing...</p>
+      <p id="callStatus" style="font-size:14px; color:var(--muted);">Connecting...</p>
     </div>
     <div class="call-controls">
-      <button type="button" id="muteAudioBtn" class="call-btn action" onclick="BestieChat.toggleMuteAudio()" title="Mute Mic">🎙️</button>
-      <button type="button" id="toggleCamBtn" class="call-btn action" onclick="BestieChat.toggleCamera()" title="Toggle Camera">📹</button>
-      <button type="button" class="call-btn decline" onclick="BestieChat.endCall()" title="End Call">📞</button>
+      <button type="button" id="muteAudioBtn" class="call-btn action" onclick="BestieChat.toggleMuteAudio()" title="Mute Mic">Mute</button>
+      <button type="button" id="toggleCamBtn" class="call-btn action" onclick="BestieChat.toggleCamera()" title="Toggle Camera">Camera</button>
+      <button type="button" class="call-btn decline" onclick="BestieChat.endCall()" title="End Call">End</button>
     </div>
   </div>
 
-  <!-- Error Boundary -->
-  <div id="errorBoundary" style="display:none; position:fixed; inset:0; background:#000; z-index:9999; flex-direction:column; align-items:center; justify-content:center; gap:16px; color:#fff; text-align:center; padding:32px;">
-    <h2>Something went wrong</h2>
-    <p style="color:var(--muted);">Please refresh the page.</p>
-    <button class="login-btn" onclick="location.reload()" style="max-width:180px;">Refresh</button>
-  </div>
-
-  <!-- Socket.io & Application Script -->
+  <!-- Scripts -->
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/app.js?v=5000"></script>
+  <script src="/app.js?v=6000"></script>
 </body>
 </html>

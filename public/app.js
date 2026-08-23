@@ -1,5 +1,5 @@
 /**
- * WHISPR — Clean, Minimal, Modern Deep AMOLED Black (Signal Style) Client
+ * WHISPR — Pure Black & White Minimalist & Beginner-Friendly Client
  */
 (() => {
   'use strict';
@@ -9,7 +9,7 @@
   let authToken = localStorage.getItem('bestieChatToken') || null;
   let myName = localStorage.getItem('bestieChatName') || '';
   let myRoom = localStorage.getItem('bestieChatRoom') || '';
-  let myProfile = { avatar: '✨', nickname: '', statusBio: '' };
+  let myProfile = { avatar: 'Y', nickname: '', statusBio: '' };
   
   let currentOnlineUsers = [];
   let cachedUserRooms = [];
@@ -28,7 +28,7 @@
   // DOM Elements cache
   let els = {};
 
-  const EMOJIS = ['❤️','🔥','👍','🎉','😍','😂','🥺','✨','💯','🙌','👏','🙏','😘','🥰','😎','🥳','😴','😭','🤔','🤩'];
+  const EMOJIS = ['❤️','👍','🔥','🎉','😍','😂','🥺','✨','💯','🙌','👏','🙏','😎','😴','😭','🤔'];
 
   // ═══════════════════ INIT ═══════════════════
   function init() {
@@ -82,7 +82,6 @@
       replyPreviewText: document.getElementById('replyPreviewText'),
       recordingWaveformBar: document.getElementById('recordingWaveformBar'),
       recordingTimer: document.getElementById('recordingTimer'),
-      charCount: document.getElementById('charCount'),
       toastContainer: document.getElementById('toastContainer')
     };
   }
@@ -128,20 +127,34 @@
     const tabReg = document.getElementById('authTabRegister');
     const nickField = document.getElementById('nicknameField');
     const confirmField = document.getElementById('confirmPasswordField');
-    if (els.loginError) els.loginError.textContent = '';
+    hideLoginError();
 
     if (tab === 'signin') {
       if (tabIn) tabIn.classList.add('active');
       if (tabReg) tabReg.classList.remove('active');
       if (nickField) nickField.style.display = 'none';
       if (confirmField) confirmField.style.display = 'none';
-      if (els.joinBtnText) els.joinBtnText.textContent = 'Enter Whispr';
+      if (els.joinBtnText) els.joinBtnText.textContent = 'Sign In';
     } else {
       if (tabReg) tabReg.classList.add('active');
       if (tabIn) tabIn.classList.remove('active');
       if (nickField) nickField.style.display = 'flex';
       if (confirmField) confirmField.style.display = 'flex';
       if (els.joinBtnText) els.joinBtnText.textContent = 'Create Account';
+    }
+  }
+
+  function showLoginError(msg) {
+    if (els.loginError) {
+      els.loginError.textContent = msg;
+      els.loginError.style.display = 'block';
+    }
+  }
+
+  function hideLoginError() {
+    if (els.loginError) {
+      els.loginError.textContent = '';
+      els.loginError.style.display = 'none';
     }
   }
 
@@ -158,7 +171,7 @@
     const password = (els.passwordInput ? els.passwordInput.value : '').trim();
 
     if (!username || !password) {
-      if (els.loginError) els.loginError.textContent = 'Please enter both username and password';
+      showLoginError('Please enter username and password');
       return;
     }
 
@@ -170,12 +183,12 @@
       });
       const data = await res.json();
       if (!res.ok) {
-        if (els.loginError) els.loginError.textContent = data.error || 'Login failed';
+        showLoginError(data.error || 'Incorrect username or password');
         return;
       }
       completeAuth(data);
     } catch (_) {
-      if (els.loginError) els.loginError.textContent = 'Network error. Please try again.';
+      showLoginError('Network error. Please try again.');
     }
   }
 
@@ -186,11 +199,11 @@
     const confirmPass = (els.regPasswordConfirmInput ? els.regPasswordConfirmInput.value : '').trim();
 
     if (!username || !password) {
-      if (els.loginError) els.loginError.textContent = 'Username and password are required';
+      showLoginError('Username and password are required');
       return;
     }
     if (password !== confirmPass) {
-      if (els.loginError) els.loginError.textContent = 'Passwords do not match';
+      showLoginError('Passwords do not match');
       return;
     }
 
@@ -198,25 +211,25 @@
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, nickname, password, avatar: '✨' })
+        body: JSON.stringify({ username, nickname, password, avatar: getInitial(nickname || username) })
       });
       const data = await res.json();
       if (!res.ok) {
-        if (els.loginError) els.loginError.textContent = data.error || 'Registration failed';
+        showLoginError(data.error || 'Registration failed');
         return;
       }
       completeAuth(data);
     } catch (_) {
-      if (els.loginError) els.loginError.textContent = 'Network error. Please try again.';
+      showLoginError('Network error. Please try again.');
     }
   }
 
   function completeAuth(data) {
     authToken = data.token;
     myName = data.username;
-    myProfile.avatar = data.avatar || '✨';
     myProfile.nickname = data.nickname || data.username;
-    myProfile.statusBio = data.statusBio || 'Available';
+    myProfile.avatar = getInitial(myProfile.nickname);
+    myProfile.statusBio = data.statusBio || 'Online';
 
     localStorage.setItem('bestieChatToken', authToken);
     localStorage.setItem('bestieChatName', myName);
@@ -232,7 +245,7 @@
     initSocket();
     doSocketJoin();
     loadChatList();
-    showToast(`Welcome, ${myProfile.nickname}! 🔒`);
+    showToast(`Welcome, ${myProfile.nickname}!`);
   }
 
   function logout() {
@@ -259,7 +272,7 @@
 
     socket.on('joined', payload => {
       if (payload.profile) myProfile = payload.profile;
-      if (els.sidebarMyAvatar) els.sidebarMyAvatar.textContent = myProfile.avatar || '✨';
+      if (els.sidebarMyAvatar) els.sidebarMyAvatar.textContent = getInitial(myProfile.nickname || myName);
       if (els.sidebarMyName) els.sidebarMyName.textContent = myProfile.nickname || myName;
       
       // Render message history
@@ -281,14 +294,14 @@
     socket.on('message', msg => {
       if (msg.room && msg.room !== myRoom) {
         loadChatList();
-        if (msg.user !== myName) playNotificationSound();
+        if (msg.user !== myName) playNotificationTone();
         return;
       }
       renderMessage(msg, true);
       scrollBottom();
       loadChatList();
       if (msg.user !== myName) {
-        playNotificationSound();
+        playNotificationTone();
         socket.emit('mark-read', { messageId: msg.id });
       }
     });
@@ -339,16 +352,13 @@
     let displayRooms = rooms || [];
     if (currentChatFilter === 'unread') {
       displayRooms = displayRooms.filter(r => r.unread > 0);
-    } else if (currentChatFilter === 'direct') {
-      displayRooms = displayRooms.filter(r => !r.isSaved);
     }
 
     if (!displayRooms.length) {
       list.innerHTML = `<div style="padding:32px 16px; text-align:center; color:var(--muted); font-size:13px;">
-        <div style="font-size:36px; margin-bottom:8px;">💬</div>
-        <div style="font-weight:700; color:#ffffff; margin-bottom:4px;">No chats yet</div>
-        <div style="margin-bottom:12px;">Search for contacts above to start messaging</div>
-        <button type="button" class="login-btn" onclick="BestieChat.openNewChatModal()" style="max-width:160px; margin:0 auto; padding:8px 14px; font-size:12px;">+ New Chat</button>
+        <div style="font-weight:700; color:#ffffff; margin-bottom:6px;">No conversations yet</div>
+        <div style="margin-bottom:14px;">Search for someone to start messaging:</div>
+        <button type="button" class="login-btn" onclick="BestieChat.openNewChatModal()" style="max-width:180px; margin:0 auto; padding:8px 14px; font-size:12px;">+ New Message</button>
       </div>`;
       return;
     }
@@ -359,27 +369,27 @@
   function renderChatListItems(rooms) {
     return rooms.map(room => {
       const isSaved = room.isSaved;
-      const avatar = (room.otherProfile && room.otherProfile.avatar) || (isSaved ? '🔖' : '✨');
       const name = isSaved ? 'Note to Self' : (room.otherParticipant || room.name.replace('dm_', '').replace(/_/g, ', '));
       const displayName = isSaved ? 'Note to Self' : (room.otherProfile && room.otherProfile.nickname ? room.otherProfile.nickname : `@${name}`);
+      const avatarInitial = isSaved ? 'N' : getInitial(displayName);
       const isOnline = !isSaved && currentOnlineUsers.some(u => (u || '').toLowerCase() === (room.otherParticipant || '').toLowerCase());
       const onlineDot = isOnline ? '<span class="dm-online-dot"></span>' : '';
 
       let tickHtml = '';
       if (room.lastMessage && room.lastMessage.user === myName) {
-        tickHtml = '<span style="color:var(--check-blue); font-size:11px; font-weight:700; margin-right:3px;">✓✓ </span>';
+        tickHtml = '<span style="font-weight:700; margin-right:3px;">✓✓ </span>';
       }
 
       const preview = room.lastMessage
-        ? `${room.lastMessage.user === myName ? 'You: ' : ''}${room.lastMessage.text || (room.lastMessage.type === 'image' ? '📷 Photo' : room.lastMessage.type === 'voice' ? '🎤 Voice' : '📄 Document')}`.slice(0, 32)
-        : (isSaved ? 'Your private notes & media' : 'Tap to message');
+        ? `${room.lastMessage.user === myName ? 'You: ' : ''}${room.lastMessage.text || (room.lastMessage.type === 'image' ? 'Photo' : room.lastMessage.type === 'voice' ? 'Voice note' : 'Document')}`.slice(0, 32)
+        : (isSaved ? 'Your private notes' : 'Tap to chat');
       const timeStr = room.lastActivity ? formatTimestamp(room.lastActivity) : '';
       const badge = room.unread > 0 ? `<div class="dm-badge">${room.unread}</div>` : '';
       const active = room.name === myRoom ? 'active' : '';
 
       return `<div class="dm-row ${active}" onclick="BestieChat.switchRoom('${escapeHtml(room.name)}')">
         <div class="dm-avatar-wrap">
-          <div class="dm-avatar">${avatar}</div>
+          <div class="dm-avatar">${avatarInitial}</div>
           ${onlineDot}
         </div>
         <div class="dm-info">
@@ -429,14 +439,14 @@
 
         let html = '';
         if (matchingChats.length > 0) {
-          html += '<div style="padding:6px 10px; font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase;">Conversations</div>';
+          html += '<div style="padding:6px 10px; font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase;">Chats</div>';
           html += renderChatListItems(matchingChats);
         }
         if (otherUsers.length > 0) {
-          html += '<div style="padding:8px 10px; font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase;">Users Directory</div>';
+          html += '<div style="padding:8px 10px; font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase;">Contacts & Users</div>';
           html += otherUsers.map(u => `
             <div class="dm-row" onclick="BestieChat.startDMWith('${escapeHtml(u.username)}')">
-              <div class="dm-avatar-wrap"><div class="dm-avatar">${u.avatar || '✨'}</div></div>
+              <div class="dm-avatar-wrap"><div class="dm-avatar">${getInitial(u.nickname || u.username)}</div></div>
               <div class="dm-info">
                 <div class="dm-name">${escapeHtml(u.nickname || u.username)}</div>
                 <div style="font-size:11.5px; color:var(--muted);">@${escapeHtml(u.username)}</div>
@@ -498,20 +508,19 @@
   function updateActiveHeader() {
     const isSaved = myRoom === `dm_${myName.toLowerCase()}_${myName.toLowerCase()}`;
     if (isSaved) {
-      if (els.headerBestieAvatar) els.headerBestieAvatar.textContent = '🔖';
+      if (els.headerBestieAvatar) els.headerBestieAvatar.textContent = 'N';
       if (els.headerBestieName) els.headerBestieName.textContent = 'Note to Self';
-      if (els.headerBestieStatus) els.headerBestieStatus.textContent = 'Cloud storage & notes';
+      if (els.headerBestieStatus) els.headerBestieStatus.textContent = 'Private cloud storage';
       return;
     }
 
-    const otherUser = myRoom.replace('dm_', '').split('_').find(p => p.toLowerCase() !== myName.toLowerCase()) || 'Bestie';
+    const otherUser = myRoom.replace('dm_', '').split('_').find(p => p.toLowerCase() !== myName.toLowerCase()) || 'User';
     const isOnline = currentOnlineUsers.some(u => (u || '').toLowerCase() === otherUser.toLowerCase());
 
-    if (els.headerBestieAvatar) els.headerBestieAvatar.textContent = '✨';
+    if (els.headerBestieAvatar) els.headerBestieAvatar.textContent = getInitial(otherUser);
     if (els.headerBestieName) els.headerBestieName.textContent = `@${otherUser}`;
     if (els.headerBestieStatus) {
-      els.headerBestieStatus.textContent = isOnline ? '● Online' : 'offline';
-      els.headerBestieStatus.classList.toggle('online', isOnline);
+      els.headerBestieStatus.textContent = isOnline ? 'Online' : 'Offline';
     }
   }
 
@@ -553,12 +562,11 @@
     updateSendBtnIcon();
   }
 
-  function renderMessage(msg, animate = false) {
+  function renderMessage(msg, _animate = false) {
     if (!els.messages || !msg) return;
     const isMe = (msg.user || '').toLowerCase() === (myName || '').toLowerCase();
     const wrap = document.createElement('div');
     wrap.className = `msg-wrap ${isMe ? 'me' : 'them'}`;
-    if (!animate) wrap.style.animation = 'none';
 
     let contentHtml = '';
 
@@ -570,16 +578,16 @@
       </div>`;
     }
 
-    // Media type handling
+    // Media types
     if (msg.type === 'image' && msg.url) {
       contentHtml += `<img class="chat-photo-img" src="${escapeHtml(msg.url)}" onclick="BestieChat.openLightbox('${escapeHtml(msg.url)}')" loading="lazy" />`;
     } else if (msg.type === 'voice' && msg.url) {
       contentHtml += `<div class="voice-bubble">
         <button type="button" class="voice-play-btn" onclick="BestieChat.playAudio('${escapeHtml(msg.url)}', this)">▶</button>
-        <div style="font-size:12px; color:var(--muted);">Voice note (${msg.duration || 0}s)</div>
+        <div style="font-size:12px;">Voice note (${msg.duration || 0}s)</div>
       </div>`;
     } else if (msg.type === 'document' && msg.url) {
-      contentHtml += `<a href="${escapeHtml(msg.url)}" download class="doc-card" style="text-decoration:none;">
+      contentHtml += `<a href="${escapeHtml(msg.url)}" download class="doc-card" style="text-decoration:none; color:inherit;">
         <div class="doc-icon">📄</div>
         <div>
           <div class="doc-name">${escapeHtml(msg.docName || 'Document')}</div>
@@ -591,7 +599,7 @@
     }
 
     const timeStr = formatTime(msg.time || Date.now());
-    const tickHtml = isMe ? '<span class="msg-status-ticks read"><svg viewBox="0 0 16 15" width="14" height="13" fill="none"><path d="M15.01 3.316l-7.92 8.56a.91.91 0 01-.67.3.91.91 0 01-.67-.3L2.3 8.35a.96.96 0 010-1.34.93.93 0 011.33 0l3.46 3.72 7.25-7.84a.93.93 0 011.34 0 .96.96 0 010 1.166l-7.92 8.56" fill="currentColor"/></svg></span>' : '';
+    const tickHtml = isMe ? '<span class="msg-status-ticks"> ✓✓</span>' : '';
 
     wrap.innerHTML = `<div class="msg ${isMe ? 'me' : 'them'}">
       ${contentHtml}
@@ -762,11 +770,11 @@
     if (input && input.files) sendPhoto(input.files);
   }
 
-  // ═══════════════════ WEBRTC CALLS ═══════════════════
+  // ═══════════════════ CALLS ═══════════════════
   async function startCall(type) {
     const isSaved = myRoom === `dm_${myName.toLowerCase()}_${myName.toLowerCase()}`;
     if (isSaved) {
-      showToast('Cannot call yourself in Note to Self');
+      showToast('Cannot call Note to Self');
       return;
     }
 
@@ -782,7 +790,7 @@
       if (localVid && type === 'video') localVid.srcObject = localStream;
       if (socket) socket.emit('call-signal', { room: myRoom, type: 'offer', callType: type });
     } catch (_) {
-      showToast('Media permissions required for calling');
+      showToast('Camera / Microphone permission required');
       endCall();
     }
   }
@@ -801,14 +809,14 @@
     if (!localStream) return;
     isMuted = !isMuted;
     localStream.getAudioTracks().forEach(t => t.enabled = !isMuted);
-    showToast(isMuted ? 'Muted 🔇' : 'Unmuted 🎙️');
+    showToast(isMuted ? 'Muted' : 'Unmuted');
   }
 
   function toggleCamera() {
     if (!localStream) return;
     isCameraOff = !isCameraOff;
     localStream.getVideoTracks().forEach(t => t.enabled = !isCameraOff);
-    showToast(isCameraOff ? 'Camera off 🚫' : 'Camera on 📹');
+    showToast(isCameraOff ? 'Camera Off' : 'Camera On');
   }
 
   function handleCallSignal(data) {
@@ -819,7 +827,7 @@
     }
   }
 
-  // ═══════════════════ MODALS & UI HELPERS ═══════════════════
+  // ═══════════════════ MODALS & HELPERS ═══════════════════
   function toggleSidebar() {
     document.body.classList.toggle('in-chat');
   }
@@ -859,7 +867,7 @@
       results.innerHTML = users.map(u => `
         <div class="user-result-row" onclick="BestieChat.startDMWith('${escapeHtml(u.username)}')">
           <div style="display:flex; align-items:center; gap:10px;">
-            <div style="width:38px; height:38px; border-radius:50%; background:var(--surface2); display:flex; align-items:center; justify-content:center; font-size:18px;">${u.avatar || '✨'}</div>
+            <div style="width:36px; height:36px; border-radius:50%; background:var(--surface2); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; color:#fff;">${getInitial(u.nickname || u.username)}</div>
             <div>
               <div style="font-weight:700; font-size:13.5px; color:#fff;">${escapeHtml(u.nickname || u.username)}</div>
               <div style="font-size:11.5px; color:var(--muted);">@${escapeHtml(u.username)}</div>
@@ -877,22 +885,14 @@
       modal.style.display = 'flex';
       const nick = document.getElementById('profileNickname');
       const status = document.getElementById('profileStatus');
-      const bigAvatar = document.getElementById('profileBigAvatar');
       if (nick) nick.value = myProfile.nickname || '';
       if (status) status.value = myProfile.statusBio || '';
-      if (bigAvatar) bigAvatar.textContent = myProfile.avatar || '✨';
     }
   }
 
   function closeProfile() {
     const modal = document.getElementById('profileModal');
     if (modal) modal.style.display = 'none';
-  }
-
-  function selectAvatar(emoji) {
-    myProfile.avatar = emoji;
-    const bigAvatar = document.getElementById('profileBigAvatar');
-    if (bigAvatar) bigAvatar.textContent = emoji;
   }
 
   async function saveProfile() {
@@ -905,39 +905,15 @@
       await fetch('/api/auth/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-        body: JSON.stringify({ avatar: myProfile.avatar, nickname: myProfile.nickname, statusBio: myProfile.statusBio })
+        body: JSON.stringify({ avatar: getInitial(myProfile.nickname), nickname: myProfile.nickname, statusBio: myProfile.statusBio })
       });
-      if (els.sidebarMyAvatar) els.sidebarMyAvatar.textContent = myProfile.avatar;
+      if (els.sidebarMyAvatar) els.sidebarMyAvatar.textContent = getInitial(myProfile.nickname);
       if (els.sidebarMyName) els.sidebarMyName.textContent = myProfile.nickname;
       closeProfile();
-      showToast('Profile updated ✨');
+      showToast('Profile updated');
     } catch (_) {
       showToast('Failed to save profile');
     }
-  }
-
-  function openPrefsModal() {
-    const modal = document.getElementById('prefsModal');
-    if (modal) modal.style.display = 'flex';
-  }
-
-  function closePrefsModal() {
-    const modal = document.getElementById('prefsModal');
-    if (modal) modal.style.display = 'none';
-  }
-
-  function selectTheme(_val) {
-    showToast('Signal AMOLED Dark mode active 🔒');
-  }
-
-  function openStarredModal() {
-    const modal = document.getElementById('starredModal');
-    if (modal) modal.style.display = 'flex';
-  }
-
-  function closeStarredModal() {
-    const modal = document.getElementById('starredModal');
-    if (modal) modal.style.display = 'none';
   }
 
   function toggleAttachMenu() {
@@ -989,47 +965,32 @@
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
-      showToast('Chat cleared 🗑️');
+      showToast('Chat cleared');
       loadChatList();
       switchRoom(`dm_${myName.toLowerCase()}_${myName.toLowerCase()}`);
     } catch (_) { /* ignore */ }
-  }
-
-  function toggleSearch() {
-    const bar = document.getElementById('searchBar');
-    if (bar) {
-      bar.style.display = bar.style.display === 'flex' ? 'none' : 'flex';
-      const input = document.getElementById('searchInput');
-      if (input && bar.style.display === 'flex') input.focus();
-    }
-  }
-
-  function clearSearch() {
-    const bar = document.getElementById('searchBar');
-    if (bar) bar.style.display = 'none';
   }
 
   function playAudio(url, btn) {
     const audio = new Audio(url);
     if (btn) btn.textContent = '⏸';
     audio.onended = () => { if (btn) btn.textContent = '▶'; };
-    audio.play().catch(() => {});
+    audio.play().catch(() => { /* ignore */ });
   }
 
-  function playNotificationSound() {
+  function playNotificationTone() {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
-      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12); // A5
-      gain.gain.setValueAtTime(0.12, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.18);
+      osc.frequency.setValueAtTime(600, ctx.currentTime);
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start();
-      osc.stop(ctx.currentTime + 0.18);
+      osc.stop(ctx.currentTime + 0.15);
     } catch (_) { /* ignore */ }
   }
 
@@ -1040,13 +1001,18 @@
     toast.className = 'toast';
     toast.textContent = msg;
     container.appendChild(toast);
-    setTimeout(() => toast.remove(), 2800);
+    setTimeout(() => toast.remove(), 2600);
   }
 
   function scrollBottom() {
     if (els.messages) {
       els.messages.scrollTop = els.messages.scrollHeight;
     }
+  }
+
+  function getInitial(str) {
+    if (!str) return 'U';
+    return String(str).trim().charAt(0).toUpperCase();
   }
 
   function formatTime(ts) {
@@ -1078,14 +1044,12 @@
     sendMessage, handleSendBtnClick, toggleRecord, cancelRecording,
     sendPhoto, uploadDocumentFile, uploadCameraFile,
     toggleAttachMenu, toggleEmojiPicker, insertEmoji,
-    openProfile, closeProfile, selectAvatar, saveProfile,
-    openPrefsModal, closePrefsModal, selectTheme,
-    openStarredModal, closeStarredModal,
+    openProfile, closeProfile, saveProfile,
     openLightbox, closeLightbox, cancelReply,
     startCall, endCall, toggleMuteAudio, toggleCamera,
-    toggleSearch, clearSearch, playAudio,
-    toggleSound: () => showToast('Sound active 🔊'),
-    toggleTheme: () => showToast('Signal AMOLED Dark active 🌙')
+    playAudio,
+    toggleSound: () => showToast('Sound active'),
+    toggleTheme: () => showToast('Black & White monochrome active')
   };
 
   if (document.readyState === 'loading') {
