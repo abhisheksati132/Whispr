@@ -1092,42 +1092,55 @@ async function searchUsers(query, excludeUsername) {
   const cleanQ = String(query || '').trim().toLowerCase().replace(/^@+/, '');
   const exclude = String(excludeUsername || '').toLowerCase();
 
-  if (!isDbReady()) {
-    let all = Array.from(memUsers.values()).filter(u => u.username.toLowerCase() !== exclude);
-    if (cleanQ) {
-      all = all.filter(u => u.username.toLowerCase().includes(cleanQ) || (u.nickname && u.nickname.toLowerCase().includes(cleanQ)));
+  const userMap = new Map();
+
+  // 1. Check in-memory users
+  for (const u of memUsers.values()) {
+    const un = (u.username || '').toLowerCase();
+    if (un && un !== exclude) {
+      if (!cleanQ || un.includes(cleanQ) || (u.nickname && u.nickname.toLowerCase().includes(cleanQ))) {
+        userMap.set(un, {
+          username: u.username,
+          nickname: u.nickname || u.username,
+          avatar: u.avatar || '✨',
+          color: u.color || '#3390ec',
+          statusBio: u.statusBio || ''
+        });
+      }
     }
-    return all.slice(0, 15).map(u => ({
-      username: u.username,
-      nickname: u.nickname || u.username,
-      avatar: u.avatar || '✨',
-      color: u.color || '#818cf8',
-      statusBio: u.statusBio || ''
-    }));
   }
 
-  try {
-    let builder = supabase
-      .from('users')
-      .select('username, nickname, avatar, color, status_bio')
-      .neq('username', exclude)
-      .limit(15);
+  // 2. Check Supabase DB if ready
+  if (isDbReady()) {
+    try {
+      let builder = supabase
+        .from('users')
+        .select('username, nickname, avatar, color, status_bio')
+        .limit(30);
 
-    if (cleanQ) {
-      builder = builder.or(`username.ilike.%${cleanQ}%,nickname.ilike.%${cleanQ}%`);
-    }
+      if (cleanQ) {
+        builder = builder.or(`username.ilike.%${cleanQ}%,nickname.ilike.%${cleanQ}%`);
+      }
 
-    const { data } = await builder;
-    return (data || []).map(u => ({
-      username: u.username,
-      nickname: u.nickname || u.username,
-      avatar: u.avatar || '✨',
-      color: u.color || '#818cf8',
-      statusBio: u.status_bio || ''
-    }));
-  } catch (_) {
-    return [];
+      const { data, error } = await builder;
+      if (!error && Array.isArray(data)) {
+        for (const u of data) {
+          const un = (u.username || '').toLowerCase();
+          if (un && un !== exclude) {
+            userMap.set(un, {
+              username: u.username,
+              nickname: u.nickname || u.username,
+              avatar: u.avatar || '✨',
+              color: u.color || '#3390ec',
+              statusBio: u.status_bio || ''
+            });
+          }
+        }
+      }
+    } catch { /* ignore */ }
   }
+
+  return Array.from(userMap.values()).slice(0, 30);
 }
 
 async function getOrCreateDMRoom(user1, user2) {

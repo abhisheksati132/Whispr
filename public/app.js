@@ -93,6 +93,15 @@
     if (els.passwordInput) {
       els.passwordInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleAuthSubmit(); });
     }
+    if (els.sidebarSearchInput) {
+      els.sidebarSearchInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const val = String(els.sidebarSearchInput.value || '').trim().replace(/^@+/, '');
+          if (val) startDMWith(val);
+        }
+      });
+    }
     if (els.msgInput) {
       els.msgInput.addEventListener('keydown', e => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -410,7 +419,7 @@
   function handleSidebarSearch(query) {
     clearTimeout(_sidebarSearchTimeout);
     if (els.sidebarSearchClear) els.sidebarSearchClear.style.display = query ? 'block' : 'none';
-    const cleanQ = String(query || '').trim().toLowerCase();
+    const cleanQ = String(query || '').trim().toLowerCase().replace(/^@+/, '');
 
     if (!cleanQ) {
       renderChatList(cachedUserRooms);
@@ -438,12 +447,25 @@
         const otherUsers = registeredUsers.filter(u => !existingNames.includes(u.username.toLowerCase()) && u.username.toLowerCase() !== myName.toLowerCase());
 
         let html = '';
+
+        // Always show direct message action at top of search
+        html += `
+          <div class="dm-row" onclick="BestieChat.startDMWith('${escapeHtml(cleanQ)}')" style="background:var(--surface2); border:1px solid rgba(255,255,255,0.3); margin-bottom:6px;">
+            <div class="dm-avatar-wrap"><div class="dm-avatar">${getInitial(cleanQ)}</div></div>
+            <div class="dm-info">
+              <div class="dm-name">Start chat with @${escapeHtml(cleanQ)}</div>
+              <div style="font-size:11.5px; color:var(--muted);">Click to message directly</div>
+            </div>
+            <button type="button" class="login-btn" onclick="event.stopPropagation(); BestieChat.startDMWith('${escapeHtml(cleanQ)}')" style="padding:4px 12px; font-size:11.5px; margin:0; width:auto;">Message</button>
+          </div>
+        `;
+
         if (matchingChats.length > 0) {
-          html += '<div style="padding:6px 10px; font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase;">Chats</div>';
+          html += '<div style="padding:6px 10px; font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase;">Active Chats</div>';
           html += renderChatListItems(matchingChats);
         }
         if (otherUsers.length > 0) {
-          html += '<div style="padding:8px 10px; font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase;">Contacts & Users</div>';
+          html += '<div style="padding:8px 10px; font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase;">Registered Users</div>';
           html += otherUsers.map(u => `
             <div class="dm-row" onclick="BestieChat.startDMWith('${escapeHtml(u.username)}')">
               <div class="dm-avatar-wrap"><div class="dm-avatar">${getInitial(u.nickname || u.username)}</div></div>
@@ -451,18 +473,15 @@
                 <div class="dm-name">${escapeHtml(u.nickname || u.username)}</div>
                 <div style="font-size:11.5px; color:var(--muted);">@${escapeHtml(u.username)}</div>
               </div>
-              <button type="button" class="login-btn" style="padding:4px 12px; font-size:11.5px; margin:0; width:auto;">Chat</button>
+              <button type="button" class="login-btn" onclick="event.stopPropagation(); BestieChat.startDMWith('${escapeHtml(u.username)}')" style="padding:4px 12px; font-size:11.5px; margin:0; width:auto;">Chat</button>
             </div>
           `).join('');
-        }
-        if (!matchingChats.length && !otherUsers.length) {
-          html = `<div style="padding:24px 16px; text-align:center; color:var(--muted); font-size:13px;">No results found for "${escapeHtml(cleanQ)}"</div>`;
         }
         if (els.sidebarDmList) els.sidebarDmList.innerHTML = html;
       } catch (err) {
         console.error('handleSidebarSearch error:', err);
       }
-    }, 150);
+    }, 100);
   }
 
   function clearSidebarSearch() {
@@ -841,7 +860,17 @@
     if (modal) {
       modal.style.display = 'flex';
       const input = document.getElementById('newChatSearch');
-      if (input) { input.value = ''; input.focus(); }
+      if (input) {
+        input.value = '';
+        input.focus();
+        input.onkeydown = (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            const val = String(input.value || '').trim().replace(/^@+/, '');
+            if (val) startDMWith(val);
+          }
+        };
+      }
       searchUsersForDM('');
     }
   }
@@ -854,28 +883,49 @@
   async function searchUsersForDM(query) {
     const results = document.getElementById('newChatResults');
     if (!results) return;
+    const cleanQ = String(query || '').trim().replace(/^@+/, '');
+
     try {
-      const resp = await fetch(`/api/rooms/users/search?q=${encodeURIComponent(query || '')}`, {
+      const resp = await fetch(`/api/rooms/users/search?q=${encodeURIComponent(cleanQ)}`, {
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
       if (!resp.ok) return;
       const users = await resp.json();
-      if (!users.length) {
-        results.innerHTML = '<div style="padding:20px; text-align:center; color:var(--muted); font-size:13px;">No registered users found</div>';
-        return;
-      }
-      results.innerHTML = users.map(u => `
-        <div class="user-result-row" onclick="BestieChat.startDMWith('${escapeHtml(u.username)}')">
-          <div style="display:flex; align-items:center; gap:10px;">
-            <div style="width:36px; height:36px; border-radius:50%; background:var(--surface2); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; color:#fff;">${getInitial(u.nickname || u.username)}</div>
-            <div>
-              <div style="font-weight:700; font-size:13.5px; color:#fff;">${escapeHtml(u.nickname || u.username)}</div>
-              <div style="font-size:11.5px; color:var(--muted);">@${escapeHtml(u.username)}</div>
+
+      let html = '';
+      if (cleanQ) {
+        html += `
+          <div class="user-result-row" onclick="BestieChat.startDMWith('${escapeHtml(cleanQ)}')" style="background:var(--surface2); border:1px solid rgba(255,255,255,0.4);">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div style="width:36px; height:36px; border-radius:50%; background:#fff; color:#000; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700;">${getInitial(cleanQ)}</div>
+              <div>
+                <div style="font-weight:700; font-size:13.5px; color:#fff;">Message @${escapeHtml(cleanQ)} directly</div>
+                <div style="font-size:11.5px; color:var(--muted);">Click or press Enter to start chat</div>
+              </div>
             </div>
+            <button type="button" class="login-btn" onclick="event.stopPropagation(); BestieChat.startDMWith('${escapeHtml(cleanQ)}')" style="padding:5px 14px; font-size:12px; margin:0; width:auto;">Chat</button>
           </div>
-          <button type="button" class="login-btn" style="padding:5px 14px; font-size:12px; margin:0; width:auto;">Message</button>
-        </div>
-      `).join('');
+        `;
+      }
+
+      if (users && users.length > 0) {
+        html += users.map(u => `
+          <div class="user-result-row" onclick="BestieChat.startDMWith('${escapeHtml(u.username)}')">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div style="width:36px; height:36px; border-radius:50%; background:var(--surface2); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; color:#fff;">${getInitial(u.nickname || u.username)}</div>
+              <div>
+                <div style="font-weight:700; font-size:13.5px; color:#fff;">${escapeHtml(u.nickname || u.username)}</div>
+                <div style="font-size:11.5px; color:var(--muted);">@${escapeHtml(u.username)}</div>
+              </div>
+            </div>
+            <button type="button" class="login-btn" onclick="event.stopPropagation(); BestieChat.startDMWith('${escapeHtml(u.username)}')" style="padding:5px 14px; font-size:12px; margin:0; width:auto;">Message</button>
+          </div>
+        `).join('');
+      } else if (!cleanQ) {
+        html += '<div style="padding:20px; text-align:center; color:var(--muted); font-size:13px;">Type any username above to start chatting</div>';
+      }
+
+      results.innerHTML = html;
     } catch (_) { /* ignore */ }
   }
 
