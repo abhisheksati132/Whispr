@@ -487,12 +487,12 @@ All critical decisions are resolved. The plan is ready for implementation.
 - **Cross-module imports:** Added 137 ESM imports across 28 modules (smart-imports approach)
 - **Build system:** Vite configured, production build succeeds (`npm run build`)
 - **Tests:** 22/22 passing
-- **Dependency audit:** Mapped 454 cross-module calls; resolved 137 via ESM imports; 182 unique external calls remain (mostly to functions not yet exported from modules)
+- **Dependency audit:** Mapped 454 cross-module calls; resolved 137 via ESM imports
 
 ### Not Started
 - Remove `public/app.js` and load only module entry point
-- Fix missing exports in extracted modules (many functions not exported)
-- Resolve remaining 182 cross-module global calls
+- Fix missing exports in extracted modules (16 functions still only in `app.js`)
+- Resolve remaining cross-module global calls
 
 ### Blocker
 Full ESM dependency resolution is partially blocked by incomplete module extraction. Many functions are:
@@ -501,6 +501,9 @@ Full ESM dependency resolution is partially blocked by incomplete module extract
 - Nested inside other functions (incorrectly exported as top-level)
 
 ### Test Results
+```
+npm test
+✔ 22 tests passing (0 failures)
 ```
 npm test
 ✔ 22 tests passing (0 failures)
