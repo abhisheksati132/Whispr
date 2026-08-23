@@ -889,26 +889,30 @@
       const resp = await fetch(`/api/rooms/users/search?q=${encodeURIComponent(cleanQ)}`, {
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
-      if (!resp.ok) return;
-      const users = await resp.json();
+      let users = [];
+      if (resp.ok) users = await resp.json();
 
       let html = '';
       if (cleanQ) {
+        const isSelf = cleanQ.toLowerCase() === (myName || '').toLowerCase();
+        const actionLabel = isSelf ? 'Open Note to Self' : `Start chat with @${escapeHtml(cleanQ)}`;
+        const actionSub = isSelf ? 'Your private cloud notes' : 'Click or press Enter to message directly';
         html += `
-          <div class="user-result-row" onclick="BestieChat.startDMWith('${escapeHtml(cleanQ)}')" style="background:var(--surface2); border:1px solid rgba(255,255,255,0.4);">
+          <div class="user-result-row" onclick="BestieChat.startDMWith('${escapeHtml(cleanQ)}')" style="background:var(--surface2); border:1px solid #ffffff; margin-bottom:8px;">
             <div style="display:flex; align-items:center; gap:10px;">
-              <div style="width:36px; height:36px; border-radius:50%; background:#fff; color:#000; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700;">${getInitial(cleanQ)}</div>
+              <div style="width:36px; height:36px; border-radius:50%; background:#fff; color:#000; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700;">${isSelf ? 'N' : getInitial(cleanQ)}</div>
               <div>
-                <div style="font-weight:700; font-size:13.5px; color:#fff;">Message @${escapeHtml(cleanQ)} directly</div>
-                <div style="font-size:11.5px; color:var(--muted);">Click or press Enter to start chat</div>
+                <div style="font-weight:700; font-size:13.5px; color:#fff;">${actionLabel}</div>
+                <div style="font-size:11.5px; color:var(--muted);">${actionSub}</div>
               </div>
             </div>
-            <button type="button" class="login-btn" onclick="event.stopPropagation(); BestieChat.startDMWith('${escapeHtml(cleanQ)}')" style="padding:5px 14px; font-size:12px; margin:0; width:auto;">Chat</button>
+            <button type="button" class="login-btn" onclick="event.stopPropagation(); BestieChat.startDMWith('${escapeHtml(cleanQ)}')" style="padding:5px 14px; font-size:12px; margin:0; width:auto;">${isSelf ? 'Open' : 'Message'}</button>
           </div>
         `;
       }
 
       if (users && users.length > 0) {
+        html += '<div style="padding:4px 2px; font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase;">Registered Contacts</div>';
         html += users.map(u => `
           <div class="user-result-row" onclick="BestieChat.startDMWith('${escapeHtml(u.username)}')">
             <div style="display:flex; align-items:center; gap:10px;">
@@ -918,7 +922,7 @@
                 <div style="font-size:11.5px; color:var(--muted);">@${escapeHtml(u.username)}</div>
               </div>
             </div>
-            <button type="button" class="login-btn" onclick="event.stopPropagation(); BestieChat.startDMWith('${escapeHtml(u.username)}')" style="padding:5px 14px; font-size:12px; margin:0; width:auto;">Message</button>
+            <button type="button" class="login-btn" onclick="event.stopPropagation(); BestieChat.startDMWith('${escapeHtml(u.username)}')" style="padding:5px 14px; font-size:12px; margin:0; width:auto;">Chat</button>
           </div>
         `).join('');
       } else if (!cleanQ) {
