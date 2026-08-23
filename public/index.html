@@ -315,8 +315,23 @@
     </div>
   </div>
 
+  <!-- Incoming Call Banner Modal -->
+  <div id="incomingCallModal">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <div id="incomingCallAvatar" style="width:38px; height:38px; border-radius:50%; background:#222; border:1px solid #fff; display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff;">C</div>
+      <div>
+        <div id="incomingCallName" style="font-size:14px; font-weight:700; color:#fff;">Incoming Call...</div>
+        <div id="incomingCallType" style="font-size:11.5px; color:var(--muted);">Voice Call</div>
+      </div>
+    </div>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <button type="button" class="login-btn" onclick="BestieChat.acceptCall()" style="padding:6px 14px; font-size:12px; margin:0; width:auto;">Accept</button>
+      <button type="button" class="login-btn secondary" onclick="BestieChat.declineCall()" style="padding:6px 12px; font-size:12px; margin:0; width:auto;">Decline</button>
+    </div>
+  </div>
+
   <!-- Scripts -->
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/app.js?v=8000"></script>
+  <script src="/app.js?v=9000"></script>
 </body>
 </html>

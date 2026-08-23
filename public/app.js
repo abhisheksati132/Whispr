@@ -15,9 +15,24 @@
   let cachedUserRooms = [];
   let currentChatFilter = 'all';
   let replyingTo = null;
+
+  // WebRTC Call State
+  let peerConnection = null;
   let localStream = null;
+  let incomingCallData = null;
   let isMuted = false;
   let isCameraOff = false;
+  let callTimerInterval = null;
+  let callSeconds = 0;
+  let ringtoneAudio = null;
+
+  const RTC_CONFIG = {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' }
+    ]
+  };
   
   // Media recorder for voice notes
   let mediaRecorder = null;
@@ -35,6 +50,7 @@
     cacheElements();
     buildEmojiPicker();
     setupEventListeners();
+    setupMobileViewport();
 
     if (authToken && myName) {
       if (!myRoom) myRoom = `dm_${myName.toLowerCase()}_${myName.toLowerCase()}`;
@@ -43,6 +59,7 @@
       initSocket();
       doSocketJoin();
       loadChatList();
+      fetchMessagesForRoom(myRoom);
     } else {
       els.login.style.display = 'flex';
       els.chat.style.display = 'none';
@@ -82,7 +99,15 @@
       replyPreviewText: document.getElementById('replyPreviewText'),
       recordingWaveformBar: document.getElementById('recordingWaveformBar'),
       recordingTimer: document.getElementById('recordingTimer'),
-      toastContainer: document.getElementById('toastContainer')
+      toastContainer: document.getElementById('toastContainer'),
+      callOverlay: document.getElementById('callOverlay'),
+      incomingCallModal: document.getElementById('incomingCallModal'),
+      callLocalVideo: document.getElementById('callLocalVideo'),
+      callRemoteVideo: document.getElementById('callRemoteVideo'),
+      callRemoteVideoWrap: document.getElementById('callRemoteVideoWrap'),
+      callAvatar: document.getElementById('callAvatar'),
+      callUserName: document.getElementById('callUserName'),
+      callStatus: document.getElementById('callStatus')
     };
   }
 
@@ -114,6 +139,9 @@
         updateSendBtnIcon();
         if (socket && socket.connected) socket.emit('typing');
       });
+      els.msgInput.addEventListener('focus', () => {
+        setTimeout(scrollBottom, 250);
+      });
     }
 
     window.addEventListener('click', e => {
@@ -125,6 +153,16 @@
         els.emojiPicker.style.display = 'none';
       }
     });
+  }
+
+  function setupMobileViewport() {
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', () => {
+        if (document.body.classList.contains('in-chat')) {
+          scrollBottom();
+        }
+      });
+    }
   }
 
   // ═══════════════════ AUTHENTICATION ═══════════════════
@@ -254,6 +292,7 @@
     initSocket();
     doSocketJoin();
     loadChatList();
+    fetchMessagesForRoom(myRoom);
     showToast(`Welcome to tahc, ${myProfile.nickname}!`);
   }
 
@@ -283,15 +322,6 @@
       if (payload.profile) myProfile = payload.profile;
       if (els.sidebarMyAvatar) els.sidebarMyAvatar.textContent = getInitial(myProfile.nickname || myName);
       if (els.sidebarMyName) els.sidebarMyName.textContent = myProfile.nickname || myName;
-      
-      // Render message history
-      if (els.messages) {
-        els.messages.innerHTML = '';
-        if (payload.history && payload.history.length) {
-          payload.history.forEach(m => renderMessage(m, false));
-        }
-        scrollBottom();
-      }
       updateActiveHeader();
     });
 
@@ -319,7 +349,12 @@
       loadChatList();
     });
 
-    socket.on('call-signal', handleCallSignal);
+    // WebRTC Signaling Events
+    socket.on('call-invite', handleCallInvite);
+    socket.on('call-accept', handleCallAccept);
+    socket.on('call-decline', handleCallDecline);
+    socket.on('call-candidate', handleCallCandidate);
+    socket.on('call-hangup', handleCallHangup);
   }
 
   function doSocketJoin() {
@@ -344,6 +379,26 @@
       renderChatList(cachedUserRooms);
     } catch (err) {
       console.error('loadChatList error:', err);
+    }
+  }
+
+  async function fetchMessagesForRoom(roomName) {
+    if (!authToken || !roomName) return;
+    try {
+      const resp = await fetch(`/api/rooms/${encodeURIComponent(roomName)}/messages`, {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      if (!resp.ok) return;
+      const messages = await resp.json();
+      if (els.messages) {
+        els.messages.innerHTML = '';
+        if (Array.isArray(messages) && messages.length > 0) {
+          messages.forEach(m => renderMessage(m, false));
+        }
+        scrollBottom();
+      }
+    } catch (err) {
+      console.error('fetchMessagesForRoom error:', err);
     }
   }
 
@@ -448,15 +503,15 @@
 
         let html = '';
 
-        // Always show direct message action at top of search
+        const isSelf = cleanQ === (myName || '').toLowerCase();
         html += `
-          <div class="dm-row" onclick="BestieChat.startDMWith('${escapeHtml(cleanQ)}')" style="background:var(--surface2); border:1px solid rgba(255,255,255,0.3); margin-bottom:6px;">
-            <div class="dm-avatar-wrap"><div class="dm-avatar">${getInitial(cleanQ)}</div></div>
+          <div class="dm-row" onclick="BestieChat.startDMWith('${escapeHtml(cleanQ)}')" style="background:var(--surface2); border:1px solid #ffffff; margin-bottom:6px;">
+            <div class="dm-avatar-wrap"><div class="dm-avatar">${isSelf ? 'N' : getInitial(cleanQ)}</div></div>
             <div class="dm-info">
-              <div class="dm-name">Start chat with @${escapeHtml(cleanQ)}</div>
-              <div style="font-size:11.5px; color:var(--muted);">Click to message directly</div>
+              <div class="dm-name">${isSelf ? 'Open Note to Self' : `Start chat with @${escapeHtml(cleanQ)}`}</div>
+              <div style="font-size:11.5px; color:var(--muted);">${isSelf ? 'Your private notes' : 'Click or press Enter to message'}</div>
             </div>
-            <button type="button" class="login-btn" onclick="event.stopPropagation(); BestieChat.startDMWith('${escapeHtml(cleanQ)}')" style="padding:4px 12px; font-size:11.5px; margin:0; width:auto;">Message</button>
+            <button type="button" class="login-btn" onclick="event.stopPropagation(); BestieChat.startDMWith('${escapeHtml(cleanQ)}')" style="padding:4px 12px; font-size:11.5px; margin:0; width:auto;">${isSelf ? 'Open' : 'Message'}</button>
           </div>
         `;
 
@@ -492,11 +547,21 @@
 
   async function startDMWith(targetUsername) {
     if (!targetUsername) return;
+    const cleanTarget = String(targetUsername || '').trim().toLowerCase().replace(/^@+/, '');
+    if (!cleanTarget) return;
+
+    if (cleanTarget === (myName || '').toLowerCase()) {
+      closeNewChatModal();
+      clearSidebarSearch();
+      await switchRoom(`dm_${myName.toLowerCase()}_${myName.toLowerCase()}`);
+      return;
+    }
+
     try {
       const resp = await fetch('/api/rooms/dm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-        body: JSON.stringify({ targetUsername })
+        body: JSON.stringify({ targetUsername: cleanTarget })
       });
       if (!resp.ok) { showToast('Could not open chat'); return; }
       const data = await resp.json();
@@ -511,17 +576,27 @@
   }
 
   async function switchRoom(roomName) {
-    if (!roomName || roomName === myRoom) return;
+    if (!roomName) return;
     myRoom = roomName;
     localStorage.setItem('bestieChatRoom', roomName);
-    if (els.messages) els.messages.innerHTML = '';
+    
+    // On mobile, transition view to active chat screen
+    document.body.classList.add('in-chat');
+
+    updateActiveHeader();
+    await fetchMessagesForRoom(roomName);
     doSocketJoin();
-    closeSidebar();
+    
     document.querySelectorAll('.dm-row').forEach(r => r.classList.remove('active'));
     document.querySelectorAll('.dm-row').forEach(r => {
       if (r.getAttribute('onclick') && r.getAttribute('onclick').includes(roomName)) r.classList.add('active');
     });
-    updateActiveHeader();
+
+    if (els.msgInput) {
+      setTimeout(() => {
+        autoExpandMsgInput();
+      }, 100);
+    }
   }
 
   function updateActiveHeader() {
@@ -789,7 +864,7 @@
     if (input && input.files) sendPhoto(input.files);
   }
 
-  // ═══════════════════ CALLS ═══════════════════
+  // ═══════════════════ COMPLETE WEBRTC CALLS ═══════════════════
   async function startCall(type) {
     const isSaved = myRoom === `dm_${myName.toLowerCase()}_${myName.toLowerCase()}`;
     if (isSaved) {
@@ -797,37 +872,220 @@
       return;
     }
 
-    const overlay = document.getElementById('callOverlay');
-    if (overlay) overlay.style.display = 'flex';
+    const otherUser = myRoom.replace('dm_', '').split('_').find(p => p.toLowerCase() !== myName.toLowerCase());
+    if (!otherUser) return;
 
     try {
       localStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
         video: type === 'video'
       });
-      const localVid = document.getElementById('callLocalVideo');
-      if (localVid && type === 'video') localVid.srcObject = localStream;
-      if (socket) socket.emit('call-signal', { room: myRoom, type: 'offer', callType: type });
+
+      if (els.callOverlay) els.callOverlay.style.display = 'flex';
+      if (els.callUserName) els.callUserName.textContent = `@${otherUser}`;
+      if (els.callStatus) els.callStatus.textContent = 'Calling...';
+      if (els.callAvatar) els.callAvatar.textContent = getInitial(otherUser);
+
+      if (type === 'video' && els.callRemoteVideoWrap) {
+        els.callRemoteVideoWrap.style.display = 'block';
+        if (els.callLocalVideo) els.callLocalVideo.srcObject = localStream;
+      } else if (els.callRemoteVideoWrap) {
+        els.callRemoteVideoWrap.style.display = 'none';
+      }
+
+      peerConnection = new RTCPeerConnection(RTC_CONFIG);
+      localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+      peerConnection.ontrack = e => {
+        if (els.callRemoteVideo && e.streams[0]) {
+          els.callRemoteVideo.srcObject = e.streams[0];
+        }
+      };
+
+      peerConnection.onicecandidate = e => {
+        if (e.candidate && socket) {
+          socket.emit('call-candidate', { candidate: e.candidate, targetUser: otherUser, room: myRoom });
+        }
+      };
+
+      const offer = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offer);
+
+      if (socket) {
+        socket.emit('call-invite', {
+          type,
+          offer,
+          targetUser: otherUser,
+          room: myRoom
+        });
+      }
     } catch (_) {
-      showToast('Camera / Microphone permission required');
+      showToast('Microphone & Camera permission required for calling');
       endCall();
     }
   }
 
+  function handleCallInvite(data) {
+    if (!data || !data.offer) return;
+    incomingCallData = data;
+
+    const modal = els.incomingCallModal || document.getElementById('incomingCallModal');
+    if (modal) {
+      modal.style.display = 'flex';
+      const nameEl = document.getElementById('incomingCallName');
+      const typeEl = document.getElementById('incomingCallType');
+      const avatarEl = document.getElementById('incomingCallAvatar');
+      if (nameEl) nameEl.textContent = `@${data.from || 'Someone'}`;
+      if (typeEl) typeEl.textContent = data.type === 'video' ? 'Incoming Video Call...' : 'Incoming Voice Call...';
+      if (avatarEl) avatarEl.textContent = getInitial(data.from);
+    }
+    playRingtone();
+  }
+
+  async function acceptCall() {
+    stopRingtone();
+    const modal = els.incomingCallModal || document.getElementById('incomingCallModal');
+    if (modal) modal.style.display = 'none';
+    if (!incomingCallData) return;
+
+    const { offer, type, from, callerSocketId } = incomingCallData;
+
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: type === 'video'
+      });
+
+      if (els.callOverlay) els.callOverlay.style.display = 'flex';
+      if (els.callUserName) els.callUserName.textContent = `@${from}`;
+      if (els.callStatus) els.callStatus.textContent = 'Connected';
+      if (els.callAvatar) els.callAvatar.textContent = getInitial(from);
+
+      if (type === 'video' && els.callRemoteVideoWrap) {
+        els.callRemoteVideoWrap.style.display = 'block';
+        if (els.callLocalVideo) els.callLocalVideo.srcObject = localStream;
+      } else if (els.callRemoteVideoWrap) {
+        els.callRemoteVideoWrap.style.display = 'none';
+      }
+
+      peerConnection = new RTCPeerConnection(RTC_CONFIG);
+      localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+      peerConnection.ontrack = e => {
+        if (els.callRemoteVideo && e.streams[0]) {
+          els.callRemoteVideo.srcObject = e.streams[0];
+        }
+      };
+
+      peerConnection.onicecandidate = e => {
+        if (e.candidate && socket) {
+          socket.emit('call-candidate', { candidate: e.candidate, targetSocketId: callerSocketId, targetUser: from });
+        }
+      };
+
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await peerConnection.createAnswer();
+      await peerConnection.setLocalDescription(answer);
+
+      if (socket) {
+        socket.emit('call-accept', {
+          answer,
+          callerSocketId,
+          targetUser: from
+        });
+      }
+
+      startCallTimer();
+    } catch (_) {
+      showToast('Media permissions required');
+      declineCall();
+    }
+  }
+
+  function declineCall() {
+    stopRingtone();
+    const modal = els.incomingCallModal || document.getElementById('incomingCallModal');
+    if (modal) modal.style.display = 'none';
+    if (incomingCallData && socket) {
+      socket.emit('call-decline', {
+        callerSocketId: incomingCallData.callerSocketId,
+        targetUser: incomingCallData.from
+      });
+    }
+    incomingCallData = null;
+  }
+
+  async function handleCallAccept(data) {
+    if (!peerConnection || !data || !data.answer) return;
+    try {
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+      if (els.callStatus) els.callStatus.textContent = 'Connected';
+      startCallTimer();
+    } catch (_) { /* ignore */ }
+  }
+
+  function handleCallDecline() {
+    showToast('Call declined');
+    endCall();
+  }
+
+  async function handleCallCandidate(data) {
+    if (peerConnection && data && data.candidate) {
+      try {
+        await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+      } catch (_) { /* ignore */ }
+    }
+  }
+
+  function handleCallHangup() {
+    showToast('Call ended');
+    cleanupCall();
+  }
+
   function endCall() {
+    if (socket && myRoom) {
+      socket.emit('call-hangup', { room: myRoom });
+    }
+    cleanupCall();
+  }
+
+  function cleanupCall() {
+    stopRingtone();
+    if (callTimerInterval) clearInterval(callTimerInterval);
+    callSeconds = 0;
+
     if (localStream) {
       localStream.getTracks().forEach(t => t.stop());
       localStream = null;
     }
-    const overlay = document.getElementById('callOverlay');
-    if (overlay) overlay.style.display = 'none';
-    if (socket) socket.emit('call-signal', { room: myRoom, type: 'hangup' });
+    if (peerConnection) {
+      peerConnection.close();
+      peerConnection = null;
+    }
+
+    if (els.callOverlay) els.callOverlay.style.display = 'none';
+    if (els.callLocalVideo) els.callLocalVideo.srcObject = null;
+    if (els.callRemoteVideo) els.callRemoteVideo.srcObject = null;
+    incomingCallData = null;
+  }
+
+  function startCallTimer() {
+    if (callTimerInterval) clearInterval(callTimerInterval);
+    callSeconds = 0;
+    callTimerInterval = setInterval(() => {
+      callSeconds++;
+      const m = Math.floor(callSeconds / 60);
+      const s = callSeconds % 60;
+      if (els.callStatus) els.callStatus.textContent = `Connected ${m}:${s < 10 ? '0' : ''}${s}`;
+    }, 1000);
   }
 
   function toggleMuteAudio() {
     if (!localStream) return;
     isMuted = !isMuted;
     localStream.getAudioTracks().forEach(t => t.enabled = !isMuted);
+    const btn = document.getElementById('muteAudioBtn');
+    if (btn) btn.textContent = isMuted ? 'Unmute' : 'Mute';
     showToast(isMuted ? 'Muted' : 'Unmuted');
   }
 
@@ -835,15 +1093,9 @@
     if (!localStream) return;
     isCameraOff = !isCameraOff;
     localStream.getVideoTracks().forEach(t => t.enabled = !isCameraOff);
+    const btn = document.getElementById('toggleCamBtn');
+    if (btn) btn.textContent = isCameraOff ? 'Camera On' : 'Camera Off';
     showToast(isCameraOff ? 'Camera Off' : 'Camera On');
-  }
-
-  function handleCallSignal(data) {
-    if (!data) return;
-    if (data.type === 'hangup') {
-      endCall();
-      showToast('Call ended');
-    }
   }
 
   // ═══════════════════ MODALS & HELPERS ═══════════════════
@@ -852,7 +1104,7 @@
   }
 
   function closeSidebar() {
-    document.body.classList.add('in-chat');
+    document.body.classList.remove('in-chat');
   }
 
   function openNewChatModal() {
@@ -1048,6 +1300,25 @@
     } catch (_) { /* ignore */ }
   }
 
+  function playRingtone() {
+    try {
+      if (!ringtoneAudio) {
+        ringtoneAudio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+        ringtoneAudio.loop = true;
+      }
+      ringtoneAudio.play().catch(() => {});
+    } catch (_) { /* ignore */ }
+  }
+
+  function stopRingtone() {
+    if (ringtoneAudio) {
+      try {
+        ringtoneAudio.pause();
+        ringtoneAudio.currentTime = 0;
+      } catch (_) { /* ignore */ }
+    }
+  }
+
   function showToast(msg) {
     const container = els.toastContainer || document.getElementById('toastContainer');
     if (!container) return;
@@ -1100,7 +1371,7 @@
     toggleAttachMenu, toggleEmojiPicker, insertEmoji,
     openProfile, closeProfile, saveProfile,
     openLightbox, closeLightbox, cancelReply,
-    startCall, endCall, toggleMuteAudio, toggleCamera,
+    startCall, acceptCall, declineCall, endCall, toggleMuteAudio, toggleCamera,
     playAudio,
     toggleSound: () => showToast('Sound active'),
     toggleTheme: () => showToast('Black & White monochrome active')
