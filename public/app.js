@@ -137,10 +137,19 @@
       els.msgInput.addEventListener('input', () => {
         autoExpandMsgInput();
         updateSendBtnIcon();
-        if (socket && socket.connected) socket.emit('typing');
+        if (socket && socket.connected) socket.emit('typing', { room: myRoom, user: myName });
       });
       els.msgInput.addEventListener('focus', () => {
         setTimeout(scrollBottom, 250);
+      });
+    }
+
+    if (els.messages) {
+      els.messages.addEventListener('scroll', () => {
+        const btn = document.getElementById('scrollBottomBtn');
+        if (!btn) return;
+        const distFromBottom = els.messages.scrollHeight - els.messages.scrollTop - els.messages.clientHeight;
+        btn.style.display = distFromBottom > 160 ? 'flex' : 'none';
       });
     }
 
@@ -331,17 +340,30 @@
     });
 
     socket.on('message', msg => {
+      hideTypingIndicator();
       if (msg.room && msg.room !== myRoom) {
         loadChatList();
         if (msg.user !== myName) playNotificationTone();
         return;
       }
+      // Remove empty intro card if exists
+      const intro = els.messages ? els.messages.querySelector('.chat-intro-card') : null;
+      if (intro) intro.remove();
+
       renderMessage(msg, true);
       scrollBottom();
       loadChatList();
       if (msg.user !== myName) {
         playNotificationTone();
         socket.emit('mark-read', { messageId: msg.id });
+      }
+    });
+
+    socket.on('typing', (data) => {
+      if (typeof data === 'string') {
+        if (data !== myName && data !== myProfile.nickname) showTypingIndicator();
+      } else if (data && data.user !== myName) {
+        showTypingIndicator();
       }
     });
 
@@ -394,12 +416,34 @@
         els.messages.innerHTML = '';
         if (Array.isArray(messages) && messages.length > 0) {
           messages.forEach(m => renderMessage(m, false));
+        } else {
+          renderConversationIntro(roomName);
         }
         scrollBottom();
       }
     } catch (err) {
       console.error('fetchMessagesForRoom error:', err);
     }
+  }
+
+  function renderConversationIntro(roomName) {
+    if (!els.messages) return;
+    const isSaved = roomName === `dm_${myName.toLowerCase()}_${myName.toLowerCase()}`;
+    const otherUser = isSaved ? 'Note to Self' : (roomName.replace('dm_', '').split('_').find(p => p.toLowerCase() !== myName.toLowerCase()) || 'User');
+    const avatarChar = isSaved ? 'N' : getInitial(otherUser);
+    const title = isSaved ? 'Note to Self' : `@${otherUser}`;
+    const sub = isSaved
+      ? 'Your personal cloud notebook. Notes, links, and documents saved here are encrypted and accessible across all your devices.'
+      : 'End-to-end encrypted direct messaging. All messages and media sent here remain private between you two.';
+
+    const intro = document.createElement('div');
+    intro.className = 'chat-intro-card';
+    intro.innerHTML = `
+      <div class="chat-intro-avatar">${avatarChar}</div>
+      <div class="chat-intro-title">${escapeHtml(title)}</div>
+      <div class="chat-intro-sub">${escapeHtml(sub)}</div>
+    `;
+    els.messages.appendChild(intro);
   }
 
   function filterChatList(filterType, btn) {
@@ -695,7 +739,7 @@
     const timeStr = formatTime(msg.time || Date.now());
     const tickHtml = isMe ? '<span class="msg-status-ticks"> ✓✓</span>' : '';
 
-    wrap.innerHTML = `<div class="msg ${isMe ? 'me' : 'them'}">
+    wrap.innerHTML = `<div class="msg ${isMe ? 'me' : 'them'}" ondblclick="BestieChat.replyToMessage('${escapeHtml(msg.id || '')}', '${escapeHtml(msg.user || '')}', '${escapeHtml(msg.text || 'Photo')}')" title="Double click to reply">
       ${contentHtml}
       <div class="bubble-meta">
         <span>${timeStr}</span>
@@ -1259,6 +1303,15 @@
     if (lb) lb.style.display = 'none';
   }
 
+  function replyToMessage(id, user, text) {
+    replyingTo = { id, user, text };
+    if (els.replyBar) {
+      els.replyBar.style.display = 'flex';
+      if (els.replyPreviewText) els.replyPreviewText.textContent = `${user}: ${text.slice(0, 35)}`;
+    }
+    if (els.msgInput) els.msgInput.focus();
+  }
+
   function cancelReply() {
     replyingTo = null;
     if (els.replyBar) els.replyBar.style.display = 'none';
@@ -1329,10 +1382,34 @@
     setTimeout(() => toast.remove(), 2600);
   }
 
+  let _typingTimer = null;
+  function showTypingIndicator() {
+    clearTimeout(_typingTimer);
+    if (!els.messages) return;
+    let bubble = document.getElementById('chatTypingBubble');
+    if (!bubble) {
+      bubble = document.createElement('div');
+      bubble.id = 'chatTypingBubble';
+      bubble.className = 'typing-bubble';
+      bubble.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
+      els.messages.appendChild(bubble);
+      scrollBottom();
+    }
+    _typingTimer = setTimeout(hideTypingIndicator, 2500);
+  }
+
+  function hideTypingIndicator() {
+    clearTimeout(_typingTimer);
+    const bubble = document.getElementById('chatTypingBubble');
+    if (bubble) bubble.remove();
+  }
+
   function scrollBottom() {
     if (els.messages) {
       els.messages.scrollTop = els.messages.scrollHeight;
     }
+    const btn = document.getElementById('scrollBottomBtn');
+    if (btn) btn.style.display = 'none';
   }
 
   function getInitial(str) {
@@ -1370,7 +1447,7 @@
     sendPhoto, uploadDocumentFile, uploadCameraFile,
     toggleAttachMenu, toggleEmojiPicker, insertEmoji,
     openProfile, closeProfile, saveProfile,
-    openLightbox, closeLightbox, cancelReply,
+    openLightbox, closeLightbox, cancelReply, replyToMessage,
     startCall, acceptCall, declineCall, endCall, toggleMuteAudio, toggleCamera,
     playAudio,
     toggleSound: () => showToast('Sound active'),
