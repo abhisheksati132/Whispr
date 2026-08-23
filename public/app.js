@@ -1,4 +1,3 @@
-/* global io */
 (() => {
   // ═══════════════════ CONSTANTS ═══════════════════
   const ROOM_LABELS  = { 'just-us': 'Just Us 💜', daily: 'Daily Check-In ☀️', cute: 'Sweet Notes 💕' };
@@ -115,7 +114,7 @@
   function saveOutboxQueue() {
     try {
       localStorage.setItem('bestieOutboxQueue', JSON.stringify(outboxQueue));
-    } catch (e) {}
+    } catch { /* ignore */ }
   }
   function flushOutboxQueue() {
     if (!socket || !socket.connected) return;
@@ -336,7 +335,7 @@
 
   function triggerHaptic(ms = 10) {
     if ('vibrate' in navigator) {
-      try { navigator.vibrate(ms); } catch (_) {}
+      try { navigator.vibrate(ms); } catch { /* ignore */ }
     }
   }
 
@@ -509,7 +508,7 @@
     const tickHtml = mine ? (msg.isPending ? `<span class="msg-status-ticks pending" id="tick-${msg.id}">🕒</span>` : `<span class="msg-status-ticks ${tickState}" id="tick-${msg.id}">${tickSvg}</span>`) : '';
     const bubbleMeta = `<span class="bubble-meta">${starHtml}<span class="bubble-time">${time}</span>${tickHtml}</span>`;
 
-    let body = '';
+    let body;
 
     if (msg.deleted) {
       body = `<div class="msg deleted ${mine ? 'me' : 'them'}">🗑️ Message deleted ${bubbleMeta}</div>`;
@@ -857,7 +856,7 @@
         const h = Math.floor((remaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         const m = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
         const s = Math.floor((remaining % (1000 * 60)) / 1000);
-        let timeStr = '';
+        let timeStr;
         if (d > 0) timeStr = `${d}d ${h}h ${m}m`;
         else if (h > 0) timeStr = `${h}h ${m}m ${s}s`;
         else timeStr = `${m}m ${s}s`;
@@ -1061,9 +1060,7 @@
     const hNameEl     = document.getElementById('headerBestieName');
     const hStatusEl   = document.getElementById('headerBestieStatus');
 
-    let bestieDisplay = 'Our Space';
-    let bestieAvatar  = '✨';
-    let bestieStatus  = 'Waiting for bestie…';
+    let bestieDisplay, bestieAvatar, bestieStatus;
     let isOnline      = false;
 
     const cleanMyName = (myName || '').toLowerCase();
@@ -1184,10 +1181,10 @@
           navigator.serviceWorker.ready.then((reg) => {
             reg.showNotification(title, options);
           }).catch(() => {
-            try { new Notification(title, options); } catch {}
+            try { new Notification(title, options); } catch { /* ignore */ }
           });
         } else {
-          try { new Notification(title, options); } catch {}
+          try { new Notification(title, options); } catch { /* ignore */ }
         }
       }
     } catch (err) {
@@ -1538,7 +1535,7 @@
     try {
       const res = await fetch('/api/rooms/blocks', { headers: { 'Authorization': `Bearer ${authToken}` } });
       if (res.ok) { blockedUsers = await res.json(); }
-    } catch (_) {}
+    } catch { /* ignore */ }
 
     await initOfflineDB();
     loadCachedMessagesFromOfflineDB(myRoom).then(msgs => {
@@ -1588,7 +1585,7 @@
       authToken = savedToken || '';
       const profileStr = localStorage.getItem('bestieChatProfile');
       if (profileStr) {
-        try { myProfile = { ...myProfile, ...JSON.parse(profileStr) }; } catch(e){}
+        try { myProfile = { ...myProfile, ...JSON.parse(profileStr) }; } catch { /* ignore */ }
       }
       
       myRoom = localStorage.getItem('bestieChatRoom') || `dm_${myName.toLowerCase()}_${myName.toLowerCase()}`;
@@ -1654,7 +1651,7 @@
     localStorage.removeItem('bestieChatRoom');
     localStorage.removeItem('bestieChatNickname');
     authToken = '';
-    if (socket) { try { socket.disconnect(); } catch (_) {} socket = null; }
+    if (socket) { try { socket.disconnect(); } catch { /* ignore */ } socket = null; }
     myName = ''; myRoom = ''; joined = false;
     if (els.nameInput) els.nameInput.value = '';
     const pinInput = document.getElementById('pinInput');
@@ -2027,7 +2024,7 @@
         }
       }
       draw();
-    } catch (_) {}
+    } catch { /* ignore */ }
   }
 
   function stopLiveVisualizer() {
@@ -2128,7 +2125,7 @@
     if (!player) return;
     const rates = [1, 1.5, 2];
     const currentText = btn.textContent.trim();
-    let nextIdx = 0;
+    let nextIdx;
     if (currentText === '1x') nextIdx = 1;
     else if (currentText === '1.5x') nextIdx = 2;
     else nextIdx = 0;
@@ -2473,7 +2470,7 @@
     if (!grid) return;
     grid.innerHTML = '';
 
-    let items = [];
+    let items;
     if (type === 'photos') {
       items = allMessagesCached.filter(m => !m.deleted && (m.type === 'image' || m.type === 'media-group' || (m.url && m.url.match(/\.(jpg|jpeg|png|webp|gif)/i))));
       if (!items.length) {
@@ -2770,7 +2767,11 @@
 
   // ═══════════════════ SOCKET.IO ═══════════════════
   function initSocket() {
-    if (socket) return;
+    if (socket) {
+      if (authToken) socket.auth = { token: authToken };
+      if (!socket.connected) socket.connect();
+      return;
+    }
     if (typeof io === 'undefined') {
       console.error('Socket.io library not loaded. Is the server running?');
       setConnected(false);
@@ -3870,56 +3871,6 @@
     }
   }
 
-  // ═══════════════════ BESTIE PROFILE VIEWER ═══════════════════
-  function openBestieProfile(targetUser) {
-    const friendName = targetUser || bestieName || 'Bestie';
-    const profile = getProfile(friendName);
-
-    const titleEl = document.getElementById('bestieProfileCardTitle');
-    const avatarEl = document.getElementById('bestieProfileAvatarDisplay');
-    const nameEl = document.getElementById('bestieProfileNameDisplay');
-    const statusEl = document.getElementById('bestieProfileStatusDisplay');
-    const feelingRow = document.getElementById('bestieProfileFeelingRow');
-    const feelingText = document.getElementById('bestieProfileFeelingText');
-    const dotEl = document.getElementById('bestieProfileOnlineDot');
-    const msgsEl = document.getElementById('bestieStatMsgs');
-    const streakEl = document.getElementById('bestieStatStreak');
-
-    if (titleEl) titleEl.textContent = `${friendName}'s Profile 👤`;
-    if (avatarEl) avatarEl.textContent = profile.avatar || '✨';
-    if (nameEl) nameEl.textContent = friendName;
-    if (statusEl) statusEl.textContent = profile.statusBio ? `"${profile.statusBio}"` : '"No bio set yet ✨"';
-    
-    const theirFeel = feelings[friendName];
-    if (feelingRow && feelingText) {
-      if (theirFeel && theirFeel.label) {
-        feelingRow.style.display = 'flex';
-        feelingText.textContent = `${theirFeel.emoji || ''} ${theirFeel.label}`;
-      } else {
-        feelingRow.style.display = 'none';
-      }
-    }
-
-    if (dotEl) {
-      const isOnline = Boolean(presenceUsers && presenceUsers.find(u => u.name === friendName));
-      dotEl.style.background = isOnline ? '#388E3C' : '#8e8e93';
-    }
-
-    if (msgsEl) {
-      const count = allMessagesCached.filter(m => m.user === friendName).length;
-      msgsEl.textContent = count;
-    }
-    if (streakEl) {
-      streakEl.textContent = `🔥 ${currentStreakDays || 0}`;
-    }
-
-    showModal('bestieProfileModal');
-  }
-
-  function closeBestieProfile() {
-    hideModal('bestieProfileModal');
-  }
-
   let bestieProfileTarget = null;
   function openBestieProfile(targetUser) {
     bestieProfileTarget = targetUser || bestieName || 'Bestie';
@@ -4883,8 +4834,8 @@
     if (!val) return;
     
     // Parse Video ID from YouTube link
-    let vidId = '';
-    const reg = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    let vidId;
+    const reg = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
     const match = val.match(reg);
     if (match && match[2].length === 11) vidId = match[2];
     else vidId = val;
@@ -5170,7 +5121,7 @@
 
   function stopSynthesizedLofi() {
     lofiOscillators.forEach(osc => {
-      try { osc.stop(); osc.disconnect(); } catch(e){}
+      try { osc.stop(); osc.disconnect(); } catch { /* ignore */ }
     });
     lofiOscillators = [];
   }
@@ -5562,7 +5513,7 @@
           renderDailyQuestionCard({ question: data.question, answers: {}, revealed: false });
         }
       }
-    } catch (_) {}
+    } catch { /* ignore */ }
   }
 
   function updateScoreboardDisplay(scores) {
@@ -5806,7 +5757,7 @@
     const audio = document.getElementById(audioId);
     if (!audio) return;
     const current = audio.playbackRate || 1;
-    let next = 1;
+    let next;
     if (current === 1) next = 1.5;
     else if (current === 1.5) next = 2;
     else next = 1;
@@ -6135,11 +6086,11 @@
       const req = indexedDB.open('bestie-store-v2', 1);
       req.onupgradeneeded = e => {
         const db = e.target.result;
-        try { db.createObjectStore('queue', { autoIncrement: true }); } catch(_) {}
+        try { db.createObjectStore('queue', { autoIncrement: true }); } catch { /* ignore */ }
         try {
           const msgStore = db.createObjectStore('messages', { keyPath: 'id' });
           msgStore.createIndex('room', 'room', { unique: false });
-        } catch(_) {}
+        } catch { /* ignore */ }
       };
       req.onsuccess = e => { offlineDB = e.target.result; resolve(); };
       req.onerror  = () => resolve();
@@ -6292,7 +6243,7 @@
     wrap.appendChild(bubble);
     setTimeout(() => bubble.remove(), 800);
     react(msgId, '❤️');
-    if ('vibrate' in navigator) { try { navigator.vibrate(30); } catch(e){} }
+    if ('vibrate' in navigator) { try { navigator.vibrate(30); } catch { /* ignore */ } }
   }
 
   // ── Starred Messages ──

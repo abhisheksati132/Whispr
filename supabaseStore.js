@@ -410,7 +410,7 @@ async function findMessage(roomName, messageId) {
         .single();
 
       if (!error && data) return dbMsgToJs(data);
-    } catch (err) {
+    } catch {
       return null;
     }
   }
@@ -499,7 +499,7 @@ async function getProfile(username) {
         profileCache.set(clean, p);
         return { ...p };
       }
-    } catch (_) {}
+    } catch { /* ignore */ }
   }
   if (memUsers.has(clean)) {
     const u = memUsers.get(clean);
@@ -534,7 +534,7 @@ async function updateProfile(username, updates) {
       if (updates.statusBio !== undefined) dbUpdates.status_bio = updates.statusBio;
       if (updates.nickname !== undefined)  dbUpdates.nickname = updates.nickname;
       await supabase.from('users').update(dbUpdates).eq('username', clean);
-    } catch (_) {}
+    } catch { /* ignore */ }
   }
   return updated;
 }
@@ -709,7 +709,7 @@ function saveUpload(buffer, ext, mime = 'application/octet-stream') {
   const filename = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}.${ext}`;
   try {
     fs.writeFileSync(path.join(dir, filename), buffer);
-  } catch (_) {}
+  } catch { /* ignore */ }
 
   if (isDbReady()) {
     const base64Data = buffer.toString('base64');
@@ -755,7 +755,7 @@ async function savePushSub(username, subscription) {
       keys: subscription.keys || {},
       created_at: Date.now()
     }, { onConflict: 'endpoint' });
-  } catch (_) {}
+  } catch { /* ignore */ }
 }
 
 async function deletePushSub(endpoint) {
@@ -765,7 +765,7 @@ async function deletePushSub(endpoint) {
   }
   try {
     await supabase.from('push_subs').delete().eq('endpoint', endpoint);
-  } catch (_) {}
+  } catch { /* ignore */ }
 }
 
 async function getPushSubs() {
@@ -796,7 +796,7 @@ async function cleanExpiredRooms() {
         await supabase.from('rooms').delete().eq('name', r.name);
       }
     }
-  } catch (_) {}
+  } catch { /* ignore */ }
 }
 
 async function cleanDisappearingMessages() {
@@ -817,7 +817,7 @@ async function cleanDisappearingMessages() {
           .lt('time', cutoff);
       }
     }
-  } catch (_) {}
+  } catch { /* ignore */ }
 }
 
 // ── Message receipts & stars ─────────────────────────────────────────────────
@@ -987,11 +987,10 @@ async function listUserRooms(username) {
       if (parts && parts.length) {
         roomNames = parts.map(p => p.room_name);
       }
-    } catch (_) {}
+    } catch { /* ignore */ }
   }
 
   // Fallback to old JSONB filtering if join table is empty (during migration)
-  let allRooms = [];
   if (roomNames.length === 0 && isDbReady()) {
     try {
       const { data: rooms } = await supabase
@@ -1000,10 +999,10 @@ async function listUserRooms(username) {
         .order('last_activity', { ascending: false })
         .limit(60);
       if (rooms) {
-        allRooms = rooms.map(dbRoomToJs).filter(r => (r.participants && r.participants.map(p => String(p).toLowerCase()).includes(clean)));
+        const allRooms = rooms.map(dbRoomToJs).filter(r => (r.participants && r.participants.map(p => String(p).toLowerCase()).includes(clean)));
         roomNames = allRooms.map(r => r.name);
       }
-    } catch (_) {}
+    } catch { /* ignore */ }
   }
 
   // Merge with memRooms
@@ -1052,7 +1051,7 @@ async function listUserRooms(username) {
           .order('time', { ascending: false })
           .limit(1);
         if (lastMsgs && lastMsgs[0]) lastMsg = dbMsgToJs(lastMsgs[0]);
-      } catch (_) {}
+      } catch { /* ignore */ }
     }
 
     const otherParticipant = isSaved
@@ -1316,7 +1315,7 @@ async function revokeSession(username, sessionId) {
       .eq('id', sessionId)
       .eq('username', username.toLowerCase())
       .catch(() => {});
-  } catch (_) {}
+  } catch { /* ignore */ }
 }
 
 module.exports = {
@@ -1339,5 +1338,6 @@ module.exports = {
   listUserRooms, searchUsers, getOrCreateDMRoom, getRoomMessagesPaginated,
   isUserBlocked, getBlockedUsers, blockUser, unblockUser,
   createSession, getSessions, revokeSession,
-  resetForTests
+  resetForTests,
+  supabase
 };

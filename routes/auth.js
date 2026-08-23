@@ -3,7 +3,6 @@ const express = require('express');
 const router  = express.Router();
 const bcrypt  = require('bcryptjs');
 const jwt     = require('jsonwebtoken');
-const crypto  = require('crypto');
 const store   = require('../supabaseStore');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-me';
@@ -12,19 +11,9 @@ const authLimiter = require('express-rate-limit')({ windowMs: 15 * 60 * 1000, ma
 router.use(authLimiter);
 
 function createSession(username, req) {
-  const sessionId = crypto.randomUUID();
   const userAgent = req.headers['user-agent'] || '';
   const ip = req.headers['x-forwarded-for'] || req.connection?.remoteAddress || '';
-  store.supabase.from('user_sessions').upsert({
-    id: sessionId,
-    username: username.toLowerCase(),
-    user_agent: userAgent.slice(0, 200),
-    ip: String(ip).slice(0, 45),
-    created_at: Date.now(),
-    last_active: Date.now(),
-    revoked: false
-  }).catch(() => {});
-  return sessionId;
+  return store.createSession(username, userAgent, ip);
 }
 
 // POST /api/auth/register — create new account
@@ -148,7 +137,7 @@ router.get('/me', async (req, res) => {
       statusBio: user.statusBio || '',
       nickname: user.nickname || user.username
     });
-  } catch (err) {
+  } catch {
     res.status(401).json({ error: 'Session expired. Please sign in again.' });
   }
 });
@@ -169,7 +158,7 @@ router.post('/profile', async (req, res) => {
 
     const updated = await store.updateProfile(decoded.username, updates);
     res.json(updated);
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: 'Failed to update profile' });
   }
 });
@@ -181,21 +170,8 @@ router.get('/sessions', async (req, res) => {
     if (!token) return res.status(401).json({ error: 'No token provided' });
     const decoded = jwt.verify(token, JWT_SECRET);
 
-    const { data, error } = await store.supabase
-      .from('user_sessions')
-      .select('id, user_agent, ip, created_at, last_active')
-      .eq('username', decoded.username)
-      .eq('revoked', false)
-      .order('last_active', { ascending: false });
-
-    if (error) throw error;
-    res.json((data || []).map(s => ({
-      id: s.id,
-      userAgent: s.user_agent,
-      ip: s.ip,
-      createdAt: s.created_at,
-      lastActive: s.last_active
-    })));
+    const sessions = await store.getSessions(decoded.username);
+    res.json(sessions || []);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -209,11 +185,7 @@ router.delete('/sessions/:sessionId', async (req, res) => {
     const decoded = jwt.verify(token, JWT_SECRET);
 
     const { sessionId } = req.params;
-    await store.supabase.from('user_sessions')
-      .update({ revoked: true })
-      .eq('id', sessionId)
-      .eq('username', decoded.username)
-      .catch(() => {});
+    await store.revokeSession(decoded.username, sessionId);
 
     res.json({ ok: true });
   } catch (err) {
