@@ -1898,3 +1898,139 @@ button:active, .dm-row:active, .icon-btn:active, .filter-pill:active, .pill-btn:
 
 .lightbox-nav-prev { left: 24px; }
 .lightbox-nav-next { right: 24px; }
+
+/* ═══════════════════ 15. 3-PANE NAVIGATION RAIL & DECLUTTERED MENU ═══════════════════ */
+/* Primary Navigation Rail (56px Far Left) */
+#navRail {
+  width: 58px;
+  min-width: 58px;
+  height: 100%;
+  background: rgba(8, 8, 12, 0.85);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-right: var(--glass-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  z-index: 30;
+  box-shadow: 2px 0 16px rgba(0, 0, 0, 0.4);
+}
+
+.nav-rail-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.nav-rail-brand {
+  margin-bottom: 6px;
+  cursor: pointer;
+}
+
+.nav-rail-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.nav-rail-btn:hover {
+  background: var(--glass-surface-hover);
+  color: #ffffff;
+}
+
+.nav-rail-btn.active {
+  background: #ffffff;
+  color: #000000;
+  box-shadow: 0 2px 10px rgba(255, 255, 255, 0.25);
+}
+
+.nav-rail-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.nav-rail-user {
+  position: relative;
+  cursor: pointer;
+}
+
+.rail-online-dot {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  background: #ffffff;
+  border: 2px solid #000000;
+  border-radius: var(--radius-pill);
+}
+
+.sidebar-brand-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.03em;
+}
+
+/* Categorized Section Headers */
+.sidebar-section-title {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-dim);
+  padding: 14px 14px 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  user-select: none;
+}
+
+/* More Options Dropdown */
+#chatMoreMenu {
+  position: absolute;
+  top: 58px;
+  right: 18px;
+  background: var(--glass-panel);
+  backdrop-filter: var(--glass-blur-heavy);
+  -webkit-backdrop-filter: var(--glass-blur-heavy);
+  border: var(--glass-border);
+  border-radius: var(--radius-md);
+  padding: 6px;
+  box-shadow: var(--glass-shadow-lg), var(--glass-inset);
+  z-index: 200;
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 220px;
+}
+
+.more-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 13px;
+  color: #ffffff;
+  transition: var(--transition);
+}
+
+.more-menu-item:hover {
+  background: var(--glass-surface-hover);
+}
+
+/* Mobile Rail Adjustments */
+@media (max-width: 768px) {
+  #navRail {
+    display: none;
+  }
+}
