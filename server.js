@@ -1216,7 +1216,7 @@ if (require.main === module) {
     });
   }
   const PORT = process.env.PORT || 3000;
-  server.listen(PORT, '0.0.0.0', () => console.warn(`✨ Whispr running on port ${PORT}`));
+  server.listen(PORT, '0.0.0.0', () => console.warn(`✨ tahc running on port ${PORT}`));
 }
 
 // ── Process Lifecycle & Graceful Shutdown ─────────────────────────────────────

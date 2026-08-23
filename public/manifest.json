@@ -1,8 +1,8 @@
 {
   "id": "https://chat-jh59.onrender.com/",
-  "name": "Whispr",
-  "short_name": "Whispr",
-  "description": "Private, encrypted real-time chat space.",
+  "name": "tahc",
+  "short_name": "tahc",
+  "description": "Simple, fast, private messaging in black and white.",
   "lang": "en",
   "dir": "ltr",
   "start_url": "/",
@@ -23,7 +23,10 @@
   "background_color": "#FAF9F5",
   "theme_color": "#FAF9F5",
   "orientation": "portrait-primary",
-  "categories": ["social", "communication"],
+  "categories": [
+    "social",
+    "communication"
+  ],
   "icons": [
     {
       "src": "/icon-192.png",
@@ -82,7 +85,13 @@
     {
       "action": "/",
       "accept": {
-        "image/*": [".jpg", ".jpeg", ".png", ".webp", ".gif"]
+        "image/*": [
+          ".jpg",
+          ".jpeg",
+          ".png",
+          ".webp",
+          ".gif"
+        ]
       }
     }
   ],

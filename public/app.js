@@ -1,5 +1,5 @@
 /**
- * WHISPR — Pure Black & White Minimalist & Beginner-Friendly Client
+ * TAHC — Pure Black & White Minimalist & Beginner-Friendly Client
  */
 (() => {
   'use strict';
@@ -245,7 +245,7 @@
     initSocket();
     doSocketJoin();
     loadChatList();
-    showToast(`Welcome, ${myProfile.nickname}!`);
+    showToast(`Welcome to tahc, ${myProfile.nickname}!`);
   }
 
   function logout() {
