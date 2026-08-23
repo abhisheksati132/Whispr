@@ -801,6 +801,39 @@ io.on('connection', (socket) => {
     if (username) await updatePresence(username, socket.id);
   });
 
+  // ── Custom User Status (e.g. ☕ In a meeting) ──────────────────────────────
+  socket.on('update-custom-status', async ({ status } = {}) => {
+    try {
+      if (!username) return;
+      const safe = normalizeText(status || '');
+      await mStore.updateProfile(username, { bio: safe });
+      io.emit('user-status-updated', { user: username, status: safe });
+    } catch (err) { console.error('update-custom-status error:', err); }
+  });
+
+  // ── Create Group Chat / Channel ───────────────────────────────────────────
+  socket.on('create-group', async ({ groupName, members, topic } = {}) => {
+    try {
+      if (!username || !groupName) return;
+      const cleanGroupName = normalizeText(groupName);
+      if (!cleanGroupName) return;
+      const groupRoom = 'group_' + cleanGroupName.toLowerCase().replace(/[^a-z0-9_-]/g, '') + '_' + Date.now().toString(36);
+      const allMembers = Array.from(new Set([username.toLowerCase(), ...(Array.isArray(members) ? members.map(m => (m || '').toLowerCase()) : [])]));
+      
+      await mStore.setRoomMeta(groupRoom, {
+        displayName: cleanGroupName,
+        isGroup: true,
+        topic: topic || '',
+        admin: username.toLowerCase(),
+        members: allMembers,
+        createdAt: Date.now()
+      });
+
+      // Notify all involved users
+      io.emit('group-created', { room: groupRoom, name: cleanGroupName, members: allMembers, topic: topic || '' });
+    } catch (err) { console.error('create-group error:', err); }
+  });
+
   // ── Star / Bookmark message ───────────────────────────────────────────────
   socket.on('star-message', async ({ messageId, starred } = {}) => {
     try {

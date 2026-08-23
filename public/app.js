@@ -141,7 +141,7 @@
     initIndexedDB();
     cacheElements();
     buildEmojiPicker();
-    setupEventListeners();
+    setupEventListeners(); initNotifications();
     setupMobileViewport();
     setupDragAndDrop();
     setupClipboardPaste();
@@ -250,6 +250,7 @@
         autoExpandMsgInput();
         updateSendBtnIcon();
         handleSlashInput();
+        handleMentionInput();
         if (socket && socket.connected) socket.emit('typing', { room: myRoom, user: myName });
       });
       els.msgInput.addEventListener('focus', () => {
@@ -580,6 +581,7 @@
 
     socket.on('message', msg => {
       hideTypingIndicator();
+      triggerBackgroundNotification(msg);
       idbSaveMessages(msg.room || myRoom, [msg]);
 
       if (msg.room && msg.room !== myRoom) {
@@ -1105,6 +1107,12 @@
     wrap.setAttribute('data-msg-user', (msg.user || '').toLowerCase());
     wrap.setAttribute('data-msg-time', msg.time || Date.now());
 
+    // Forwarded attribution
+    let forwardedHtml = '';
+    if (msg.forwardedFrom) {
+      forwardedHtml = `<div class="forwarded-tag">↪️ Forwarded from @${escapeHtml(msg.forwardedFrom)}</div>`;
+    }
+
     // Message Grouping / Stacking with previous message
     const prevWrap = els.messages.lastElementChild;
     if (prevWrap && prevWrap.classList.contains('msg-wrap')) {
@@ -1121,7 +1129,7 @@
       }
     }
 
-    let contentHtml = '';
+    let contentHtml = forwardedHtml;
 
     // Quoted reply
     if (msg.replyTo) {
@@ -1173,6 +1181,7 @@
       <div class="msg-action-bar">
         <button type="button" class="msg-action-btn" onclick="BestieChat.replyToMessage('${escapeHtml(msg.id || '')}', '${escapeHtml(msg.user || '')}', '${escapeHtml(msg.text || 'Media')}')" title="Reply">↩️</button>
         <button type="button" class="msg-action-btn" onclick="BestieChat.copyMessageText('${escapeHtml(msg.text || msg.url || '')}')" title="Copy">📋</button>
+        <button type="button" class="msg-action-btn" onclick="BestieChat.openForwardModal('${escapeHtml(msg.id)}')" title="Forward">↪️</button>
         <button type="button" class="msg-action-btn" onclick="BestieChat.openReminderModal('${escapeHtml(msg.id)}', '${escapeHtml(msg.text || 'Message')}')" title="Remind Me">🔔</button>
         ${(isMe && msg.type === 'text') ? `<button type="button" class="msg-action-btn" onclick="BestieChat.openEditModal('${escapeHtml(msg.id)}', '${escapeHtml(msg.text || '')}')" title="Edit">✏️</button>` : ''}
         <button type="button" class="msg-action-btn" onclick="BestieChat.pinMessage('${escapeHtml(msg.id)}')" title="Pin">📌</button>
@@ -1182,6 +1191,14 @@
     `;
 
     els.messages.appendChild(wrap);
+
+    // Auto-fetch link preview if message contains URL
+    if (msg.text && /https?:\/\/[^\s]+/.test(msg.text)) {
+      const match = msg.text.match(/(https?:\/\/[^\s]+)/);
+      if (match && match[1]) {
+        fetchAndAttachLinkPreview(match[1], wrap.querySelector('.msg'));
+      }
+    }
   }
 
   function autoExpandMsgInput() {
@@ -1583,6 +1600,7 @@
   }
 
   function handleCallInvite(data) {
+    startRingtoneLoop();
     if (!data || !data.offer) return;
     incomingCallData = data;
 
@@ -1599,7 +1617,7 @@
     playRingtone();
   }
 
-  async function acceptCall() {
+  async function acceptCall() { stopRingtoneLoop(); logCall(incomingCallData.caller, incomingCallData.type, 'incoming', 'completed');
     stopRingtone();
     const modal = els.incomingCallModal || document.getElementById('incomingCallModal');
     if (modal) modal.style.display = 'none';
@@ -1659,7 +1677,7 @@
     }
   }
 
-  function declineCall() {
+  function declineCall() { stopRingtoneLoop();
     stopRingtone();
     const modal = els.incomingCallModal || document.getElementById('incomingCallModal');
     if (modal) modal.style.display = 'none';
@@ -1699,7 +1717,7 @@
     cleanupCall();
   }
 
-  function endCall() {
+  function endCall() { stopRingtoneLoop();
     if (socket && myRoom) {
       socket.emit('call-hangup', { room: myRoom });
     }
@@ -1948,12 +1966,7 @@
   }
 
   function openLightbox(url) {
-    const lb = document.getElementById('lightbox');
-    const img = document.getElementById('lightboxImg');
-    if (lb && img) {
-      img.src = url;
-      lb.style.display = 'flex';
-    }
+    openLightboxSlideshow(url);
   }
 
   function closeLightbox() {
@@ -2085,6 +2098,12 @@
   function formatMessageContent(rawText, msgId) {
     if (!rawText) return '';
     let str = escapeHtml(rawText);
+
+    // Mentions
+    str = str.replace(/@([a-zA-Z0-9_-]+)/g, '<span class="mention-tag">@$1</span>');
+
+    // Auto link formatting
+    str = str.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:inherit; text-decoration:underline;">$1</a>');
     const triple = String.fromCharCode(96, 96, 96);
     const single = String.fromCharCode(96);
     if (str.includes(triple)) {
@@ -2543,6 +2562,387 @@
   }
 
 
+
+  // ═══════════════════ REAL-WORLD: GROUPS, FORWARDING, NOTIFICATIONS & PREVIEWS ═══════════════════
+  let _unreadCount = 0;
+  let ringtoneInterval = null;
+  let targetForwardMsg = null;
+  let currentLightboxImages = [];
+  let currentLightboxIdx = 0;
+  let _recordedAudioBlob = null;
+  let audioPreviewObj = null;
+
+  // Background Web Notifications
+  function initNotifications() {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+    window.addEventListener('focus', () => {
+      _unreadCount = 0;
+      document.title = 'tahc';
+    });
+  }
+
+  function triggerBackgroundNotification(msg) {
+    if (!msg || (msg.user || '').toLowerCase() === (myName || '').toLowerCase()) return;
+    if (document.hidden) {
+      _unreadCount++;
+      document.title = `(${_unreadCount}) tahc`;
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          new Notification(`@${msg.user} in tahc`, {
+            body: msg.text || (msg.type === 'image' ? '📷 Sent a photo' : '📄 Sent a document'),
+            icon: '/icon-192.png'
+          });
+        } catch (_) { /* ignore */ }
+      }
+    }
+  }
+
+  // OpenGraph Link Previews
+  const _linkPreviewCache = new Map();
+  async function fetchAndAttachLinkPreview(url, msgEl) {
+    if (!msgEl || !url) return;
+    if (_linkPreviewCache.has(url)) {
+      const cached = _linkPreviewCache.get(url);
+      if (cached && !msgEl.querySelector('.link-preview-card')) {
+        renderLinkPreviewInEl(cached, msgEl, url);
+      }
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/link-preview?url=${encodeURIComponent(url)}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && (data.title || data.image)) {
+        _linkPreviewCache.set(url, data);
+        if (!msgEl.querySelector('.link-preview-card')) {
+          renderLinkPreviewInEl(data, msgEl, url);
+        }
+      }
+    } catch (_) { /* ignore */ }
+  }
+
+  function renderLinkPreviewInEl(data, msgEl, url) {
+    const card = document.createElement('a');
+    card.href = url;
+    card.target = '_blank';
+    card.rel = 'noopener noreferrer';
+    card.className = 'link-preview-card';
+    let domain = 'link';
+    try { domain = new URL(url).hostname; } catch (_) { /* ignore */ }
+
+    card.innerHTML = `
+      ${data.image ? `<img src="${escapeHtml(data.image)}" class="link-preview-img" alt="thumbnail" loading="lazy" />` : ''}
+      <div class="link-preview-body">
+        <div class="link-preview-title">${escapeHtml(data.title || domain)}</div>
+        ${data.description ? `<div class="link-preview-desc">${escapeHtml(data.description)}</div>` : ''}
+        <div class="link-preview-domain">${escapeHtml(domain)}</div>
+      </div>
+    `;
+    msgEl.appendChild(card);
+  }
+
+  // @Mentions Autocomplete
+  function handleMentionInput() {
+    const menu = document.getElementById('mentionMenu');
+    if (!menu || !els.msgInput) return;
+    const val = els.msgInput.value;
+    const cursor = els.msgInput.selectionStart || val.length;
+    const textBefore = val.slice(0, cursor);
+    const match = textBefore.match(/@([a-zA-Z0-9_-]*)$/);
+
+    if (match) {
+      const query = match[1].toLowerCase();
+      const users = currentOnlineUsers.filter(u => u.toLowerCase().includes(query) && u.toLowerCase() !== (myName || '').toLowerCase());
+      if (users.length > 0) {
+        menu.innerHTML = users.map(u => `
+          <div class="mention-item" onclick="BestieChat.selectMention('${escapeHtml(u)}')">
+            <div style="width:22px; height:22px; border-radius:50%; background:#fff; color:#000; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700;">${getInitial(u)}</div>
+            <span>@${escapeHtml(u)}</span>
+          </div>
+        `).join('');
+        menu.style.display = 'flex';
+        return;
+      }
+    }
+    menu.style.display = 'none';
+  }
+
+  function selectMention(username) {
+    if (!els.msgInput) return;
+    const val = els.msgInput.value;
+    const cursor = els.msgInput.selectionStart || val.length;
+    const textBefore = val.slice(0, cursor).replace(/@([a-zA-Z0-9_-]*)$/, `@${username} `);
+    const textAfter = val.slice(cursor);
+    els.msgInput.value = textBefore + textAfter;
+    els.msgInput.focus();
+    const menu = document.getElementById('mentionMenu');
+    if (menu) menu.style.display = 'none';
+  }
+
+  // Group Chats
+  function openNewGroupModal() {
+    const modal = document.getElementById('newGroupModal');
+    const picker = document.getElementById('groupMembersPickerList');
+    if (modal) {
+      modal.style.display = 'flex';
+      if (picker) {
+        const others = currentOnlineUsers.filter(u => u.toLowerCase() !== (myName || '').toLowerCase());
+        if (!others.length) {
+          picker.innerHTML = '<div style="padding:10px; color:var(--text-muted); font-size:12px;">No other users online right now</div>';
+        } else {
+          picker.innerHTML = others.map(u => `
+            <label class="member-picker-row">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <div style="width:24px; height:24px; border-radius:50%; background:#fff; color:#000; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700;">${getInitial(u)}</div>
+                <span style="font-size:13px; color:#fff;">@${escapeHtml(u)}</span>
+              </div>
+              <input type="checkbox" value="${escapeHtml(u)}" class="group-member-checkbox" style="accent-color:#fff; width:16px; height:16px;" />
+            </label>
+          `).join('');
+        }
+      }
+    }
+  }
+
+  function closeNewGroupModal() {
+    const modal = document.getElementById('newGroupModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function submitCreateGroup() {
+    const nameInput = document.getElementById('newGroupNameInput');
+    const topicInput = document.getElementById('newGroupTopicInput');
+    if (!nameInput || !nameInput.value.trim()) {
+      showToast('Please enter a group name');
+      return;
+    }
+    const groupName = nameInput.value.trim();
+    const topic = topicInput ? topicInput.value.trim() : '';
+    const checked = Array.from(document.querySelectorAll('.group-member-checkbox:checked')).map(cb => cb.value);
+
+    if (socket && socket.connected) {
+      socket.emit('create-group', { groupName, members: checked, topic });
+      closeNewGroupModal();
+      showToast(`Group "${groupName}" created!`);
+    }
+  }
+
+  // Message Forwarding
+  async function openForwardModal(msgId) {
+    if (!myRoom) return;
+    const msgs = await idbGetMessages(myRoom);
+    const target = msgs.find(m => m.id === msgId);
+    if (!target) return;
+    targetForwardMsg = target;
+
+    const modal = document.getElementById('forwardModal');
+    const list = document.getElementById('forwardChatList');
+    if (modal && list) {
+      list.innerHTML = cachedUserRooms.map(r => {
+        const isGroup = r.isGroup || (r.name || '').startsWith('group_');
+        const displayName = r.displayName || (r.name.replace('dm_', '').replace(/_/g, ' ') || 'Chat');
+        return `
+          <div class="member-picker-row" onclick="BestieChat.forwardToRoom('${escapeHtml(r.name)}')">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div style="width:30px; height:30px; border-radius:50%; background:rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700;">${isGroup ? '👥' : getInitial(displayName)}</div>
+              <div>
+                <div style="font-size:13px; font-weight:600; color:#fff;">${escapeHtml(displayName)}</div>
+                <div style="font-size:11px; color:var(--text-muted);">${isGroup ? 'Group Chat' : 'Direct Message'}</div>
+              </div>
+            </div>
+            <button type="button" class="filter-pill" style="padding:4px 10px; font-size:11px;">Send ↪️</button>
+          </div>
+        `;
+      }).join('');
+      modal.style.display = 'flex';
+    }
+  }
+
+  function closeForwardModal() {
+    targetForwardMsg = null;
+    const modal = document.getElementById('forwardModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function forwardToRoom(targetRoom) {
+    if (!targetForwardMsg || !targetRoom) return;
+    const payload = {
+      id: 'fwd_' + Date.now(),
+      text: targetForwardMsg.text || '',
+      url: targetForwardMsg.url || null,
+      type: targetForwardMsg.type || 'text',
+      user: myName,
+      room: targetRoom,
+      forwardedFrom: targetForwardMsg.user,
+      time: Date.now()
+    };
+
+    if (socket && socket.connected) {
+      socket.emit('message', payload);
+    }
+    idbSaveMessages(targetRoom, [payload]);
+    if (targetRoom === myRoom) {
+      renderMessage(payload, true);
+      scrollBottom();
+    }
+    closeForwardModal();
+    showToast('↪️ Message forwarded!');
+  }
+
+  // Call Ringtones & History
+  let _callHistory = [];
+  function startRingtoneLoop() {
+    stopRingtoneLoop();
+    try {
+      const playTonePair = () => {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc1.frequency.setValueAtTime(440, ctx.currentTime);
+        osc2.frequency.setValueAtTime(480, ctx.currentTime);
+        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.2);
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(ctx.destination);
+        osc1.start();
+        osc2.start();
+        osc1.stop(ctx.currentTime + 1.2);
+        osc2.stop(ctx.currentTime + 1.2);
+      };
+      playTonePair();
+      ringtoneInterval = setInterval(playTonePair, 3000);
+    } catch (_) { /* ignore */ }
+  }
+
+  function stopRingtoneLoop() {
+    if (ringtoneInterval) {
+      clearInterval(ringtoneInterval);
+      ringtoneInterval = null;
+    }
+  }
+
+  function logCall(user, type, direction, status, duration = 0) {
+    _callHistory.unshift({
+      id: 'call_' + Date.now(),
+      user,
+      type,
+      direction,
+      status,
+      duration,
+      time: Date.now()
+    });
+  }
+
+  function openCallHistoryModal() {
+    const modal = document.getElementById('callHistoryModal');
+    const list = document.getElementById('callHistoryList');
+    if (modal && list) {
+      if (!_callHistory.length) {
+        list.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-muted); font-size:12.5px;">No recent calls</div>';
+      } else {
+        list.innerHTML = _callHistory.map(c => `
+          <div class="call-history-row">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div style="font-size:16px;">${c.type === 'video' ? '📹' : '📞'}</div>
+              <div>
+                <div style="font-size:13px; font-weight:700; color:#fff;">@${escapeHtml(c.user)}</div>
+                <div style="font-size:11px; color:var(--text-muted);">${c.direction === 'incoming' ? 'Incoming' : 'Outgoing'} · ${formatTimestamp(c.time)}</div>
+              </div>
+            </div>
+            <div class="${c.status === 'missed' ? 'call-badge-missed' : 'call-badge-completed'}">${c.status.toUpperCase()} ${c.duration ? '(' + c.duration + 's)' : ''}</div>
+          </div>
+        `).join('');
+      }
+      modal.style.display = 'flex';
+    }
+  }
+
+  function closeCallHistoryModal() {
+    const modal = document.getElementById('callHistoryModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  // Lightbox Slideshow
+  function openLightboxSlideshow(src) {
+    const modal = document.getElementById('lightbox');
+    const img = document.getElementById('lightboxImg');
+    const dl = document.getElementById('lightboxDownloadBtn');
+    if (modal && img) {
+      // Gather all images in chat
+      const chatImgs = Array.from(document.querySelectorAll('.chat-photo-img')).map(el => el.src);
+      currentLightboxImages = chatImgs.length ? chatImgs : [src];
+      currentLightboxIdx = currentLightboxImages.indexOf(src);
+      if (currentLightboxIdx === -1) currentLightboxIdx = 0;
+
+      img.src = currentLightboxImages[currentLightboxIdx];
+      if (dl) dl.href = currentLightboxImages[currentLightboxIdx];
+      modal.style.display = 'flex';
+    }
+  }
+
+  function prevLightboxImg() {
+    if (!currentLightboxImages.length) return;
+    currentLightboxIdx = (currentLightboxIdx - 1 + currentLightboxImages.length) % currentLightboxImages.length;
+    const img = document.getElementById('lightboxImg');
+    const dl = document.getElementById('lightboxDownloadBtn');
+    if (img) img.src = currentLightboxImages[currentLightboxIdx];
+    if (dl) dl.href = currentLightboxImages[currentLightboxIdx];
+  }
+
+  function nextLightboxImg() {
+    if (!currentLightboxImages.length) return;
+    currentLightboxIdx = (currentLightboxIdx + 1) % currentLightboxImages.length;
+    const img = document.getElementById('lightboxImg');
+    const dl = document.getElementById('lightboxDownloadBtn');
+    if (img) img.src = currentLightboxImages[currentLightboxIdx];
+    if (dl) dl.href = currentLightboxImages[currentLightboxIdx];
+  }
+
+  // Voice Studio Controls
+  let _isRecordingPaused = false;
+  function togglePauseRecording() {
+    if (!mediaRecorder) return;
+    const btn = document.getElementById('voicePauseResumeBtn');
+    const status = document.getElementById('voiceStudioStatus');
+    const previewBtn = document.getElementById('voicePreviewBtn');
+
+    if (mediaRecorder.state === 'recording') {
+      mediaRecorder.pause();
+      _isRecordingPaused = true;
+      if (btn) btn.textContent = '▶️ Resume';
+      if (status) status.textContent = 'Recording paused';
+      if (previewBtn) previewBtn.style.display = 'flex';
+    } else if (mediaRecorder.state === 'paused') {
+      mediaRecorder.resume();
+      _isRecordingPaused = false;
+      if (btn) btn.textContent = '⏸️ Pause';
+      if (status) status.textContent = 'Recording voice note...';
+      if (previewBtn) previewBtn.style.display = 'none';
+    }
+  }
+
+  function previewRecording() {
+    if (audioChunks.length) {
+      const blob = new Blob(audioChunks, { type: 'audio/webm' });
+      if (audioPreviewObj) audioPreviewObj.pause();
+      audioPreviewObj = new Audio(URL.createObjectURL(blob));
+      audioPreviewObj.play();
+      showToast('🎧 Playing recording preview');
+    }
+  }
+
+  function submitRecording() {
+    if (mediaRecorder && (mediaRecorder.state === 'recording' || mediaRecorder.state === 'paused')) {
+      toggleRecord();
+    }
+  }
+
+
 // ═══════════════════ EXPORTS ═══════════════════
   window.BestieChat = {
     switchAuthTab, handleSignIn, handleRegister, joinChat: handleAuthSubmit, logout,
@@ -2556,7 +2956,12 @@
     openLightbox, closeLightbox, replyToMessage, cancelReply,
     startCall, acceptCall, declineCall, endCall, toggleMuteAudio, toggleCamera, toggleScreenShare, cycleAudioSpeed, openEditModal, closeEditModal, submitEditMessage, openDisappearingModal, closeDisappearingModal, setDisappearingTimer, exportChatHistory,
     applySlashCommand, toggleTaskItem, votePoll,
-    insertStarter, openScheduleModal, closeScheduleModal, scheduleMessageIn, scheduleMessageTomorrowMorning,
+    insertStarter, openScheduleModal,
+    openNewGroupModal, closeNewGroupModal, submitCreateGroup,
+    openForwardModal, closeForwardModal, forwardToRoom,
+    openCallHistoryModal, closeCallHistoryModal,
+    selectMention, prevLightboxImg, nextLightboxImg,
+    togglePauseRecording, previewRecording, submitRecording, closeScheduleModal, scheduleMessageIn, scheduleMessageTomorrowMorning,
     openReminderModal, closeReminderModal, setReminderIn,
     openSharedDrawer, closeSharedDrawer, switchSharedTab,
     playAudio, scrollBottom,
