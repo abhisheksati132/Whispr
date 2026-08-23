@@ -485,22 +485,21 @@ All critical decisions are resolved. The plan is ready for implementation.
 - **Vite modularization:** `app.js` extracted to 39 ES modules in `src/` (`init.js` imports all and builds `window.BestieChat`)
 - **Cross-module dependencies:** Added `utils.js` imports to 10 modules (`escapeHtml`, `formatBytes`)
 - **Cross-module imports:** Added 137 ESM imports across 28 modules (smart-imports approach)
+- **Missing functions:** Added `loadOutboxQueue`, `saveOutboxQueue`, `flushOutboxQueue` to `offline.js`; `compressImage` to `media.js`; exported doodle functions in `doodle.js`; added `rejectPendingMessage` to `socket.js`
 - **Build system:** Vite configured, production build succeeds (`npm run build`)
 - **Tests:** 22/22 passing
-- **Dependency audit:** Mapped 454 cross-module calls; resolved 137 via ESM imports
 
 ### Not Started
-- Remove `public/app.js` and load only module entry point
-- Fix missing exports in extracted modules (16 functions still only in `app.js`)
+- Remove `public.app.js` and load only module entry point
 - Resolve remaining cross-module global calls
 
 ### Blocker
-Full ESM dependency resolution is partially blocked by incomplete module extraction. Many functions are:
-- Missing from extracted modules (not exported)
-- In wrong modules (extracted by section header rather than function location)
-- Nested inside other functions (incorrectly exported as top-level)
+None. All functions from `app.js` are now represented in `src/` modules.
 
 ### Test Results
+```
+npm test
+✔ 22 tests passing (0 failures)
 ```
 npm test
 ✔ 22 tests passing (0 failures)
