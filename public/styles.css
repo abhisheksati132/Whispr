@@ -1543,3 +1543,118 @@ mark.search-highlight {
     padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   }
 }
+
+/* ═══════════════════ 13. LUXURY CRAFT (SCROLLBARS, SPRING, GROUPING, DATES) ═══════════════════ */
+/* 4px Frosted Glass Scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: var(--radius-pill);
+  backdrop-filter: blur(10px);
+  transition: background 0.2s ease;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+/* Micro-press Haptics */
+button:active, .dm-row:active, .icon-btn:active, .filter-pill:active, .pill-btn:active, .starter-chip:active {
+  transform: scale(0.96) !important;
+}
+
+/* Spring Physics Message Entry */
+@keyframes msgSlideSpring {
+  0% { opacity: 0; transform: translateY(12px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.msg-new {
+  animation: msgSlideSpring 0.24s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Consecutive Message Stacking / Grouping */
+.msg-wrap.grouped-top .msg.them {
+  border-bottom-left-radius: 6px;
+}
+.msg-wrap.grouped-bottom .msg.them {
+  border-top-left-radius: 6px;
+}
+.msg-wrap.grouped-middle .msg.them {
+  border-top-left-radius: 6px;
+  border-bottom-left-radius: 6px;
+}
+
+.msg-wrap.grouped-top .msg.me {
+  border-bottom-right-radius: 6px;
+}
+.msg-wrap.grouped-bottom .msg.me {
+  border-top-right-radius: 6px;
+}
+.msg-wrap.grouped-middle .msg.me {
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+}
+
+.msg-wrap.grouped-top, .msg-wrap.grouped-middle {
+  margin-bottom: 2px !important;
+}
+
+/* Floating Glass Date Separator */
+.date-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 16px 0 10px;
+  position: relative;
+  user-select: none;
+}
+
+.date-divider span {
+  padding: 4px 12px;
+  background: var(--glass-card);
+  backdrop-filter: var(--glass-blur-subtle);
+  border: var(--glass-border-subtle);
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+  box-shadow: var(--glass-inset-subtle);
+}
+
+/* Starter Action Chips */
+.starter-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.starter-chip {
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  background: var(--glass-surface);
+  border: var(--glass-border);
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffffff;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: var(--glass-inset);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.starter-chip:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.35);
+  transform: translateY(-1px);
+}

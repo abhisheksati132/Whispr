@@ -160,7 +160,7 @@
       }
       const cachedMsgs = await idbGetMessages(myRoom);
       if (cachedMsgs.length > 0 && els.messages) {
-        els.messages.innerHTML = '';
+        els.messages.innerHTML = ''; _lastRenderedDateStr = '';
         cachedMsgs.forEach(m => renderMessage(m, false));
         scrollBottom();
       }
@@ -744,17 +744,41 @@
     const avatarChar = isSaved ? 'N' : getInitial(otherUser);
     const title = isSaved ? 'Note to Self' : `@${otherUser}`;
     const sub = isSaved
-      ? 'Your personal cloud notebook. Notes, links, and documents saved here are encrypted and accessible across all your devices.'
-      : 'End-to-end encrypted direct messaging. All messages and media sent here remain private between you two.';
+      ? 'Your private encrypted cloud notebook. Notes, links, and files saved here sync across all your devices.'
+      : 'End-to-end encrypted direct session. All messages, voice notes, and media remain private.';
 
     const intro = document.createElement('div');
     intro.className = 'chat-intro-card';
     intro.innerHTML = `
       <div class="chat-intro-avatar">${avatarChar}</div>
       <div class="chat-intro-title">${escapeHtml(title)}</div>
+      <div style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; color:#ffffff; background:rgba(255,255,255,0.08); padding:3px 8px; border-radius:12px; margin-bottom:4px;">🔒 AES-256 Direct Encrypted</div>
       <div class="chat-intro-sub">${escapeHtml(sub)}</div>
+      <div class="starter-chips">
+        <button type="button" class="starter-chip" onclick="BestieChat.insertStarter('hello')">👋 Say Hello</button>
+        <button type="button" class="starter-chip" onclick="BestieChat.insertStarter('task')">☑️ Create Task</button>
+        <button type="button" class="starter-chip" onclick="BestieChat.insertStarter('file')">📁 Share File</button>
+      </div>
     `;
     els.messages.appendChild(intro);
+  }
+
+  function insertStarter(type) {
+    if (type === 'hello') {
+      if (els.msgInput) {
+        els.msgInput.value = 'Hello! 👋';
+        sendMessage();
+      }
+    } else if (type === 'task') {
+      if (els.msgInput) {
+        els.msgInput.value = '/todo ';
+        els.msgInput.focus();
+        updateSendBtnIcon();
+      }
+    } else if (type === 'file') {
+      const docInput = document.getElementById('docInput');
+      if (docInput) docInput.click();
+    }
   }
 
   function filterChatList(filterType, btn) {
@@ -932,7 +956,7 @@
 
   async function switchRoom(roomName) {
     if (!roomName) return;
-    myRoom = roomName;
+    playClickTone(); myRoom = roomName;
     localStorage.setItem('bestieChatRoom', roomName);
     
     // On mobile, transition view to active chat screen
@@ -1053,12 +1077,49 @@
     updateSendBtnIcon();
   }
 
-  function renderMessage(msg, _animate = false) {
+  let _lastRenderedDateStr = '';
+
+  function renderMessage(msg, animate = false) {
     if (!els.messages || !msg) return;
+    const msgDate = new Date(msg.time || Date.now());
+    const dateStr = msgDate.toDateString();
+
+    // Check if we need to render a Date Divider
+    if (dateStr !== _lastRenderedDateStr) {
+      _lastRenderedDateStr = dateStr;
+      const divider = document.createElement('div');
+      divider.className = 'date-divider';
+      const todayStr = new Date().toDateString();
+      const yesterdayStr = new Date(Date.now() - 86400000).toDateString();
+      let label = msgDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      if (dateStr === todayStr) label = 'Today';
+      else if (dateStr === yesterdayStr) label = 'Yesterday';
+      divider.innerHTML = `<span>${label}</span>`;
+      els.messages.appendChild(divider);
+    }
+
     const isMe = (msg.user || '').toLowerCase() === (myName || '').toLowerCase();
     const wrap = document.createElement('div');
-    wrap.className = `msg-wrap ${isMe ? 'me' : 'them'}`;
+    wrap.className = `msg-wrap ${isMe ? 'me' : 'them'} ${animate ? 'msg-new' : ''}`;
     wrap.setAttribute('data-msg-id', msg.id || '');
+    wrap.setAttribute('data-msg-user', (msg.user || '').toLowerCase());
+    wrap.setAttribute('data-msg-time', msg.time || Date.now());
+
+    // Message Grouping / Stacking with previous message
+    const prevWrap = els.messages.lastElementChild;
+    if (prevWrap && prevWrap.classList.contains('msg-wrap')) {
+      const prevUser = prevWrap.getAttribute('data-msg-user');
+      const prevTime = parseInt(prevWrap.getAttribute('data-msg-time') || '0', 10);
+      if (prevUser === (msg.user || '').toLowerCase() && ((msg.time || Date.now()) - prevTime < 300000)) {
+        if (!prevWrap.classList.contains('grouped-top') && !prevWrap.classList.contains('grouped-middle')) {
+          prevWrap.classList.add('grouped-top');
+        } else if (prevWrap.classList.contains('grouped-top')) {
+          prevWrap.classList.remove('grouped-top');
+          prevWrap.classList.add('grouped-middle');
+        }
+        wrap.classList.add('grouped-bottom');
+      }
+    }
 
     let contentHtml = '';
 
@@ -1919,13 +1980,14 @@
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(800, ctx.currentTime);
+      osc.frequency.setValueAtTime(920, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(460, ctx.currentTime + 0.06);
       gain.gain.setValueAtTime(0.04, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start();
-      osc.stop(ctx.currentTime + 0.08);
+      osc.stop(ctx.currentTime + 0.06);
     } catch (_) { /* ignore */ }
   }
 
@@ -1935,13 +1997,30 @@
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(580, ctx.currentTime);
-      gain.gain.setValueAtTime(0.06, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.005, ctx.currentTime + 0.14);
+      osc.frequency.setValueAtTime(560, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(840, ctx.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.05, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start();
-      osc.stop(ctx.currentTime + 0.14);
+      osc.stop(ctx.currentTime + 0.12);
+    } catch (_) { /* ignore */ }
+  }
+
+  function playClickTone() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(1400, ctx.currentTime);
+      gain.gain.setValueAtTime(0.02, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.02);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.02);
     } catch (_) { /* ignore */ }
   }
 
@@ -2477,7 +2556,7 @@
     openLightbox, closeLightbox, replyToMessage, cancelReply,
     startCall, acceptCall, declineCall, endCall, toggleMuteAudio, toggleCamera, toggleScreenShare, cycleAudioSpeed, openEditModal, closeEditModal, submitEditMessage, openDisappearingModal, closeDisappearingModal, setDisappearingTimer, exportChatHistory,
     applySlashCommand, toggleTaskItem, votePoll,
-    openScheduleModal, closeScheduleModal, scheduleMessageIn, scheduleMessageTomorrowMorning,
+    insertStarter, openScheduleModal, closeScheduleModal, scheduleMessageIn, scheduleMessageTomorrowMorning,
     openReminderModal, closeReminderModal, setReminderIn,
     openSharedDrawer, closeSharedDrawer, switchSharedTab,
     playAudio, scrollBottom,
