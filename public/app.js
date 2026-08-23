@@ -980,11 +980,20 @@
 
   async function switchRoom(roomName) {
     if (!roomName) return;
-    playClickTone(); myRoom = roomName;
+    playClickTone();
+    myRoom = roomName;
     localStorage.setItem('bestieChatRoom', roomName);
     
-    // On mobile, transition view to active chat screen
-    document.body.classList.add('in-chat');
+    // On desktop & mobile, transition view to active chat screen
+    const chatMain = document.getElementById('chatMain');
+    const sidebar = document.getElementById('sidebar');
+    const welcome = document.getElementById('welcomeDashboard');
+    if (chatMain) {
+      chatMain.classList.add('chat-active', 'mobile-chat-open');
+    }
+    if (sidebar) sidebar.classList.add('mobile-chat-open');
+    if (welcome) welcome.style.display = 'none';
+    document.body.classList.add('in-chat', 'mobile-chat-active');
 
     updateActiveHeader();
     await fetchMessagesForRoom(roomName);
@@ -998,16 +1007,26 @@
     if (els.msgInput) {
       setTimeout(() => {
         autoExpandMsgInput();
+        els.msgInput.focus();
       }, 100);
     }
   }
 
   function updateActiveHeader() {
+    if (!myRoom) return;
     const isSaved = myRoom === `dm_${myName.toLowerCase()}_${myName.toLowerCase()}`;
+    const isGroup = (myRoom || '').startsWith('group_');
     if (isSaved) {
       if (els.headerBestieAvatar) els.headerBestieAvatar.textContent = 'N';
       if (els.headerBestieName) els.headerBestieName.textContent = 'Note to Self';
       if (els.headerBestieStatus) els.headerBestieStatus.textContent = 'Private cloud notebook';
+      return;
+    }
+    if (isGroup) {
+      const groupName = myRoom.replace('group_', '').replace(/_/g, ' ');
+      if (els.headerBestieAvatar) els.headerBestieAvatar.textContent = '👥';
+      if (els.headerBestieName) els.headerBestieName.textContent = groupName;
+      if (els.headerBestieStatus) els.headerBestieStatus.textContent = 'Group Channel';
       return;
     }
 
@@ -3227,7 +3246,7 @@
     switchAuthTab, handleSignIn, handleRegister, joinChat: handleAuthSubmit, logout,
     toggleSidebar, closeSidebar,
     loadChatList, filterChatList, handleSidebarSearch, clearSidebarSearch,
-    openNewChatModal, closeNewChatModal, searchUsersForDM, startDMWith, switchRoom, deleteRoom,
+    openNewChatModal, closeNewChatModal, searchUsersForDM, startDMWith, switchRoom, openChatRoom: switchRoom, deleteRoom,
     sendMessage, handleSendBtnClick, toggleRecord, cancelRecording,
     sendPhoto, uploadDocumentFile, uploadCameraFile,
     toggleAttachMenu, toggleEmojiPicker, insertEmoji,
