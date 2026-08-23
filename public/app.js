@@ -1500,15 +1500,17 @@
   }
 
   async function uploadVoiceBlob(blob, duration) {
+    if (!myRoom) { showToast('Select a chat to send voice note'); return; }
     const formData = new FormData();
     formData.append('file', blob, 'voice.webm');
     formData.append('room', myRoom);
     formData.append('duration', duration);
 
     try {
-      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      let res = await fetch('/api/upload-multipart', { method: 'POST', body: formData });
+      if (!res.ok) res = await fetch('/api/upload', { method: 'POST', body: formData });
       const data = await res.json();
-      if (data.url) {
+      if (data && data.url) {
         const payload = {
           id: 'msg_' + Date.now(),
           type: 'voice',
@@ -1522,6 +1524,7 @@
         scrollBottom();
         idbSaveMessages(myRoom, [payload]);
         if (socket && socket.connected) socket.emit('message', payload);
+        loadChatList();
       }
     } catch (_) {
       showToast('Failed to upload voice note');
@@ -1531,16 +1534,19 @@
   // ═══════════════════ FILE / PHOTO UPLOAD WITH AUTO-COMPRESSION ═══════════════════
   async function sendPhoto(files) {
     if (!files || !files.length) return;
+    if (!myRoom) { showToast('Select a chat to send photos'); return; }
     for (const rawFile of Array.from(files)) {
-      const file = await compressImageFile(rawFile);
+      let file;
+      try { file = await compressImageFile(rawFile); } catch (_) { file = rawFile; }
       const formData = new FormData();
       formData.append('file', file);
       formData.append('room', myRoom);
 
       try {
-        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        let res = await fetch('/api/upload-multipart', { method: 'POST', body: formData });
+        if (!res.ok) res = await fetch('/api/upload', { method: 'POST', body: formData });
         const data = await res.json();
-        if (data.url) {
+        if (data && data.url) {
           const payload = {
             id: 'msg_' + Date.now(),
             type: 'image',
@@ -1553,6 +1559,7 @@
           scrollBottom();
           idbSaveMessages(myRoom, [payload]);
           if (socket && socket.connected) socket.emit('message', payload);
+          loadChatList();
         }
       } catch (_) {
         showToast('Failed to upload photo');
@@ -1568,14 +1575,16 @@
   }
 
   async function uploadDirectFile(file) {
+    if (!myRoom) { showToast('Select a chat to send files'); return; }
     const formData = new FormData();
     formData.append('file', file);
     formData.append('room', myRoom);
 
     try {
-      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      let res = await fetch('/api/upload-multipart', { method: 'POST', body: formData });
+      if (!res.ok) res = await fetch('/api/upload', { method: 'POST', body: formData });
       const data = await res.json();
-      if (data.url) {
+      if (data && data.url) {
         const payload = {
           id: 'msg_' + Date.now(),
           type: 'document',
@@ -1590,6 +1599,7 @@
         scrollBottom();
         idbSaveMessages(myRoom, [payload]);
         if (socket && socket.connected) socket.emit('message', payload);
+        loadChatList();
       }
     } catch (_) {
       showToast('Failed to upload document');
