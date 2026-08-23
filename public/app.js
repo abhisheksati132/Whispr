@@ -3067,6 +3067,140 @@
   }
 
 
+
+  // ═══════════════════ ACTIVE NOW & DESKTOP INFO PANEL & MOBILE ═══════════════════
+
+  function renderActiveNowRibbon() {
+    const wrap = document.getElementById('activeNowWrap');
+    const ribbon = document.getElementById('activeNowRibbon');
+    if (!wrap || !ribbon) return;
+
+    const others = currentOnlineUsers.filter(u => (u || '').toLowerCase() !== (myName || '').toLowerCase());
+    if (!others.length) {
+      wrap.style.display = 'none';
+      return;
+    }
+
+    wrap.style.display = 'block';
+    ribbon.innerHTML = others.map(u => `
+      <div class="active-now-item" onclick="BestieChat.openDirectWithUser('${escapeHtml(u)}')" title="Chat with @${escapeHtml(u)}">
+        <div class="active-now-avatar-wrap">
+          <div class="active-now-avatar">${getInitial(u)}</div>
+          <div class="active-now-pulse-ring"></div>
+        </div>
+        <span class="active-now-name">@${escapeHtml(u)}</span>
+      </div>
+    `).join('');
+  }
+
+  function openDirectWithUser(username) {
+    if (!username) return;
+    const pair = [myName.toLowerCase(), username.toLowerCase()].sort();
+    const dmRoom = `dm_${pair[0]}_${pair[1]}`;
+    switchRoom(dmRoom);
+  }
+
+  function openNoteToSelf() {
+    if (!myName) return;
+    const room = `dm_${myName.toLowerCase()}_${myName.toLowerCase()}`;
+    switchRoom(room);
+  }
+
+  function backToChatList() {
+    const sidebar = document.getElementById('sidebar');
+    const chatMain = document.getElementById('chatMain');
+    if (sidebar) sidebar.classList.remove('mobile-chat-open');
+    if (chatMain) chatMain.classList.remove('mobile-chat-open');
+  }
+
+  function mobileSwitchTab(tab) {
+    ['mobNavChats', 'mobNavGroups'].forEach(id => {
+      const btn = document.getElementById(id);
+      if (btn) btn.classList.remove('active');
+    });
+    if (tab === 'chats') {
+      const btn = document.getElementById('mobNavChats');
+      if (btn) btn.classList.add('active');
+      switchRail('direct');
+    } else if (tab === 'groups') {
+      const btn = document.getElementById('mobNavGroups');
+      if (btn) btn.classList.add('active');
+      switchRail('groups');
+    }
+  }
+
+  async function toggleChatInfoPanel() {
+    const panel = document.getElementById('chatInfoPanel');
+    if (!panel) return;
+    if (panel.style.display === 'flex') {
+      panel.style.display = 'none';
+      return;
+    }
+
+    if (!myRoom) {
+      showToast('Select a chat to view details');
+      return;
+    }
+
+    const isSaved = myRoom === `dm_${myName.toLowerCase()}_${myName.toLowerCase()}`;
+    const isGroup = (myRoom || '').startsWith('group_');
+    const otherUser = isSaved ? 'Note to Self' : (myRoom.replace('dm_', '').split('_').find(p => p.toLowerCase() !== myName.toLowerCase()) || 'User');
+    const avatarChar = isSaved ? 'N' : (isGroup ? '👥' : getInitial(otherUser));
+    const title = isSaved ? 'Note to Self' : (isGroup ? myRoom.replace('group_', '').replace(/_/g, ' ') : `@${otherUser}`);
+
+    const avatarEl = document.getElementById('infoAvatar');
+    const nameEl = document.getElementById('infoName');
+    const statusEl = document.getElementById('infoStatus');
+    const bioEl = document.getElementById('infoBio');
+    const mediaGrid = document.getElementById('infoMediaGrid');
+    const docsList = document.getElementById('infoDocsList');
+
+    if (avatarEl) avatarEl.textContent = avatarChar;
+    if (nameEl) nameEl.textContent = title;
+    if (statusEl) statusEl.textContent = isOnlineUser(otherUser) ? 'Online' : 'Offline';
+    if (bioEl) bioEl.textContent = isSaved ? 'Private cloud notes' : 'Direct End-to-End Encrypted Session';
+
+    // Populate media & docs
+    const msgs = await idbGetMessages(myRoom);
+    const media = msgs.filter(m => m.type === 'image' && m.url).slice(-6);
+    const docs = msgs.filter(m => m.type === 'document' && m.url).slice(-3);
+
+    if (mediaGrid) {
+      if (!media.length) {
+        mediaGrid.innerHTML = '<div style="grid-column:span 3; font-size:11.5px; color:var(--text-muted); padding:8px 0;">No photos shared yet</div>';
+      } else {
+        mediaGrid.innerHTML = media.map(m => `
+          <img src="${escapeHtml(m.url)}" class="info-media-thumb" onclick="BestieChat.openLightbox('${escapeHtml(m.url)}')" alt="media" />
+        `).join('');
+      }
+    }
+
+    if (docsList) {
+      if (!docs.length) {
+        docsList.innerHTML = '<div style="font-size:11.5px; color:var(--text-muted); padding:4px 0;">No documents shared yet</div>';
+      } else {
+        docsList.innerHTML = docs.map(d => `
+          <a href="${escapeHtml(d.url)}" target="_blank" download class="info-doc-row">
+            <span>📄</span>
+            <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;">${escapeHtml(d.docName || 'Document')}</span>
+          </a>
+        `).join('');
+      }
+    }
+
+    panel.style.display = 'flex';
+  }
+
+  function closeChatInfoPanel() {
+    const panel = document.getElementById('chatInfoPanel');
+    if (panel) panel.style.display = 'none';
+  }
+
+  function isOnlineUser(username) {
+    if (!username) return false;
+    return currentOnlineUsers.some(u => (u || '').toLowerCase() === username.toLowerCase());
+  }
+
 // ═══════════════════ EXPORTS ═══════════════════
   window.BestieChat = {
     switchAuthTab, handleSignIn, handleRegister, joinChat: handleAuthSubmit, logout,
@@ -3086,7 +3220,9 @@
     openCallHistoryModal, closeCallHistoryModal,
     selectMention, prevLightboxImg, nextLightboxImg,
     togglePauseRecording, previewRecording, submitRecording,
-    switchRail, toggleMoreMenu, closeMoreMenu, closeScheduleModal, scheduleMessageIn, scheduleMessageTomorrowMorning,
+    switchRail, toggleMoreMenu, closeMoreMenu,
+    renderActiveNowRibbon, openDirectWithUser, openNoteToSelf,
+    backToChatList, mobileSwitchTab, toggleChatInfoPanel, closeChatInfoPanel, closeScheduleModal, scheduleMessageIn, scheduleMessageTomorrowMorning,
     openReminderModal, closeReminderModal, setReminderIn,
     openSharedDrawer, closeSharedDrawer, switchSharedTab,
     playAudio, scrollBottom,

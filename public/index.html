@@ -135,6 +135,12 @@
         </div>
       </div>
 
+      <!-- Active Now Presence Carousel -->
+      <div id="activeNowWrap" class="active-now-section" style="display:none;">
+        <div class="active-now-title">Active Now</div>
+        <div id="activeNowRibbon" class="active-now-ribbon"></div>
+      </div>
+
       <!-- Structured Categorized Conversations List -->
       <div id="sidebarDmList" class="sidebar-chats-list"></div>
 
@@ -159,7 +165,7 @@
       <!-- Active Chat Header -->
       <header>
         <div class="header-left" onclick="BestieChat.openProfile()">
-          <button type="button" class="header-back-btn" onclick="event.stopPropagation(); BestieChat.toggleSidebar();" title="Back to Chats">
+          <button type="button" class="header-back-btn" onclick="event.stopPropagation(); BestieChat.backToChatList();" title="Back to Chats">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
           </button>
           <div id="headerBestieAvatar" class="header-avatar">B</div>
@@ -178,6 +184,9 @@
           </button>
           <button type="button" class="icon-btn" onclick="BestieChat.toggleInChatSearch()" title="Search in chat (Ctrl+F)">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </button>
+          <button type="button" class="icon-btn" onclick="BestieChat.toggleChatInfoPanel()" title="Contact & Media Details">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
           </button>
           <button type="button" class="icon-btn" onclick="BestieChat.toggleMoreMenu()" title="More Options">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
@@ -203,6 +212,48 @@
           </div>
         </div>
       </header>
+
+      <!-- Welcome & Productivity Dashboard (Shown when no chat selected) -->
+      <div id="welcomeDashboard" class="welcome-dashboard">
+        <div class="welcome-hero-card">
+          <div class="welcome-logo-wrap">
+            <div class="welcome-brand-glow"></div>
+            <div class="welcome-brand-icon">💭</div>
+          </div>
+          <h2 id="welcomeGreeting" class="welcome-title">Welcome to tahc</h2>
+          <p class="welcome-subtitle">A private, high-performance workspace designed for deep focus and seamless real-time collaboration.</p>
+
+          <div class="welcome-badges-row">
+            <div class="welcome-badge">🔒 End-to-End Encrypted</div>
+            <div class="welcome-badge">⚡ 0ms Zero-Latency</div>
+            <div class="welcome-badge">📁 Offline Sync Ready</div>
+          </div>
+
+          <div class="welcome-launcher-grid">
+            <div class="welcome-card" onclick="BestieChat.openNewChatModal()">
+              <div class="welcome-card-icon">💬</div>
+              <div class="welcome-card-title">Direct Message</div>
+              <div class="welcome-card-desc">Start a private 1-on-1 encrypted conversation</div>
+            </div>
+            <div class="welcome-card" onclick="BestieChat.openNewGroupModal()">
+              <div class="welcome-card-icon">👥</div>
+              <div class="welcome-card-title">New Group</div>
+              <div class="welcome-card-desc">Collaborate with teams, friends, or channels</div>
+            </div>
+            <div class="welcome-card" onclick="BestieChat.openNoteToSelf()">
+              <div class="welcome-card-icon">📝</div>
+              <div class="welcome-card-title">Note to Self</div>
+              <div class="welcome-card-desc">Private encrypted notebook synced across devices</div>
+            </div>
+          </div>
+
+          <div class="welcome-shortcuts-bar">
+            <span><kbd>Ctrl</kbd> + <kbd>K</kbd> Quick Search</span>
+            <span><kbd>Ctrl</kbd> + <kbd>F</kbd> In-Chat Search</span>
+            <span><kbd>Esc</kbd> Close Modals</span>
+          </div>
+        </div>
+      </div>
 
       <!-- In-Chat Search Bar -->
       <div id="inChatSearchBar" style="display:none; padding:7px 14px; background:var(--bg-panel); border-bottom:1px solid var(--border); align-items:center; justify-content:space-between; gap:10px;">
@@ -348,6 +399,76 @@
       </div>
 
     </div>
+
+    <!-- ── 4. DESKTOP RIGHT-HAND CHAT INFO PANEL ── -->
+    <aside id="chatInfoPanel" class="chat-info-panel" style="display:none;">
+      <div class="info-panel-header">
+        <div class="info-panel-title">Details</div>
+        <button type="button" class="icon-btn" onclick="BestieChat.closeChatInfoPanel()" title="Close">✕</button>
+      </div>
+      <div class="info-panel-scroll">
+        <div class="info-hero">
+          <div id="infoAvatar" class="info-avatar">U</div>
+          <div id="infoName" class="info-name">@User</div>
+          <div id="infoStatus" class="info-status">Online</div>
+          <div id="infoBio" class="info-bio">No custom status set</div>
+        </div>
+
+        <div class="info-section">
+          <div class="info-section-header">
+            <span>📷 SHARED MEDIA</span>
+            <span class="info-view-all" onclick="BestieChat.openSharedDrawer('media')">View all</span>
+          </div>
+          <div id="infoMediaGrid" class="info-media-grid"></div>
+        </div>
+
+        <div class="info-section">
+          <div class="info-section-header">
+            <span>📄 SHARED FILES</span>
+            <span class="info-view-all" onclick="BestieChat.openSharedDrawer('docs')">View all</span>
+          </div>
+          <div id="infoDocsList" class="info-docs-list"></div>
+        </div>
+
+        <div class="info-section">
+          <div class="info-section-header">
+            <span>⚙️ PRIVACY & SETTINGS</span>
+          </div>
+          <button type="button" class="info-action-btn" onclick="BestieChat.openDisappearingModal()">
+            <span>⏱️</span><span>Disappearing Messages</span>
+          </button>
+          <button type="button" class="info-action-btn" onclick="BestieChat.openStarredModal()">
+            <span>⭐</span><span>Starred Messages</span>
+          </button>
+          <button type="button" class="info-action-btn" onclick="BestieChat.exportChatHistory()">
+            <span>📥</span><span>Export Chat Transcript</span>
+          </button>
+          <button type="button" class="info-action-btn danger" onclick="BestieChat.deleteRoom()">
+            <span>🗑️</span><span>Clear Conversation</span>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Mobile Bottom Navigation Bar -->
+    <nav id="mobileBottomNav" class="mobile-bottom-nav">
+      <button type="button" class="mobile-nav-item active" id="mobNavChats" onclick="BestieChat.mobileSwitchTab('chats')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span>Chats</span>
+      </button>
+      <button type="button" class="mobile-nav-item" id="mobNavGroups" onclick="BestieChat.mobileSwitchTab('groups')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Groups</span>
+      </button>
+      <button type="button" class="mobile-nav-item" onclick="BestieChat.openCallHistoryModal()">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        <span>Calls</span>
+      </button>
+      <button type="button" class="mobile-nav-item" onclick="BestieChat.openProfile()">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>Profile</span>
+      </button>
+    </nav>
   </div>
 
   <!-- ═══════════════════ MODALS ═══════════════════ -->
