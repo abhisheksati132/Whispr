@@ -50,12 +50,34 @@ router.get('/users/search', authMw, async (req, res) => {
   }
 });
 
+// GET /api/rooms/messages/starred — get all starred messages for user
+router.get('/messages/starred', authMw, async (req, res) => {
+  try {
+    const messages = await store.getStarredMessages(req.username);
+    res.json(messages);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/rooms/:roomName/messages/:messageId/star — toggle star
+router.post('/:roomName/messages/:messageId/star', authMw, async (req, res) => {
+  try {
+    const { roomName, messageId } = req.params;
+    const { starred } = req.body;
+    const ok = await store.starMessage(roomName, messageId, req.username, starred !== false);
+    res.json({ ok });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/rooms/:roomName/messages?before=timestamp — paginated history
 router.get('/:roomName/messages', authMw, async (req, res) => {
   try {
     const { roomName } = req.params;
     const before = req.query.before ? parseInt(req.query.before, 10) : null;
-    const messages = await store.getRoomMessagesPaginated(roomName, before, 50);
+    const messages = await store.getRoomMessagesPaginated(roomName, before, 100);
     res.json(messages);
   } catch (err) {
     res.status(500).json({ error: err.message });

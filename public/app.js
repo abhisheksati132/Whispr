@@ -1,5 +1,6 @@
 /**
- * TAHC — Pure Black & White Minimalist & Beginner-Friendly Client
+ * TAHC — God-Level Professional Monochrome Messenger
+ * Powered by IndexedDB Local Cache, Client-Side Compression & Fast WebRTC
  */
 (() => {
   'use strict';
@@ -15,6 +16,7 @@
   let cachedUserRooms = [];
   let currentChatFilter = 'all';
   let replyingTo = null;
+  let currentPinnedMessage = null;
 
   // WebRTC Call State
   let peerConnection = null;
@@ -45,17 +47,121 @@
 
   const EMOJIS = ['❤️','👍','🔥','🎉','😍','😂','🥺','✨','💯','🙌','👏','🙏','😎','😴','😭','🤔'];
 
+  // ═══════════════════ INDEXEDDB LOCAL STORAGE ENGINE ═══════════════════
+  let dbPromise = null;
+
+  function initIndexedDB() {
+    if (!window.indexedDB) return;
+    dbPromise = new Promise((resolve, reject) => {
+      const req = indexedDB.open('tahc_local_db', 1);
+      req.onupgradeneeded = e => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains('messages')) {
+          const store = db.createObjectStore('messages', { keyPath: 'id' });
+          store.createIndex('room', 'room', { unique: false });
+        }
+        if (!db.objectStoreNames.contains('rooms')) {
+          db.createObjectStore('rooms', { keyPath: 'name' });
+        }
+      };
+      req.onsuccess = e => resolve(e.target.result);
+      req.onerror = e => reject(e);
+    }).catch(err => {
+      console.warn('IndexedDB unavailable, falling back to network:', err);
+      return null;
+    });
+  }
+
+  async function idbSaveMessages(roomName, msgs) {
+    const db = await dbPromise;
+    if (!db || !Array.isArray(msgs)) return;
+    try {
+      const tx = db.transaction('messages', 'readwrite');
+      const store = tx.objectStore('messages');
+      for (const m of msgs) {
+        if (m && m.id) store.put({ ...m, room: roomName });
+      }
+    } catch (_) { /* ignore */ }
+  }
+
+  async function idbGetMessages(roomName) {
+    const db = await dbPromise;
+    if (!db) return [];
+    return new Promise(resolve => {
+      try {
+        const tx = db.transaction('messages', 'readonly');
+        const store = tx.objectStore('messages');
+        const index = store.index('room');
+        const req = index.getAll(roomName);
+        req.onsuccess = () => {
+          const res = req.result || [];
+          res.sort((a, b) => (a.time || 0) - (b.time || 0));
+          resolve(res);
+        };
+        req.onerror = () => resolve([]);
+      } catch (_) { resolve([]); }
+    });
+  }
+
+  async function idbSaveRooms(rooms) {
+    const db = await dbPromise;
+    if (!db || !Array.isArray(rooms)) return;
+    try {
+      const tx = db.transaction('rooms', 'readwrite');
+      const store = tx.objectStore('rooms');
+      for (const r of rooms) {
+        if (r && r.name) store.put(r);
+      }
+    } catch (_) { /* ignore */ }
+  }
+
+  async function idbGetRooms() {
+    const db = await dbPromise;
+    if (!db) return [];
+    return new Promise(resolve => {
+      try {
+        const tx = db.transaction('rooms', 'readonly');
+        const store = tx.objectStore('rooms');
+        const req = store.getAll();
+        req.onsuccess = () => {
+          const res = req.result || [];
+          res.sort((a, b) => (b.lastActivity || 0) - (a.lastActivity || 0));
+          resolve(res);
+        };
+        req.onerror = () => resolve([]);
+      } catch (_) { resolve([]); }
+    });
+  }
+
   // ═══════════════════ INIT ═══════════════════
-  function init() {
+  async function init() {
+    initIndexedDB();
     cacheElements();
     buildEmojiPicker();
     setupEventListeners();
     setupMobileViewport();
+    setupDragAndDrop();
+    setupClipboardPaste();
+    setupKeyboardShortcuts();
 
     if (authToken && myName) {
       if (!myRoom) myRoom = `dm_${myName.toLowerCase()}_${myName.toLowerCase()}`;
       els.login.style.display = 'none';
       els.chat.style.display = 'flex';
+
+      // 0ms Instant Render from IndexedDB
+      const cachedRooms = await idbGetRooms();
+      if (cachedRooms.length > 0) {
+        cachedUserRooms = cachedRooms;
+        renderChatList(cachedRooms);
+      }
+      const cachedMsgs = await idbGetMessages(myRoom);
+      if (cachedMsgs.length > 0 && els.messages) {
+        els.messages.innerHTML = '';
+        cachedMsgs.forEach(m => renderMessage(m, false));
+        scrollBottom();
+      }
+
       initSocket();
       doSocketJoin();
       loadChatList();
@@ -71,23 +177,26 @@
       login: document.getElementById('login'),
       chat: document.getElementById('chat'),
       sidebar: document.getElementById('sidebar'),
-      sidebarOverlay: document.getElementById('sidebarOverlay'),
       nameInput: document.getElementById('nameInput'),
       passwordInput: document.getElementById('passwordInput'),
       regNicknameInput: document.getElementById('regNicknameInput'),
       regPasswordConfirmInput: document.getElementById('regPasswordConfirmInput'),
       loginError: document.getElementById('loginError'),
-      joinBtn: document.getElementById('joinBtn'),
       joinBtnText: document.getElementById('joinBtnText'),
       sidebarMyAvatar: document.getElementById('sidebarMyAvatar'),
       sidebarMyName: document.getElementById('sidebarMyName'),
-      sidebarMyBio: document.getElementById('sidebarMyBio'),
       sidebarSearchInput: document.getElementById('sidebarSearchInput'),
       sidebarSearchClear: document.getElementById('sidebarSearchClear'),
       sidebarDmList: document.getElementById('sidebarDmList'),
       headerBestieAvatar: document.getElementById('headerBestieAvatar'),
       headerBestieName: document.getElementById('headerBestieName'),
       headerBestieStatus: document.getElementById('headerBestieStatus'),
+      pinnedBanner: document.getElementById('pinnedBanner'),
+      pinnedBannerText: document.getElementById('pinnedBannerText'),
+      inChatSearchBar: document.getElementById('inChatSearchBar'),
+      inChatSearchInput: document.getElementById('inChatSearchInput'),
+      inChatMatchCount: document.getElementById('inChatMatchCount'),
+      dropOverlay: document.getElementById('dropOverlay'),
       messages: document.getElementById('messages'),
       msgInput: document.getElementById('msgInput'),
       sendBtn: document.getElementById('sendBtn'),
@@ -172,6 +281,125 @@
         }
       });
     }
+  }
+
+  function setupDragAndDrop() {
+    const chatMain = document.getElementById('chatMain');
+    if (!chatMain) return;
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      window.addEventListener(eventName, e => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (els.dropOverlay && authToken && myRoom) {
+          els.dropOverlay.style.display = 'flex';
+        }
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      window.addEventListener(eventName, e => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (eventName === 'drop' || (e.clientX === 0 && e.clientY === 0)) {
+          if (els.dropOverlay) els.dropOverlay.style.display = 'none';
+        }
+      });
+    });
+
+    window.addEventListener('drop', e => {
+      e.preventDefault();
+      if (!authToken || !myRoom || !e.dataTransfer || !e.dataTransfer.files) return;
+      const files = Array.from(e.dataTransfer.files);
+      if (!files.length) return;
+
+      const photos = files.filter(f => f.type.startsWith('image/') || f.type.startsWith('video/'));
+      const docs = files.filter(f => !f.type.startsWith('image/') && !f.type.startsWith('video/'));
+
+      if (photos.length) sendPhoto(photos);
+      if (docs.length) {
+        docs.forEach(d => uploadDirectFile(d));
+      }
+    });
+  }
+
+  function setupClipboardPaste() {
+    window.addEventListener('paste', e => {
+      if (!authToken || !myRoom || !e.clipboardData) return;
+      const items = Array.from(e.clipboardData.items);
+      const imgItem = items.find(item => item.type.startsWith('image/'));
+      if (imgItem) {
+        const file = imgItem.getAsFile();
+        if (file) {
+          e.preventDefault();
+          showToast('Uploading pasted image...');
+          sendPhoto([file]);
+        }
+      }
+    });
+  }
+
+  function setupKeyboardShortcuts() {
+    window.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        if (els.sidebarSearchInput) {
+          document.body.classList.remove('in-chat');
+          els.sidebarSearchInput.focus();
+          els.sidebarSearchInput.select();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        toggleInChatSearch();
+      } else if (e.key === 'Escape') {
+        closeInChatSearch();
+        closeNewChatModal();
+        closeProfile();
+        closeStarredModal();
+        cancelReply();
+      }
+    });
+  }
+
+  // ═══════════════════ CLIENT-SIDE IMAGE AUTO-COMPRESSOR ═══════════════════
+  async function compressImageFile(file, maxWidth = 1600, maxHeight = 1600, quality = 0.85) {
+    if (!file || !file.type.startsWith('image/') || file.type.includes('gif') || file.type.includes('svg')) {
+      return file;
+    }
+    return new Promise(resolve => {
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(img.src);
+        let w = img.width;
+        let h = img.height;
+
+        if (w > maxWidth || h > maxHeight) {
+          if (w > h) {
+            h = Math.round((h * maxWidth) / w);
+            w = maxWidth;
+          } else {
+            w = Math.round((w * maxHeight) / h);
+            h = maxHeight;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+
+        canvas.toBlob(blob => {
+          if (blob && blob.size < file.size) {
+            resolve(new File([blob], file.name.replace(/\.[^/.]+$/, '') + '.jpg', { type: 'image/jpeg' }));
+          } else {
+            resolve(file);
+          }
+        }, 'image/jpeg', quality);
+      };
+      img.onerror = () => resolve(file);
+    });
   }
 
   // ═══════════════════ AUTHENTICATION ═══════════════════
@@ -331,6 +559,13 @@
       if (payload.profile) myProfile = payload.profile;
       if (els.sidebarMyAvatar) els.sidebarMyAvatar.textContent = getInitial(myProfile.nickname || myName);
       if (els.sidebarMyName) els.sidebarMyName.textContent = myProfile.nickname || myName;
+      if (payload.pinnedMsg) {
+        currentPinnedMessage = payload.pinnedMsg;
+        renderPinnedBanner(payload.pinnedMsg);
+      } else {
+        currentPinnedMessage = null;
+        if (els.pinnedBanner) els.pinnedBanner.style.display = 'none';
+      }
       updateActiveHeader();
     });
 
@@ -341,12 +576,15 @@
 
     socket.on('message', msg => {
       hideTypingIndicator();
+      idbSaveMessages(msg.room || myRoom, [msg]);
+
       if (msg.room && msg.room !== myRoom) {
         loadChatList();
         if (msg.user !== myName) playNotificationTone();
         return;
       }
-      // Remove empty intro card if exists
+
+      // Remove intro card if exists
       const intro = els.messages ? els.messages.querySelector('.chat-intro-card') : null;
       if (intro) intro.remove();
 
@@ -369,6 +607,27 @@
 
     socket.on('chat-list-update', () => {
       loadChatList();
+    });
+
+    socket.on('pinned-message', msg => {
+      currentPinnedMessage = msg;
+      renderPinnedBanner(msg);
+      showToast('Message pinned to conversation');
+    });
+
+    socket.on('unpinned-message', () => {
+      currentPinnedMessage = null;
+      if (els.pinnedBanner) els.pinnedBanner.style.display = 'none';
+      showToast('Message unpinned');
+    });
+
+    socket.on('message-deleted', data => {
+      if (!data || !data.messageId) return;
+      const el = document.querySelector(`[data-msg-id="${data.messageId}"]`);
+      if (el) {
+        el.remove();
+        showToast('Message deleted');
+      }
     });
 
     // WebRTC Signaling Events
@@ -398,6 +657,7 @@
       if (!resp.ok) return;
       const rooms = await resp.json();
       cachedUserRooms = rooms || [];
+      idbSaveRooms(cachedUserRooms);
       renderChatList(cachedUserRooms);
     } catch (err) {
       console.error('loadChatList error:', err);
@@ -406,6 +666,15 @@
 
   async function fetchMessagesForRoom(roomName) {
     if (!authToken || !roomName) return;
+
+    // Fast IndexedDB display
+    const cached = await idbGetMessages(roomName);
+    if (cached.length > 0 && els.messages) {
+      els.messages.innerHTML = '';
+      cached.forEach(m => renderMessage(m, false));
+      scrollBottom();
+    }
+
     try {
       const resp = await fetch(`/api/rooms/${encodeURIComponent(roomName)}/messages`, {
         headers: { 'Authorization': `Bearer ${authToken}` }
@@ -416,6 +685,7 @@
         els.messages.innerHTML = '';
         if (Array.isArray(messages) && messages.length > 0) {
           messages.forEach(m => renderMessage(m, false));
+          idbSaveMessages(roomName, messages);
         } else {
           renderConversationIntro(roomName);
         }
@@ -463,7 +733,7 @@
     }
 
     if (!displayRooms.length) {
-      list.innerHTML = `<div style="padding:32px 16px; text-align:center; color:var(--muted); font-size:13px;">
+      list.innerHTML = `<div style="padding:32px 16px; text-align:center; color:var(--text-muted); font-size:13px;">
         <div style="font-weight:700; color:#ffffff; margin-bottom:6px;">No conversations yet</div>
         <div style="margin-bottom:14px;">Search for someone to start messaging:</div>
         <button type="button" class="login-btn" onclick="BestieChat.openNewChatModal()" style="max-width:180px; margin:0 auto; padding:8px 14px; font-size:12px;">+ New Message</button>
@@ -549,28 +819,28 @@
 
         const isSelf = cleanQ === (myName || '').toLowerCase();
         html += `
-          <div class="dm-row" onclick="BestieChat.startDMWith('${escapeHtml(cleanQ)}')" style="background:var(--surface2); border:1px solid #ffffff; margin-bottom:6px;">
+          <div class="dm-row" onclick="BestieChat.startDMWith('${escapeHtml(cleanQ)}')" style="background:var(--bg-surface); border:1px solid #ffffff; margin-bottom:6px;">
             <div class="dm-avatar-wrap"><div class="dm-avatar">${isSelf ? 'N' : getInitial(cleanQ)}</div></div>
             <div class="dm-info">
               <div class="dm-name">${isSelf ? 'Open Note to Self' : `Start chat with @${escapeHtml(cleanQ)}`}</div>
-              <div style="font-size:11.5px; color:var(--muted);">${isSelf ? 'Your private notes' : 'Click or press Enter to message'}</div>
+              <div style="font-size:11.5px; color:var(--text-muted);">${isSelf ? 'Your private notes' : 'Click or press Enter to message'}</div>
             </div>
             <button type="button" class="login-btn" onclick="event.stopPropagation(); BestieChat.startDMWith('${escapeHtml(cleanQ)}')" style="padding:4px 12px; font-size:11.5px; margin:0; width:auto;">${isSelf ? 'Open' : 'Message'}</button>
           </div>
         `;
 
         if (matchingChats.length > 0) {
-          html += '<div style="padding:6px 10px; font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase;">Active Chats</div>';
+          html += '<div style="padding:6px 10px; font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Active Chats</div>';
           html += renderChatListItems(matchingChats);
         }
         if (otherUsers.length > 0) {
-          html += '<div style="padding:8px 10px; font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase;">Registered Users</div>';
+          html += '<div style="padding:8px 10px; font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Registered Users</div>';
           html += otherUsers.map(u => `
             <div class="dm-row" onclick="BestieChat.startDMWith('${escapeHtml(u.username)}')">
               <div class="dm-avatar-wrap"><div class="dm-avatar">${getInitial(u.nickname || u.username)}</div></div>
               <div class="dm-info">
                 <div class="dm-name">${escapeHtml(u.nickname || u.username)}</div>
-                <div style="font-size:11.5px; color:var(--muted);">@${escapeHtml(u.username)}</div>
+                <div style="font-size:11.5px; color:var(--text-muted);">@${escapeHtml(u.username)}</div>
               </div>
               <button type="button" class="login-btn" onclick="event.stopPropagation(); BestieChat.startDMWith('${escapeHtml(u.username)}')" style="padding:4px 12px; font-size:11.5px; margin:0; width:auto;">Chat</button>
             </div>
@@ -648,7 +918,7 @@
     if (isSaved) {
       if (els.headerBestieAvatar) els.headerBestieAvatar.textContent = 'N';
       if (els.headerBestieName) els.headerBestieName.textContent = 'Note to Self';
-      if (els.headerBestieStatus) els.headerBestieStatus.textContent = 'Private cloud storage';
+      if (els.headerBestieStatus) els.headerBestieStatus.textContent = 'Private cloud notebook';
       return;
     }
 
@@ -669,7 +939,7 @@
     }
   }
 
-  // ═══════════════════ MESSAGING ═══════════════════
+  // ═══════════════════ MESSAGING (OPTIMISTIC UI) ═══════════════════
   function sendMessage() {
     if (!els.msgInput) return;
     const text = els.msgInput.value.trim();
@@ -678,7 +948,10 @@
       return;
     }
 
+    const clientMsgId = 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
     const payload = {
+      id: clientMsgId,
+      clientMsgId,
       text,
       user: myName,
       room: myRoom,
@@ -687,13 +960,19 @@
       replyTo: replyingTo
     };
 
+    // Remove intro card
+    const intro = els.messages ? els.messages.querySelector('.chat-intro-card') : null;
+    if (intro) intro.remove();
+
     renderMessage(payload, true);
     scrollBottom();
+    idbSaveMessages(myRoom, [payload]);
 
     if (socket && socket.connected) {
       socket.emit('message', payload);
     }
 
+    playSendTone();
     els.msgInput.value = '';
     autoExpandMsgInput();
     cancelReply();
@@ -705,6 +984,7 @@
     const isMe = (msg.user || '').toLowerCase() === (myName || '').toLowerCase();
     const wrap = document.createElement('div');
     wrap.className = `msg-wrap ${isMe ? 'me' : 'them'}`;
+    wrap.setAttribute('data-msg-id', msg.id || '');
 
     let contentHtml = '';
 
@@ -733,19 +1013,31 @@
         </div>
       </a>`;
     } else {
-      contentHtml += `<span>${escapeHtml(msg.text || '')}</span>`;
+      contentHtml += `<span class="msg-text-content">${escapeHtml(msg.text || '')}</span>`;
     }
 
     const timeStr = formatTime(msg.time || Date.now());
     const tickHtml = isMe ? '<span class="msg-status-ticks"> ✓✓</span>' : '';
 
-    wrap.innerHTML = `<div class="msg ${isMe ? 'me' : 'them'}" ondblclick="BestieChat.replyToMessage('${escapeHtml(msg.id || '')}', '${escapeHtml(msg.user || '')}', '${escapeHtml(msg.text || 'Photo')}')" title="Double click to reply">
-      ${contentHtml}
-      <div class="bubble-meta">
-        <span>${timeStr}</span>
-        ${tickHtml}
+    // Action bar for power actions
+    const deleteBtn = isMe ? `<button type="button" class="msg-action-btn" onclick="BestieChat.deleteMessage('${escapeHtml(msg.id)}')" title="Delete">🗑️</button>` : '';
+
+    wrap.innerHTML = `
+      <div class="msg ${isMe ? 'me' : 'them'}" ondblclick="BestieChat.replyToMessage('${escapeHtml(msg.id || '')}', '${escapeHtml(msg.user || '')}', '${escapeHtml(msg.text || 'Media')}')" title="Double click to reply">
+        ${contentHtml}
+        <div class="bubble-meta">
+          <span>${timeStr}</span>
+          ${tickHtml}
+        </div>
       </div>
-    </div>`;
+      <div class="msg-action-bar">
+        <button type="button" class="msg-action-btn" onclick="BestieChat.replyToMessage('${escapeHtml(msg.id || '')}', '${escapeHtml(msg.user || '')}', '${escapeHtml(msg.text || 'Media')}')" title="Reply">↩️</button>
+        <button type="button" class="msg-action-btn" onclick="BestieChat.copyMessageText('${escapeHtml(msg.text || msg.url || '')}')" title="Copy">📋</button>
+        <button type="button" class="msg-action-btn" onclick="BestieChat.pinMessage('${escapeHtml(msg.id)}')" title="Pin">📌</button>
+        <button type="button" class="msg-action-btn" onclick="BestieChat.starMessage('${escapeHtml(msg.id)}')" title="Star">⭐</button>
+        ${deleteBtn}
+      </div>
+    `;
 
     els.messages.appendChild(wrap);
   }
@@ -767,6 +1059,172 @@
     const hasText = Boolean(els.msgInput && els.msgInput.value.trim());
     if (hasText) sendMessage();
     else toggleRecord();
+  }
+
+  // ═══════════════════ IN-CHAT MESSAGE SEARCH ═══════════════════
+  function toggleInChatSearch() {
+    if (!els.inChatSearchBar) return;
+    const isOpen = els.inChatSearchBar.style.display === 'flex';
+    els.inChatSearchBar.style.display = isOpen ? 'none' : 'flex';
+    if (!isOpen && els.inChatSearchInput) {
+      els.inChatSearchInput.value = '';
+      els.inChatSearchInput.focus();
+    } else {
+      closeInChatSearch();
+    }
+  }
+
+  function closeInChatSearch() {
+    if (els.inChatSearchBar) els.inChatSearchBar.style.display = 'none';
+    if (els.inChatMatchCount) els.inChatMatchCount.textContent = '';
+    // Clear marks
+    if (els.messages) {
+      els.messages.querySelectorAll('mark.search-highlight').forEach(m => {
+        const textNode = document.createTextNode(m.textContent);
+        m.parentNode.replaceChild(textNode, m);
+      });
+    }
+  }
+
+  function searchInChat(query) {
+    if (!els.messages) return;
+    const cleanQ = String(query || '').trim().toLowerCase();
+    
+    // Clear previous marks
+    els.messages.querySelectorAll('mark.search-highlight').forEach(m => {
+      const textNode = document.createTextNode(m.textContent);
+      m.parentNode.replaceChild(textNode, m);
+    });
+
+    if (!cleanQ) {
+      if (els.inChatMatchCount) els.inChatMatchCount.textContent = '';
+      return;
+    }
+
+    let matchCount = 0;
+    let firstMatch = null;
+
+    els.messages.querySelectorAll('.msg-text-content').forEach(node => {
+      const text = node.textContent;
+      if (text.toLowerCase().includes(cleanQ)) {
+        const regex = new RegExp(`(${escapeRegex(cleanQ)})`, 'gi');
+        node.innerHTML = escapeHtml(text).replace(regex, '<mark class="search-highlight">$1</mark>');
+        matchCount++;
+        if (!firstMatch) firstMatch = node;
+      }
+    });
+
+    if (els.inChatMatchCount) {
+      els.inChatMatchCount.textContent = matchCount > 0 ? `${matchCount} found` : 'No match';
+    }
+    if (firstMatch) {
+      firstMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  // ═══════════════════ PIN & STARRED MESSAGES ═══════════════════
+  function pinMessage(messageId) {
+    if (socket && messageId) {
+      socket.emit('pin-message', { messageId });
+    }
+  }
+
+  function unpinCurrentMessage() {
+    if (socket) {
+      socket.emit('unpin-message');
+    }
+  }
+
+  function renderPinnedBanner(msg) {
+    if (!els.pinnedBanner || !els.pinnedBannerText) return;
+    if (!msg) {
+      els.pinnedBanner.style.display = 'none';
+      return;
+    }
+    els.pinnedBannerText.textContent = `Pinned: ${msg.text || (msg.type === 'image' ? 'Photo' : 'Attachment')}`;
+    els.pinnedBanner.style.display = 'flex';
+  }
+
+  function scrollToPinned() {
+    if (!currentPinnedMessage) return;
+    scrollToMessage(currentPinnedMessage.id);
+  }
+
+  function scrollToMessage(id) {
+    if (!id) return;
+    const el = document.querySelector(`[data-msg-id="${id}"]`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('msg-highlight');
+      setTimeout(() => el.classList.remove('msg-highlight'), 1600);
+    }
+  }
+
+  async function starMessage(messageId) {
+    if (!messageId || !authToken || !myRoom) return;
+    try {
+      await fetch(`/api/rooms/${encodeURIComponent(myRoom)}/messages/${encodeURIComponent(messageId)}/star`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+        body: JSON.stringify({ starred: true })
+      });
+      showToast('⭐ Message saved to Starred');
+    } catch (_) {
+      showToast('Could not star message');
+    }
+  }
+
+  async function openStarredModal() {
+    const modal = document.getElementById('starredModal');
+    const list = document.getElementById('starredList');
+    if (modal && list) {
+      modal.style.display = 'flex';
+      list.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-muted); font-size:13px;">Loading starred messages...</div>';
+
+      try {
+        const resp = await fetch('/api/rooms/messages/starred', {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        if (!resp.ok) return;
+        const messages = await resp.json();
+
+        if (!messages || !messages.length) {
+          list.innerHTML = '<div style="padding:24px; text-align:center; color:var(--text-muted); font-size:13px;">No starred messages yet. Hover any message and click ⭐ to save it.</div>';
+          return;
+        }
+
+        list.innerHTML = messages.map(m => `
+          <div class="starred-item-card" onclick="BestieChat.closeStarredModal(); BestieChat.switchRoom('${escapeHtml(m.room)}');">
+            <div class="starred-item-header">
+              <span style="font-weight:700; color:#ffffff;">@${escapeHtml(m.user)}</span>
+              <span>${formatTimestamp(m.time)}</span>
+            </div>
+            <div style="font-size:13px; color:#ffffff;">${escapeHtml(m.text || (m.type === 'image' ? 'Photo' : 'Document'))}</div>
+          </div>
+        `).join('');
+      } catch (_) {
+        list.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-muted);">Failed to load starred messages</div>';
+      }
+    }
+  }
+
+  function closeStarredModal() {
+    const modal = document.getElementById('starredModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function deleteMessage(messageId) {
+    if (!messageId || !socket) return;
+    socket.emit('delete-message', { messageId });
+  }
+
+  function copyMessageText(text) {
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      showToast('📋 Copied to clipboard');
+    }).catch(() => {
+      showToast('Could not copy text');
+    });
   }
 
   // ═══════════════════ VOICE RECORDING ═══════════════════
@@ -831,6 +1289,7 @@
       const data = await res.json();
       if (data.url) {
         const payload = {
+          id: 'msg_' + Date.now(),
           type: 'voice',
           url: data.url,
           duration,
@@ -840,6 +1299,7 @@
         };
         renderMessage(payload, true);
         scrollBottom();
+        idbSaveMessages(myRoom, [payload]);
         if (socket && socket.connected) socket.emit('message', payload);
       }
     } catch (_) {
@@ -847,37 +1307,46 @@
     }
   }
 
-  // ═══════════════════ FILE / PHOTO UPLOAD ═══════════════════
+  // ═══════════════════ FILE / PHOTO UPLOAD WITH AUTO-COMPRESSION ═══════════════════
   async function sendPhoto(files) {
     if (!files || !files.length) return;
-    const file = files[0];
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('room', myRoom);
+    for (const rawFile of Array.from(files)) {
+      const file = await compressImageFile(rawFile);
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('room', myRoom);
 
-    try {
-      const res = await fetch('/api/upload', { method: 'POST', body: formData });
-      const data = await res.json();
-      if (data.url) {
-        const payload = {
-          type: 'image',
-          url: data.url,
-          user: myName,
-          room: myRoom,
-          time: Date.now()
-        };
-        renderMessage(payload, true);
-        scrollBottom();
-        if (socket && socket.connected) socket.emit('message', payload);
+      try {
+        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.url) {
+          const payload = {
+            id: 'msg_' + Date.now(),
+            type: 'image',
+            url: data.url,
+            user: myName,
+            room: myRoom,
+            time: Date.now()
+          };
+          renderMessage(payload, true);
+          scrollBottom();
+          idbSaveMessages(myRoom, [payload]);
+          if (socket && socket.connected) socket.emit('message', payload);
+        }
+      } catch (_) {
+        showToast('Failed to upload photo');
       }
-    } catch (_) {
-      showToast('Failed to upload photo');
     }
   }
 
   async function uploadDocumentFile(input) {
     if (!input || !input.files || !input.files.length) return;
-    const file = input.files[0];
+    for (const file of Array.from(input.files)) {
+      await uploadDirectFile(file);
+    }
+  }
+
+  async function uploadDirectFile(file) {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('room', myRoom);
@@ -887,6 +1356,7 @@
       const data = await res.json();
       if (data.url) {
         const payload = {
+          id: 'msg_' + Date.now(),
           type: 'document',
           url: data.url,
           docName: file.name,
@@ -897,6 +1367,7 @@
         };
         renderMessage(payload, true);
         scrollBottom();
+        idbSaveMessages(myRoom, [payload]);
         if (socket && socket.connected) socket.emit('message', payload);
       }
     } catch (_) {
@@ -1142,6 +1613,37 @@
     showToast(isCameraOff ? 'Camera Off' : 'Camera On');
   }
 
+  // ═══════════════════ TYPING INDICATOR & SCROLL ═══════════════════
+  let _typingTimer = null;
+  function showTypingIndicator() {
+    clearTimeout(_typingTimer);
+    if (!els.messages) return;
+    let bubble = document.getElementById('chatTypingBubble');
+    if (!bubble) {
+      bubble = document.createElement('div');
+      bubble.id = 'chatTypingBubble';
+      bubble.className = 'typing-bubble';
+      bubble.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
+      els.messages.appendChild(bubble);
+      scrollBottom();
+    }
+    _typingTimer = setTimeout(hideTypingIndicator, 2500);
+  }
+
+  function hideTypingIndicator() {
+    clearTimeout(_typingTimer);
+    const bubble = document.getElementById('chatTypingBubble');
+    if (bubble) bubble.remove();
+  }
+
+  function scrollBottom() {
+    if (els.messages) {
+      els.messages.scrollTop = els.messages.scrollHeight;
+    }
+    const btn = document.getElementById('scrollBottomBtn');
+    if (btn) btn.style.display = 'none';
+  }
+
   // ═══════════════════ MODALS & HELPERS ═══════════════════
   function toggleSidebar() {
     document.body.classList.toggle('in-chat');
@@ -1194,12 +1696,12 @@
         const actionLabel = isSelf ? 'Open Note to Self' : `Start chat with @${escapeHtml(cleanQ)}`;
         const actionSub = isSelf ? 'Your private cloud notes' : 'Click or press Enter to message directly';
         html += `
-          <div class="user-result-row" onclick="BestieChat.startDMWith('${escapeHtml(cleanQ)}')" style="background:var(--surface2); border:1px solid #ffffff; margin-bottom:8px;">
+          <div class="user-result-row" onclick="BestieChat.startDMWith('${escapeHtml(cleanQ)}')" style="background:var(--bg-surface); border:1px solid #ffffff; margin-bottom:8px;">
             <div style="display:flex; align-items:center; gap:10px;">
               <div style="width:36px; height:36px; border-radius:50%; background:#fff; color:#000; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700;">${isSelf ? 'N' : getInitial(cleanQ)}</div>
               <div>
                 <div style="font-weight:700; font-size:13.5px; color:#fff;">${actionLabel}</div>
-                <div style="font-size:11.5px; color:var(--muted);">${actionSub}</div>
+                <div style="font-size:11.5px; color:var(--text-muted);">${actionSub}</div>
               </div>
             </div>
             <button type="button" class="login-btn" onclick="event.stopPropagation(); BestieChat.startDMWith('${escapeHtml(cleanQ)}')" style="padding:5px 14px; font-size:12px; margin:0; width:auto;">${isSelf ? 'Open' : 'Message'}</button>
@@ -1208,21 +1710,21 @@
       }
 
       if (users && users.length > 0) {
-        html += '<div style="padding:4px 2px; font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase;">Registered Contacts</div>';
+        html += '<div style="padding:4px 2px; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Registered Contacts</div>';
         html += users.map(u => `
           <div class="user-result-row" onclick="BestieChat.startDMWith('${escapeHtml(u.username)}')">
             <div style="display:flex; align-items:center; gap:10px;">
-              <div style="width:36px; height:36px; border-radius:50%; background:var(--surface2); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; color:#fff;">${getInitial(u.nickname || u.username)}</div>
+              <div style="width:36px; height:36px; border-radius:50%; background:var(--bg-surface); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; color:#fff;">${getInitial(u.nickname || u.username)}</div>
               <div>
                 <div style="font-weight:700; font-size:13.5px; color:#fff;">${escapeHtml(u.nickname || u.username)}</div>
-                <div style="font-size:11.5px; color:var(--muted);">@${escapeHtml(u.username)}</div>
+                <div style="font-size:11.5px; color:var(--text-muted);">@${escapeHtml(u.username)}</div>
               </div>
             </div>
             <button type="button" class="login-btn" onclick="event.stopPropagation(); BestieChat.startDMWith('${escapeHtml(u.username)}')" style="padding:5px 14px; font-size:12px; margin:0; width:auto;">Chat</button>
           </div>
         `).join('');
       } else if (!cleanQ) {
-        html += '<div style="padding:20px; text-align:center; color:var(--muted); font-size:13px;">Type any username above to start chatting</div>';
+        html += '<div style="padding:20px; text-align:center; color:var(--text-muted); font-size:13px;">Type any username above to start chatting</div>';
       }
 
       results.innerHTML = html;
@@ -1266,6 +1768,20 @@
     }
   }
 
+  function replyToMessage(id, user, text) {
+    replyingTo = { id, user, text };
+    if (els.replyBar) {
+      els.replyBar.style.display = 'flex';
+      if (els.replyPreviewText) els.replyPreviewText.textContent = `${user}: ${text.slice(0, 35)}`;
+    }
+    if (els.msgInput) els.msgInput.focus();
+  }
+
+  function cancelReply() {
+    replyingTo = null;
+    if (els.replyBar) els.replyBar.style.display = 'none';
+  }
+
   function toggleAttachMenu() {
     if (!els.attachMenu) return;
     els.attachMenu.style.display = els.attachMenu.style.display === 'grid' ? 'none' : 'grid';
@@ -1303,20 +1819,6 @@
     if (lb) lb.style.display = 'none';
   }
 
-  function replyToMessage(id, user, text) {
-    replyingTo = { id, user, text };
-    if (els.replyBar) {
-      els.replyBar.style.display = 'flex';
-      if (els.replyPreviewText) els.replyPreviewText.textContent = `${user}: ${text.slice(0, 35)}`;
-    }
-    if (els.msgInput) els.msgInput.focus();
-  }
-
-  function cancelReply() {
-    replyingTo = null;
-    if (els.replyBar) els.replyBar.style.display = 'none';
-  }
-
   async function deleteRoom() {
     if (!myRoom) return;
     try {
@@ -1337,19 +1839,35 @@
     audio.play().catch(() => { /* ignore */ });
   }
 
+  function playSendTone() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(800, ctx.currentTime);
+      gain.gain.setValueAtTime(0.04, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.08);
+    } catch (_) { /* ignore */ }
+  }
+
   function playNotificationTone() {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(600, ctx.currentTime);
-      gain.gain.setValueAtTime(0.08, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+      osc.frequency.setValueAtTime(580, ctx.currentTime);
+      gain.gain.setValueAtTime(0.06, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.005, ctx.currentTime + 0.14);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start();
-      osc.stop(ctx.currentTime + 0.15);
+      osc.stop(ctx.currentTime + 0.14);
     } catch (_) { /* ignore */ }
   }
 
@@ -1379,37 +1897,7 @@
     toast.className = 'toast';
     toast.textContent = msg;
     container.appendChild(toast);
-    setTimeout(() => toast.remove(), 2600);
-  }
-
-  let _typingTimer = null;
-  function showTypingIndicator() {
-    clearTimeout(_typingTimer);
-    if (!els.messages) return;
-    let bubble = document.getElementById('chatTypingBubble');
-    if (!bubble) {
-      bubble = document.createElement('div');
-      bubble.id = 'chatTypingBubble';
-      bubble.className = 'typing-bubble';
-      bubble.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
-      els.messages.appendChild(bubble);
-      scrollBottom();
-    }
-    _typingTimer = setTimeout(hideTypingIndicator, 2500);
-  }
-
-  function hideTypingIndicator() {
-    clearTimeout(_typingTimer);
-    const bubble = document.getElementById('chatTypingBubble');
-    if (bubble) bubble.remove();
-  }
-
-  function scrollBottom() {
-    if (els.messages) {
-      els.messages.scrollTop = els.messages.scrollHeight;
-    }
-    const btn = document.getElementById('scrollBottomBtn');
-    if (btn) btn.style.display = 'none';
+    setTimeout(() => toast.remove(), 2400);
   }
 
   function getInitial(str) {
@@ -1437,6 +1925,10 @@
     return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
   }
 
+  function escapeRegex(str) {
+    return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
   // ═══════════════════ EXPORTS ═══════════════════
   window.BestieChat = {
     switchAuthTab, handleSignIn, handleRegister, joinChat: handleAuthSubmit, logout,
@@ -1447,9 +1939,13 @@
     sendPhoto, uploadDocumentFile, uploadCameraFile,
     toggleAttachMenu, toggleEmojiPicker, insertEmoji,
     openProfile, closeProfile, saveProfile,
-    openLightbox, closeLightbox, cancelReply, replyToMessage,
+    openLightbox, closeLightbox, replyToMessage, cancelReply,
     startCall, acceptCall, declineCall, endCall, toggleMuteAudio, toggleCamera,
-    playAudio,
+    playAudio, scrollBottom,
+    toggleInChatSearch, closeInChatSearch, searchInChat,
+    pinMessage, unpinCurrentMessage, scrollToPinned, scrollToMessage,
+    starMessage, openStarredModal, closeStarredModal,
+    deleteMessage, copyMessageText,
     toggleSound: () => showToast('Sound active'),
     toggleTheme: () => showToast('Black & White monochrome active')
   };

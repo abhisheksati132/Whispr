@@ -1321,3 +1321,66 @@ header {
     padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
   }
 }
+
+/* ═══════════════════ 9. MESSAGE ACTIONS, SEARCH & STARRED ═══════════════════ */
+.msg-action-bar {
+  position: absolute;
+  top: -14px;
+  right: 8px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 2px 4px;
+  display: none;
+  align-items: center;
+  gap: 2px;
+  box-shadow: var(--shadow-md);
+  z-index: 50;
+}
+
+.msg-wrap:hover .msg-action-bar {
+  display: flex;
+}
+
+.msg-action-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--text-muted);
+  transition: var(--transition);
+}
+
+.msg-action-btn:hover {
+  background: var(--bg-surface-hover);
+  color: #ffffff;
+}
+
+mark.search-highlight {
+  background: #ffffff;
+  color: #000000;
+  border-radius: 2px;
+  padding: 0 2px;
+  font-weight: 700;
+}
+
+.starred-item-card {
+  padding: 10px 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.starred-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-muted);
+}
