@@ -1384,3 +1384,56 @@ mark.search-highlight {
   font-size: 11px;
   color: var(--text-muted);
 }
+
+/* ═══════════════════ 10. CODE BLOCKS, AUDIO SPEED & POWER STYLES ═══════════════════ */
+.chat-code-block {
+  background: #09090b;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  margin: 4px 0;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 12px;
+  overflow-x: auto;
+  color: #e4e4e7;
+  position: relative;
+}
+
+.msg.me .chat-code-block {
+  background: #f4f4f5;
+  color: #09090b;
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+.voice-speed-btn {
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  color: inherit;
+  margin-left: auto;
+  cursor: pointer;
+  user-select: none;
+}
+.voice-speed-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.edited-tag {
+  font-size: 9.5px;
+  opacity: 0.6;
+  margin-left: 4px;
+}
+
+.disappearing-timer-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}

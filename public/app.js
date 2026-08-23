@@ -16,6 +16,8 @@
   let cachedUserRooms = [];
   let currentChatFilter = 'all';
   let replyingTo = null;
+  let isScreenSharing = false;
+  let screenStream = null;
   let currentPinnedMessage = null;
 
   // WebRTC Call State
@@ -605,6 +607,17 @@
       }
     });
 
+        socket.on('message-edited', data => {
+      if (!data || !data.messageId) return;
+      const el = document.querySelector(`[data-msg-id="${data.messageId}"]`);
+      if (el) {
+        const textSpan = el.querySelector('.msg-text-content');
+        if (textSpan) {
+          textSpan.innerHTML = formatMessageContent(data.text) + ' <span class="edited-tag">(edited)</span>';
+        }
+      }
+    });
+
     socket.on('chat-list-update', () => {
       loadChatList();
     });
@@ -1003,6 +1016,7 @@
       contentHtml += `<div class="voice-bubble">
         <button type="button" class="voice-play-btn" onclick="BestieChat.playAudio('${escapeHtml(msg.url)}', this)">▶</button>
         <div style="font-size:12px;">Voice note (${msg.duration || 0}s)</div>
+        <button type="button" class="voice-speed-btn" onclick="BestieChat.cycleAudioSpeed(this, '${escapeHtml(msg.url)}')">1x</button>
       </div>`;
     } else if (msg.type === 'document' && msg.url) {
       contentHtml += `<a href="${escapeHtml(msg.url)}" download class="doc-card" style="text-decoration:none; color:inherit;">
@@ -1013,7 +1027,9 @@
         </div>
       </a>`;
     } else {
-      contentHtml += `<span class="msg-text-content">${escapeHtml(msg.text || '')}</span>`;
+      const formatted = formatMessageContent(msg.text || '');
+      const editedTag = msg.edited ? '<span class="edited-tag">(edited)</span>' : '';
+      contentHtml += `<span class="msg-text-content">${formatted}${editedTag}</span>`;
     }
 
     const timeStr = formatTime(msg.time || Date.now());
@@ -1033,6 +1049,7 @@
       <div class="msg-action-bar">
         <button type="button" class="msg-action-btn" onclick="BestieChat.replyToMessage('${escapeHtml(msg.id || '')}', '${escapeHtml(msg.user || '')}', '${escapeHtml(msg.text || 'Media')}')" title="Reply">↩️</button>
         <button type="button" class="msg-action-btn" onclick="BestieChat.copyMessageText('${escapeHtml(msg.text || msg.url || '')}')" title="Copy">📋</button>
+        ${(isMe && msg.type === 'text') ? `<button type="button" class="msg-action-btn" onclick="BestieChat.openEditModal('${escapeHtml(msg.id)}', '${escapeHtml(msg.text || '')}')" title="Edit">✏️</button>` : ''}
         <button type="button" class="msg-action-btn" onclick="BestieChat.pinMessage('${escapeHtml(msg.id)}')" title="Pin">📌</button>
         <button type="button" class="msg-action-btn" onclick="BestieChat.starMessage('${escapeHtml(msg.id)}')" title="Star">⭐</button>
         ${deleteBtn}
@@ -1832,13 +1849,6 @@
     } catch (_) { /* ignore */ }
   }
 
-  function playAudio(url, btn) {
-    const audio = new Audio(url);
-    if (btn) btn.textContent = '⏸';
-    audio.onended = () => { if (btn) btn.textContent = '▶'; };
-    audio.play().catch(() => { /* ignore */ });
-  }
-
   function playSendTone() {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1929,7 +1939,180 @@
     return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
-  // ═══════════════════ EXPORTS ═══════════════════
+  function formatMessageContent(rawText) {
+    if (!rawText) return '';
+    let str = escapeHtml(rawText);
+    const triple = String.fromCharCode(96, 96, 96);
+    const single = String.fromCharCode(96);
+    if (str.includes(triple)) {
+      str = str.replace(new RegExp(triple + '([\\s\\S]*?)' + triple, 'g'), '<pre class="chat-code-block"><code>$1</code></pre>');
+    }
+    if (str.includes(single)) {
+      str = str.replace(new RegExp(single + '([^' + single + ']+)' + single, 'g'), '<code style="background:rgba(255,255,255,0.15); padding:1px 4px; border-radius:3px; font-size:12px;">$1</code>');
+    }
+    return str;
+  }
+
+  async function toggleScreenShare() {
+    if (!peerConnection) return;
+    if (isScreenSharing) {
+      if (screenStream) {
+        screenStream.getTracks().forEach(t => t.stop());
+        screenStream = null;
+      }
+      isScreenSharing = false;
+      const camTrack = localStream ? localStream.getVideoTracks()[0] : null;
+      if (camTrack) {
+        const sender = peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
+        if (sender) sender.replaceTrack(camTrack);
+        if (els.callLocalVideo) els.callLocalVideo.srcObject = localStream;
+      }
+      if (els.screenShareBtn) els.screenShareBtn.textContent = 'Screen';
+      showToast('Screen sharing stopped');
+    } else {
+      try {
+        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        const screenTrack = screenStream.getVideoTracks()[0];
+        const sender = peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
+        if (sender) sender.replaceTrack(screenTrack);
+        if (els.callLocalVideo) els.callLocalVideo.srcObject = screenStream;
+        
+        isScreenSharing = true;
+        if (els.screenShareBtn) els.screenShareBtn.textContent = 'Stop Share';
+        showToast('Screen sharing started');
+
+        screenTrack.onended = () => toggleScreenShare();
+      } catch (_) {
+        showToast('Screen sharing cancelled');
+      }
+    }
+  }
+
+  const activeAudioPlayers = new Map();
+  function playAudio(url, btn) {
+    let audio = activeAudioPlayers.get(url);
+    if (!audio) {
+      audio = new Audio(url);
+      activeAudioPlayers.set(url, audio);
+      audio.onended = () => { if (btn) btn.textContent = '▶'; };
+    }
+
+    if (audio.paused) {
+      audio.play().catch(() => {});
+      if (btn) btn.textContent = '⏸';
+    } else {
+      audio.pause();
+      if (btn) btn.textContent = '▶';
+    }
+  }
+
+  function cycleAudioSpeed(btn, url) {
+    let audio = activeAudioPlayers.get(url);
+    if (!audio) {
+      audio = new Audio(url);
+      activeAudioPlayers.set(url, audio);
+    }
+    const rates = [1.0, 1.5, 2.0];
+    const currentRate = audio.playbackRate || 1.0;
+    const nextIdx = (rates.indexOf(currentRate) + 1) % rates.length;
+    const nextRate = rates[nextIdx];
+    audio.playbackRate = nextRate;
+    btn.textContent = nextRate + 'x';
+    showToast('Audio speed: ' + nextRate + 'x');
+  }
+
+  let editingMessageId = null;
+  function openEditModal(messageId, currentText) {
+    editingMessageId = messageId;
+    const modal = document.getElementById('editMessageModal');
+    const input = document.getElementById('editMessageInput');
+    if (modal && input) {
+      input.value = currentText || '';
+      modal.style.display = 'flex';
+      input.focus();
+    }
+  }
+
+  function closeEditModal() {
+    editingMessageId = null;
+    const modal = document.getElementById('editMessageModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function submitEditMessage() {
+    const input = document.getElementById('editMessageInput');
+    if (!input || !editingMessageId || !socket) return;
+    const newText = input.value.trim();
+    if (!newText) return;
+
+    socket.emit('edit-message', { messageId: editingMessageId, text: newText });
+
+    const el = document.querySelector(`[data-msg-id="${editingMessageId}"]`);
+    if (el) {
+      const textSpan = el.querySelector('.msg-text-content');
+      if (textSpan) {
+        textSpan.innerHTML = formatMessageContent(newText) + ' <span class="edited-tag">(edited)</span>';
+      }
+    }
+    closeEditModal();
+    showToast('Message edited');
+  }
+
+  function openDisappearingModal() {
+    const modal = document.getElementById('disappearingModal');
+    if (modal) modal.style.display = 'flex';
+  }
+
+  function closeDisappearingModal() {
+    const modal = document.getElementById('disappearingModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function setDisappearingTimer(ms) {
+    if (socket && myRoom) {
+      socket.emit('set-disappearing-timer', ms);
+      const labels = { 0: 'Off', 30000: '30s', 300000: '5m', 3600000: '1h', 86400000: '24h' };
+      showToast('⏱️ Disappearing timer: ' + (labels[ms] || ms + 'ms'));
+    }
+    closeDisappearingModal();
+  }
+
+  async function exportChatHistory() {
+    if (!myRoom || !authToken) return;
+    try {
+      const resp = await fetch(`/api/rooms/${encodeURIComponent(myRoom)}/messages`, {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      if (!resp.ok) return;
+      const messages = await resp.json();
+      
+      const otherUser = myRoom === `dm_${myName.toLowerCase()}_${myName.toLowerCase()}` ? 'Note_to_Self' : myRoom.replace('dm_', '');
+      let transcript = '=== tahc Chat Transcript for room: @' + otherUser + ' ===\n';
+      transcript += 'Exported on: ' + new Date().toLocaleString() + '\n\n';
+
+      if (Array.isArray(messages)) {
+        messages.forEach(m => {
+          const time = new Date(m.time).toLocaleString();
+          const user = m.user || 'Unknown';
+          const text = m.text || (m.type === 'image' ? '[Photo: ' + m.url + ']' : m.type === 'document' ? '[Document: ' + m.docName + ']' : '[Voice Note]');
+          transcript += '[' + time + '] @' + user + ': ' + text + '\n';
+        });
+      }
+
+      const blob = new Blob([transcript], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'tahc_chat_' + otherUser + '_' + Date.now() + '.txt';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      showToast('📥 Chat transcript downloaded');
+    } catch (_) {
+      showToast('Could not export chat');
+    }
+  }
+
+// ═══════════════════ EXPORTS ═══════════════════
   window.BestieChat = {
     switchAuthTab, handleSignIn, handleRegister, joinChat: handleAuthSubmit, logout,
     toggleSidebar, closeSidebar,
@@ -1940,7 +2123,7 @@
     toggleAttachMenu, toggleEmojiPicker, insertEmoji,
     openProfile, closeProfile, saveProfile,
     openLightbox, closeLightbox, replyToMessage, cancelReply,
-    startCall, acceptCall, declineCall, endCall, toggleMuteAudio, toggleCamera,
+    startCall, acceptCall, declineCall, endCall, toggleMuteAudio, toggleCamera, toggleScreenShare, cycleAudioSpeed, openEditModal, closeEditModal, submitEditMessage, openDisappearingModal, closeDisappearingModal, setDisappearingTimer, exportChatHistory,
     playAudio, scrollBottom,
     toggleInChatSearch, closeInChatSearch, searchInChat,
     pinMessage, unpinCurrentMessage, scrollToPinned, scrollToMessage,
