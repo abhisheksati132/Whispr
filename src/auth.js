@@ -1,4 +1,3 @@
-import { state } from './state.js';
 import { initSocket } from './socket.js';
 import { renderMessage } from './ui.js';
 import { updateSidebarMyProfile } from './sidebar.js';
@@ -7,9 +6,9 @@ import { applyRoomTheme } from './sounds.js';
 import { showToast } from './ultimate-features.js';
 
   // ═══════════════════ JOIN / LEAVE ═══════════════════
-  let selectedLoginAvatar = '✨';
+  let _selectedLoginAvatar = '✨';
   export function selectLoginAvatar(emoji, btnEl) {
-    selectedLoginAvatar = emoji;
+    _selectedLoginAvatar = emoji;
     document.querySelectorAll('.login-avatar-btn').forEach(b => b.classList.remove('active'));
     const target = btnEl || (window.event && (window.event.currentTarget || window.event.target));
     if (target && target.classList) target.classList.add('active');
@@ -201,7 +200,7 @@ import { showToast } from './ultimate-features.js';
     try {
       const res = await fetch('/api/rooms/blocks', { headers: { 'Authorization': `Bearer ${authToken}` } });
       if (res.ok) { blockedUsers = await res.json(); }
-    } catch (_) {}
+    } catch { /* ignore */ }
 
     await initOfflineDB();
     loadCachedMessagesFromOfflineDB(myRoom).then(msgs => {
@@ -251,7 +250,7 @@ import { showToast } from './ultimate-features.js';
       authToken = savedToken || '';
       const profileStr = localStorage.getItem('bestieChatProfile');
       if (profileStr) {
-        try { myProfile = { ...myProfile, ...JSON.parse(profileStr) }; } catch(e){}
+        try { myProfile = { ...myProfile, ...JSON.parse(profileStr) }; } catch { /* ignore */ }
       }
       
       myRoom = localStorage.getItem('bestieChatRoom') || `dm_${myName.toLowerCase()}_${myName.toLowerCase()}`;
@@ -317,7 +316,7 @@ import { showToast } from './ultimate-features.js';
     localStorage.removeItem('bestieChatRoom');
     localStorage.removeItem('bestieChatNickname');
     authToken = '';
-    if (socket) { try { socket.disconnect(); } catch (_) {} socket = null; }
+    if (socket) { try { socket.disconnect(); } catch { /* ignore */ } socket = null; }
     myName = ''; myRoom = ''; joined = false;
     if (els.nameInput) els.nameInput.value = '';
     const pinInput = document.getElementById('pinInput');

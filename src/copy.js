@@ -1,4 +1,3 @@
-import { state } from './state.js';
 import { playSound } from './sounds.js';
 import { cancelReply } from './reply.js';
 import { hideContextMenu } from './context-menu.js';
@@ -17,7 +16,6 @@ import { showToast } from './ultimate-features.js';
   let recAnalyser = null;
   let recAnimId = null;
   let recTimerInterval = null;
-  let recStream = null;
 
   export function cancelRecording() {
     if (mediaRecorder && mediaRecorder.state === 'recording') {
@@ -31,7 +29,6 @@ import { showToast } from './ultimate-features.js';
 
   export function startLiveVisualizer(stream) {
     try {
-      recStream = stream;
       recAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
       recAnalyser = recAudioCtx.createAnalyser();
       recAnalyser.fftSize = 64;
@@ -61,7 +58,7 @@ import { showToast } from './ultimate-features.js';
         }
       }
       draw();
-    } catch (_) {}
+    } catch { /* ignore */ }
   }
 
   export function stopLiveVisualizer() {
@@ -162,7 +159,7 @@ import { showToast } from './ultimate-features.js';
     if (!player) return;
     const rates = [1, 1.5, 2];
     const currentText = btn.textContent.trim();
-    let nextIdx = 0;
+    let nextIdx;
     if (currentText === '1x') nextIdx = 1;
     else if (currentText === '1.5x') nextIdx = 2;
     else nextIdx = 0;

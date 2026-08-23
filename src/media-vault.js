@@ -1,14 +1,9 @@
-import { state } from './state.js';
 import { getDisplayName } from './helpers.js';
 import { showModal, hideModal } from './modals.js';
-import { scrollToMessage } from './reply.js';
-import { openLightbox } from './time-capsule.js';
 import { decryptE2EE } from './ultimate-features.js';
 import { escapeHtml, formatBytes } from './utils.js';
 
   // ═══════════════════ CATEGORIZED MEDIA VAULT ═══════════════════
-  let activeVaultTab = 'photos';
-
   export function openGallery() {
     showModal('galleryModal');
     const firstTabBtn = document.querySelector('.vault-tab-btn');
@@ -20,7 +15,6 @@ import { escapeHtml, formatBytes } from './utils.js';
   }
 
   export function filterGallery(type, btn) {
-    activeVaultTab = type || 'photos';
     if (btn) {
       document.querySelectorAll('.vault-tab-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
@@ -30,7 +24,7 @@ import { escapeHtml, formatBytes } from './utils.js';
     if (!grid) return;
     grid.innerHTML = '';
 
-    let items = [];
+    let items;
     if (type === 'photos') {
       items = allMessagesCached.filter(m => !m.deleted && (m.type === 'image' || m.type === 'media-group' || (m.url && m.url.match(/\.(jpg|jpeg|png|webp|gif)/i))));
       if (!items.length) {

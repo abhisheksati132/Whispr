@@ -1,4 +1,3 @@
-import { state } from './state.js';
 
   // ═══════════════════ SECRET MODE ═══════════════════
   export function toggleSecretMode() {

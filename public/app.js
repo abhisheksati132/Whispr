@@ -5923,12 +5923,6 @@
       }
     })();
   }
-      } catch (err) {
-        showToast('Could not upload photo');
-      }
-    };
-    reader.readAsDataURL(file);
-  }
 
   async function captureDualCamera() {
     if (!joined) return;

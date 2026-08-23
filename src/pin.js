@@ -1,4 +1,3 @@
-import { state } from './state.js';
 import { hideContextMenu } from './context-menu.js';
 import { scrollToMessage } from './reply.js';
 

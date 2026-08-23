@@ -1,4 +1,3 @@
-import { state } from './state.js';
 import { playSound } from './sounds.js';
 import { cancelReply, scrollToMessage } from './reply.js';
 import { hideContextMenu } from './context-menu.js';
@@ -16,7 +15,7 @@ import { escapeHtml } from './utils.js';
     wrap.appendChild(bubble);
     setTimeout(() => bubble.remove(), 800);
     react(msgId, '❤️');
-    if ('vibrate' in navigator) { try { navigator.vibrate(30); } catch(e){} }
+    if ('vibrate' in navigator) { try { navigator.vibrate(30); } catch { /* ignore */ } }
   }
 
   // ── Starred Messages ──

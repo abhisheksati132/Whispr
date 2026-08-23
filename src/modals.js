@@ -1,4 +1,3 @@
-import { state } from './state.js';
 
   // ═══════════════════ MODAL CONTROLLER HELPERS ═══════════════════
   export function showModal(id) {

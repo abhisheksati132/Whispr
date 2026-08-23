@@ -1,4 +1,3 @@
-import { state } from './state.js';
 import { updateCountdown } from './ui-updates.js';
 
   // ═══════════════════ ROOM META ═══════════════════

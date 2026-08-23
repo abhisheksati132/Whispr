@@ -1,4 +1,3 @@
-import { state } from './state.js';
 import { encryptE2EE, showToast } from './ultimate-features.js';
 import { isMusicUrl, scrollBottom, triggerHaptic } from './helpers.js';
 import { toggleRecord } from './copy.js';
@@ -154,7 +153,7 @@ import { openLightbox } from './time-capsule.js';
         const result = await uploadFileWithProgress(blob, 'image', (pct) => showToast(`Uploading… ${pct}%`));
         sendMessagePayload({ type: 'image', url: result.url, replyTo: replyingTo });
         cancelReply();
-      } catch (err) {
+      } catch {
         showToast('Could not upload photo');
       }
     } else {
@@ -169,7 +168,7 @@ import { openLightbox } from './time-capsule.js';
         const items = await Promise.all(uploadPromises);
         sendMessagePayload({ type: 'media-group', items, replyTo: replyingTo });
         cancelReply();
-      } catch (err) {
+      } catch {
         showToast('Could not upload photo group');
       }
     }
@@ -203,12 +202,12 @@ import { openLightbox } from './time-capsule.js';
         url: result.url,
         docName: file.name,
         docSize: file.size,
-        replyTo: replyingTo
-      });
-      cancelReply();
-    } catch (err) {
-      showToast('Could not upload document');
-    }
+      replyTo: replyingTo
+    });
+    cancelReply();
+  } catch {
+    showToast('Could not upload document');
+  }
   }
 
   export function openViewOnceMedia(messageId, url) {

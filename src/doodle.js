@@ -1,4 +1,3 @@
-import { state } from './state.js';
 import { playSound } from './sounds.js';
 import { cancelReply } from './reply.js';
 import { uploadFileWithProgress } from './media.js';

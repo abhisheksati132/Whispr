@@ -1,4 +1,3 @@
-import { state } from './state.js';
 import { playSound } from './sounds.js';
 import { getProfile } from './helpers.js';
 import { renderSystem } from './ui.js';
@@ -18,10 +17,10 @@ import { showToast } from './ultimate-features.js';
     if (type === 'video') {
       try {
         return await navigator.mediaDevices.getUserMedia({ audio: audioConstraints, video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } });
-      } catch (e1) {
+      } catch (_e1) {
         try {
           return await navigator.mediaDevices.getUserMedia({ audio: audioConstraints, video: true });
-        } catch (e2) {
+        } catch (_e2) {
           showToast('📹 Camera permission denied or unavailable. Continuing with Voice Call.');
           return await navigator.mediaDevices.getUserMedia({ audio: audioConstraints, video: false });
         }
@@ -426,7 +425,7 @@ import { showToast } from './ultimate-features.js';
         if (sender) sender.replaceTrack(newVideoTrack);
       }
       showToast(`Switched to ${currentFacingMode === 'user' ? 'Front' : 'Back'} Camera 🔄`);
-    } catch (err) {
+    } catch {
       showToast('Could not flip camera');
     }
   }

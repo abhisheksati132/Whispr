@@ -1,12 +1,3 @@
-import { state } from './state.js';
-import { copyText } from './copy.js';
-import { startEditMessage, deleteMessage } from './edit-delete.js';
-import { pinMessageById, unpinMessage } from './pin.js';
-import { muteRoom } from './profile.js';
-import { replyToMessage, openThread } from './reply.js';
-import { forwardMessage } from './send-message.js';
-import { toggleStarMessage } from './telegram-whatsapp.js';
-import { quickReact } from './ultimate-features.js';
 import { escapeHtml } from './utils.js';
 
   // ═══════════════════ CONTEXT MENU ═══════════════════

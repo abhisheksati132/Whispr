@@ -1,4 +1,3 @@
-import { state } from './state.js';
 import { updateBestieHeaderState } from './ui-updates.js';
 
   // ═══════════════════ CONNECTION STATUS ═══════════════════

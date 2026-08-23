@@ -1,4 +1,3 @@
-import { state } from './state.js';
 
   // ═══════════════════ OFFLINE QUEUE & CACHE ═══════════════════
   export async function initOfflineDB() {
@@ -7,11 +6,11 @@ import { state } from './state.js';
       const req = indexedDB.open('bestie-store-v2', 1);
       req.onupgradeneeded = e => {
         const db = e.target.result;
-        try { db.createObjectStore('queue', { autoIncrement: true }); } catch(_) {}
+        try { db.createObjectStore('queue', { autoIncrement: true }); } catch { /* ignore */ }
         try {
           const msgStore = db.createObjectStore('messages', { keyPath: 'id' });
           msgStore.createIndex('room', 'room', { unique: false });
-        } catch(_) {}
+        } catch { /* ignore */ }
       };
       req.onsuccess = e => { offlineDB = e.target.result; resolve(); };
       req.onerror  = () => resolve();
@@ -136,7 +135,7 @@ import { state } from './state.js';
         if (Array.isArray(parsed)) outboxQueue = parsed;
         else outboxQueue = [];
       }
-    } catch (e) {
+    } catch (_e) {
       outboxQueue = [];
     }
   }
@@ -144,7 +143,7 @@ import { state } from './state.js';
   export function saveOutboxQueue() {
     try {
       localStorage.setItem('bestieOutboxQueue', JSON.stringify(outboxQueue));
-    } catch (e) {}
+    } catch { /* ignore */ }
   }
 
   export function flushOutboxQueue() {

@@ -1,4 +1,3 @@
-import { state } from './state.js';
 import { playSound } from './sounds.js';
 import { getDisplayName } from './helpers.js';
 import { showModal, hideModal, toggleModal } from './modals.js';

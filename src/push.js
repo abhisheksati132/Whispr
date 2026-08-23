@@ -1,4 +1,3 @@
-import { state } from './state.js';
 import { loadChatList } from './dm-chat-list.js';
 import { showModal, hideModal, toggleModal } from './modals.js';
 

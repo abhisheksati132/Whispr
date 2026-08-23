@@ -11,7 +11,6 @@ const jwt      = require('jsonwebtoken');
 const multer   = require('multer');
 const helmet   = require('helmet');
 const cors     = require('cors');
-const rateLimit= require('express-rate-limit');
 const morgan   = require('morgan');
 
 const mStore = require('./supabaseStore');
@@ -38,23 +37,23 @@ try {
     const Sentry = require('@sentry/node');
     Sentry.init({ dsn: process.env.SENTRY_DSN, tracesSampleRate: 0.1, environment: process.env.NODE_ENV || 'development' });
     sentryEnabled = true;
-    console.log('✅ Sentry error tracking initialized');
+    console.warn('✅ Sentry error tracking initialized');
   }
-} catch (_) {}
+} catch { /* ignore */ }
 
 // ── Supabase (PostgreSQL) ────────────────────────────────────────────────────
 (async () => {
   if (isConfigured()) {
     try {
-      console.log('\n=============================================');
-      console.log('🔄 Checking Supabase connection...');
+      console.warn('\n=============================================');
+      console.warn('🔄 Checking Supabase connection...');
       const status = await checkConnection();
       if (status.connected) {
-        console.log('✅ Supabase (PostgreSQL) connected successfully!');
+        console.warn('✅ Supabase (PostgreSQL) connected successfully!');
       } else {
         console.warn('⚠️  Supabase reachable with notice:', status.reason);
       }
-      console.log('=============================================\n');
+      console.warn('=============================================\n');
     } catch (err) {
       console.error('\n=============================================');
       console.error('❌ SUPABASE INITIALIZATION WARNING:');
@@ -91,8 +90,6 @@ app.use(morgan('combined'));
 app.use(express.json({ limit: '40mb' }));
 app.use(express.static(path.join(__dirname, 'public'), { index: 'index.html' }));
 
-const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: { error: 'Too many attempts, try again later.' } });
-const apiLimiter  = rateLimit({ windowMs: 60 * 1000, max: 120 });
 app.get('/uploads/:filename', async (req, res) => {
   const filename = path.basename(req.params.filename);
   const filePath = path.join(mStore.getUploadsDir(), filename);
@@ -104,7 +101,7 @@ app.get('/uploads/:filename', async (req, res) => {
     if (media && media.data) {
       res.setHeader('Content-Type', media.mime || 'application/octet-stream');
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-      try { fs.writeFileSync(filePath, media.data); } catch (_) {}
+      try { fs.writeFileSync(filePath, media.data); } catch { /* ignore */ }
       return res.send(media.data);
     }
   } catch (e) {
@@ -140,7 +137,7 @@ app.get('/api/export-chat', async (req, res) => {
       messages,
       meta
     });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: 'Export failed' });
   }
 });
@@ -199,7 +196,7 @@ app.get('/api/link-preview', async (req, res) => {
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
         }
       });
-    } catch (_) {
+    } catch {
       response = null;
     } finally {
       clearTimeout(timeout);
@@ -248,7 +245,7 @@ app.get('/api/link-preview', async (req, res) => {
 
     res.setHeader('Cache-Control', 'public, max-age=86400');
     res.json(metaData);
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: 'Preview failed' });
   }
 });
@@ -323,7 +320,6 @@ app.post('/api/upload-multipart', uploadMiddleware.single('file'), async (req, r
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     const { size, mimetype, originalname } = req.file;
-    const kind = String(req.body.kind || '').trim() || (mimetype || '').split('/')[0];
     const cleanMime = String(mimetype || '').split(';')[0].trim().toLowerCase();
     const allowed = [
       'image/jpeg','image/png','image/gif','image/webp','image/svg+xml','image/heic','image/heif',
@@ -357,7 +353,7 @@ app.post('/api/upload-multipart', uploadMiddleware.single('file'), async (req, r
         } else {
           thumbnailUrl = mStore.saveUpload(thumbBuffer, 'jpg');
         }
-      } catch (_) {}
+      } catch { /* ignore */ }
     }
     
     if (isConfigured()) {
@@ -369,7 +365,7 @@ app.post('/api/upload-multipart', uploadMiddleware.single('file'), async (req, r
           const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(filename);
           return res.json({ url: publicUrl, kind: cleanMime.split('/')[0], name: originalname, size, thumbnailUrl });
         }
-      } catch (_) {}
+      } catch { /* ignore */ }
     }
     
     const url = mStore.saveUpload(req.file.buffer, ext);
@@ -454,7 +450,7 @@ async function updatePresence(username, socketId) {
       socket_id: socketId,
       last_heartbeat: Date.now()
     }).catch(() => {});
-  } catch (_) {}
+  } catch { /* ignore */ }
 }
 
 async function getOnlineUsers() {
@@ -466,7 +462,7 @@ async function getOnlineUsers() {
       .select('username')
       .gt('last_heartbeat', cutoff);
     return (data || []).map(r => r.username);
-  } catch (_) {
+  } catch {
     return [];
   }
 }
@@ -480,16 +476,6 @@ async function broadcastPresence(room) {
   io.to(room).emit('presence', { room, users: list, profiles: profList, lastSeen: mStore.getLastSeen(), onlineUsers });
   io.emit('global-presence', { lastSeen: mStore.getLastSeen(), onlineUsers });
 }
-
-const MILESTONE_TEXTS = {
-  10:'🎉 10 messages! You two are off to a great start!',
-  25:'✨ 25 messages — you really can\'t stop talking, can you? 💕',
-  50:'🔥 50 messages! Officially besties at this point.',
-  100:'💯 100 messages!! This friendship is unstoppable! 🥺',
-  200:'🌟 200 messages — absolute legends.',
-  500:'🚀 500 messages! You two are the definition of besties.',
-  1000:'👑 1000 MESSAGES!!! This is love. Pure love.'
-};
 
 // ── Push helper ───────────────────────────────────────────────────────────────
 async function sendPushToRoom(room, senderName, title, body) {
@@ -526,7 +512,7 @@ io.use((socket, next) => {
     const decoded = jwt.verify(token, JWT_SECRET);
     socket.data.authenticatedUser = decoded.username;
     next();
-  } catch (_) {
+  } catch {
     next(new Error('Invalid token'));
   }
 });
@@ -537,7 +523,7 @@ io.on('connection', (socket) => {
   let currentRoom = null;
 
   // ── Join ──────────────────────────────────────────────────────────────────
-  socket.on('join', async ({ name, room, nickname, password } = {}) => {
+  socket.on('join', async ({ name, room, nickname, _password } = {}) => {
     try {
       if (currentRoom) {
         socket.leave(currentRoom);
@@ -829,7 +815,7 @@ io.on('connection', (socket) => {
       if (!currentRoom || !username || typeof ack !== 'function') return;
       const list = await mStore.getStarredMessages(currentRoom, username);
       ack({ messages: list || [] });
-    } catch (err) { if (typeof ack === 'function') ack({ messages: [] }); }
+    } catch { if (typeof ack === 'function') ack({ messages: [] }); }
   });
 
   // ── Secret message ────────────────────────────────────────────────────────
@@ -1216,7 +1202,7 @@ setInterval(async () => {
   const cutoff = Date.now() - 60000;
   try {
     await supabase.from('user_presence').delete().lt('last_heartbeat', cutoff).catch(() => {});
-  } catch (_) {}
+  } catch { /* ignore */ }
 }, 60 * 1000).unref();
 
 // ── Start ─────────────────────────────────────────────────────────────────────
@@ -1224,27 +1210,27 @@ if (require.main === module) {
   if (sentryEnabled) {
     const Sentry = require('@sentry/node');
     app.use(Sentry.Handlers.errorHandler());
-    app.use((err, req, res, next) => {
+    app.use((err, req, res, _next) => {
       console.error('Unhandled error:', err);
       res.status(500).json({ error: 'Internal server error' });
     });
   }
   const PORT = process.env.PORT || 3000;
-  server.listen(PORT, '0.0.0.0', () => console.log(`✨ Whispr running on port ${PORT}`));
+  server.listen(PORT, '0.0.0.0', () => console.warn(`✨ Whispr running on port ${PORT}`));
 }
 
 // ── Process Lifecycle & Graceful Shutdown ─────────────────────────────────────
 process.on('SIGTERM', () => {
-  console.log('🛑 SIGTERM signal received: closing HTTP and WebSocket servers...');
+  console.warn('🛑 SIGTERM signal received: closing HTTP and WebSocket servers...');
   server.close(() => {
-    console.log('✅ Server closed cleanly.');
+    console.warn('✅ Server closed cleanly.');
     process.exit(0);
   });
   setTimeout(() => process.exit(0), 4000).unref();
 });
 
 process.on('SIGINT', () => {
-  console.log('🛑 SIGINT signal received: exiting cleanly...');
+  console.warn('🛑 SIGINT signal received: exiting cleanly...');
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(0), 4000).unref();
 });

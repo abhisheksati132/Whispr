@@ -1,4 +1,3 @@
-import { state } from './state.js';
 import { joinChat, quickReentry } from './auth.js';
 import { sendMessage, autoExpandMsgInput, sendPhoto } from './send-message.js';
 import { toggleSendMicIcons } from './ui-helpers.js';
@@ -23,7 +22,7 @@ import { escapeHtml } from './utils.js';
   // ═══════════════════ ULTIMATE FEATURES SET ═══════════════════
 
   // ── Tab Navigation ──
-  let activeExtrasTab = 'vibe';
+  let _activeExtrasTab = 'vibe';
   export function switchExtrasTab(tabId) {
     activeExtrasTab = tabId;
     document.querySelectorAll('#extrasPanel .tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -79,7 +78,7 @@ import { escapeHtml } from './utils.js';
 
   // ── App PIN Lock ──
   export function toggleAppPin() {
-    const input = document.getElementById('appPinInput');
+    const _input = document.getElementById('appPinInput');
     const btn = document.getElementById('pinToggleBtn');
     const current = localStorage.getItem('bestieAppPin');
     if (current) {
@@ -105,7 +104,7 @@ import { escapeHtml } from './utils.js';
     if (val === pin) {
       if (modal) modal.style.display = 'none';
       if (err) err.style.display = 'none';
-      const input = document.getElementById('pinLockInput');
+      const _input = document.getElementById('pinLockInput');
       if (input) input.value = '';
     } else {
       if (err) err.style.display = 'block';
@@ -239,7 +238,7 @@ import { escapeHtml } from './utils.js';
   export function playWaveform(msgId, btn) {
     const player = btn.closest('.custom-audio-player');
     if (!player) return;
-    const url = player.dataset.url;
+    const _url = player.dataset.url;
     
     if (activeAudio && activeAudio.src === url) {
       if (activeAudio.paused) {
@@ -311,7 +310,7 @@ import { escapeHtml } from './utils.js';
     }
   }
 
-  export function transcribeAudio(msgId, url) {
+  export function transcribeAudio(msgId, _url) {
     const box = document.getElementById(`transcription-${msgId}`);
     if (!box) return;
     box.style.display = 'block';
@@ -781,7 +780,7 @@ import { escapeHtml } from './utils.js';
   }
 
   // ── YouTube Watch Together syncer ──
-  let watchPlayerFrame = null;
+  let _watchPlayerFrame = null;
 
   export function openWatchTogether() {
     showModal('watchModal');
@@ -798,8 +797,8 @@ import { escapeHtml } from './utils.js';
     if (!val) return;
     
     // Parse Video ID from YouTube link
-    let vidId = '';
-    const reg = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    let vidId;
+    const reg = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
     const match = val.match(reg);
     if (match && match[2].length === 11) vidId = match[2];
     else vidId = val;
@@ -999,7 +998,7 @@ import { escapeHtml } from './utils.js';
     if (els.attachMenu) els.attachMenu.style.display = 'none';
   }
 
-  export function triggerScreenNudge(from) {
+  export function triggerScreenNudge(_from) {
     const chatEl = els.chat;
     if (!chatEl) return;
     
@@ -1037,10 +1036,10 @@ import { escapeHtml } from './utils.js';
       showToast('🔇 Lo-Fi paused');
     } else {
       lofiPlaying = true;
-      let streamStarted = false;
+      let _streamStarted = false;
       if (audio) {
         audio.play().then(() => {
-          streamStarted = true;
+          _streamStarted = true;
         }).catch(() => {
           startSynthesizedLofi();
         });
@@ -1085,7 +1084,7 @@ import { escapeHtml } from './utils.js';
 
   export function stopSynthesizedLofi() {
     lofiOscillators.forEach(osc => {
-      try { osc.stop(); osc.disconnect(); } catch(e){}
+      try { osc.stop(); osc.disconnect(); } catch { /* ignore */ }
     });
     lofiOscillators = [];
   }
@@ -1104,7 +1103,7 @@ import { escapeHtml } from './utils.js';
     if (!wrap) return;
     
     const rect = wrap.getBoundingClientRect();
-    const colors = ['#ff6fae', '#8b5cf6', '#f59e0b', '#06b6d4'];
+    const _colors = ['#ff6fae', '#8b5cf6', '#f59e0b', '#06b6d4'];
     
     for (let i = 0; i < 7; i++) {
       const p = document.createElement('div');
@@ -1420,7 +1419,7 @@ import { escapeHtml } from './utils.js';
     const waitingArea = document.getElementById('dqWaitingArea');
     const revealedArea = document.getElementById('dqRevealedArea');
     const answersList = document.getElementById('dqAnswersList');
-    const input = document.getElementById('dqAnswerInput');
+    const _input = document.getElementById('dqAnswerInput');
     if (!card || !textEl) return;
 
     textEl.textContent = state.question || 'What made you smile today?';
@@ -1477,7 +1476,7 @@ import { escapeHtml } from './utils.js';
           renderDailyQuestionCard({ question: data.question, answers: {}, revealed: false });
         }
       }
-    } catch (_) {}
+    } catch { /* ignore */ }
   }
 
   export function updateScoreboardDisplay(scores) {
@@ -1721,7 +1720,7 @@ import { escapeHtml } from './utils.js';
     const audio = document.getElementById(audioId);
     if (!audio) return;
     const current = audio.playbackRate || 1;
-    let next = 1;
+    let next;
     if (current === 1) next = 1.5;
     else if (current === 1.5) next = 2;
     else next = 1;
@@ -1833,7 +1832,7 @@ import { escapeHtml } from './utils.js';
           socket.emit('message', { user: myName, type: 'image', url: result.url });
           showToast('📸 Camera Moment sent!');
         }
-      } catch (err) {
+      } catch {
         showToast('Could not upload camera photo');
       }
     })();

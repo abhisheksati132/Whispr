@@ -1,5 +1,3 @@
-import { state } from './state.js';
-
   // ═══════════════════ HELPERS ═══════════════════
   export function getDisplayName(username) {
     const p = profiles[username] || {};
@@ -42,7 +40,7 @@ import { state } from './state.js';
 
   export function triggerHaptic(ms = 10) {
     if ('vibrate' in navigator) {
-      try { navigator.vibrate(ms); } catch (_) {}
+      try { navigator.vibrate(ms); } catch { /* ignore */ }
     }
   }
 

@@ -344,12 +344,6 @@ function getLastSeen() {
   return { ...data.lastSeen };
 }
 
-function getMotd() {
-  const day = new Date().toISOString().slice(0, 10);
-  const idx = hashName(day) % MOTD_PROMPTS.length;
-  return MOTD_PROMPTS[idx];
-}
-
 function setFeeling(username, feelingKey) {
   if (!FEELINGS[feelingKey]) return null;
   data.feelings[username] = { key: feelingKey, updatedAt: Date.now() };
@@ -449,7 +443,7 @@ function cleanExpiredRooms() {
   }
   if (cleaned > 0) {
     persist();
-    console.log('Cleaned ' + cleaned + ' expired room(s)');
+    console.warn('Cleaned ' + cleaned + ' expired room(s)');
   }
 }
 
@@ -601,21 +595,11 @@ function updatePollVotes(room, messageId, optionIndex, username) {
   return msg;
 }
 
-function getUploadsDir() { return UPLOADS_DIR; }
-
-function saveUpload(buffer, ext) {
-  ensureDirs();
-  const id = crypto.randomUUID();
-  const filename = `${id}.${ext}`;
-  fs.writeFileSync(path.join(UPLOADS_DIR, filename), buffer);
-  return `/uploads/${filename}`;
-}
-
 function getMedia() { return []; }
 
-function savePushSub(username, subscription) { return; }
-function deletePushSub(endpoint) { return; }
-function getPushSubs(username) { return []; }
+function savePushSub(_username, _subscription) { return; }
+function deletePushSub(_endpoint) { return; }
+function getPushSubs(_username) { return []; }
 
 function listUserRooms(username) {
   const clean = String(username || '').toLowerCase();
@@ -672,7 +656,6 @@ module.exports = {
   getDailyQuestion,
   cleanExpiredRooms,
   updateGameScore,
-  clearHistory,
   cleanDisappearingMessages,
   markMessageDelivered,
   markMessageRead,

@@ -1,4 +1,3 @@
-import { state } from './state.js';
 
   // ═══════════════════ READ RECEIPTS ═══════════════════
   export function emitReadReceipt(msgId) {
@@ -32,7 +31,7 @@ import { state } from './state.js';
     let hasBeenRead = false;
     let readReceiptTime = null;
     
-    for (const [name, readMsgId] of others) {
+    for (const [_name, readMsgId] of others) {
       const readIdx = getMessageIndex(readMsgId);
       if (readIdx >= targetIdx) {
         hasBeenRead = true;

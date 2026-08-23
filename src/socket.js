@@ -1,4 +1,3 @@
-import { state } from './state.js';
 import { loadChatList } from './dm-chat-list.js';
 import { restoreDraft } from './send-message.js';
 import { renderMessage, renderReactions, renderEmptyWelcome, updateReactions, renderSystem } from './ui.js';
@@ -432,7 +431,7 @@ import { startCallTimer, endCall } from './webrtc.js';
       updateCountdown(cd);
     });
 
-    socket.on('pinned-update', ({ messageId, msg }) => {
+    socket.on('pinned-update', ({ _messageId, msg }) => {
       updatePinnedBanner(msg || null);
     });
 

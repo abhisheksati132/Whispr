@@ -1,4 +1,3 @@
-import { state } from './state.js';
 import { showToast } from './ultimate-features.js';
 
   // ═══════════════════ CHAT WALLPAPER ═══════════════════

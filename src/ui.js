@@ -1,16 +1,11 @@
-import { state } from './state.js';
-import { copyInviteLink } from './auth.js';
 import { scrollBottom, triggerHaptic, getProfile, getDisplayName, maybeAddDateDivider, getMusicPlatform } from './helpers.js';
 import { playSound, confetti } from './sounds.js';
 import { showContextMenu } from './context-menu.js';
-import { cycleAudioSpeed } from './copy.js';
-import { react, votePoll } from './reactions.js';
+import { votePoll } from './reactions.js';
 import { emitReadReceipt, updateReadTickForMessage } from './read-receipts.js';
-import { replyToMessage, scrollToMessage } from './reply.js';
-import { openViewOnceMedia } from './send-message.js';
-import { triggerDoubleTapHeart, toggleVideoNoteAudio } from './telegram-whatsapp.js';
-import { openLightbox } from './time-capsule.js';
-import { decryptE2EE, playWaveform, seekWaveform, transcribeAudio, highlightInsideJokes, refreshMessagesLayout, showToast, sendQuickReply } from './ultimate-features.js';
+import { replyToMessage } from './reply.js';
+import { triggerDoubleTapHeart } from './telegram-whatsapp.js';
+import { decryptE2EE, highlightInsideJokes, refreshMessagesLayout, showToast } from './ultimate-features.js';
 import { escapeHtml, formatBytes, formatMarkdown } from './utils.js';
 
   // ═══════════════════ RENDER HELPERS ═══════════════════
@@ -159,7 +154,7 @@ import { escapeHtml, formatBytes, formatMarkdown } from './utils.js';
     const tickHtml = mine ? (msg.isPending ? `<span class="msg-status-ticks pending" id="tick-${msg.id}">🕒</span>` : `<span class="msg-status-ticks ${tickState}" id="tick-${msg.id}">${tickSvg}</span>`) : '';
     const bubbleMeta = `<span class="bubble-meta">${starHtml}<span class="bubble-time">${time}</span>${tickHtml}</span>`;
 
-    let body = '';
+    let body;
 
     if (msg.deleted) {
       body = `<div class="msg deleted ${mine ? 'me' : 'them'}">🗑️ Message deleted ${bubbleMeta}</div>`;
@@ -508,7 +503,7 @@ import { escapeHtml, formatBytes, formatMarkdown } from './utils.js';
         const h = Math.floor((remaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         const m = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
         const s = Math.floor((remaining % (1000 * 60)) / 1000);
-        let timeStr = '';
+        let timeStr;
         if (d > 0) timeStr = `${d}d ${h}h ${m}m`;
         else if (h > 0) timeStr = `${h}h ${m}m ${s}s`;
         else timeStr = `${m}m ${s}s`;

@@ -1,4 +1,3 @@
-import { state } from './state.js';
 
   // ═══════════════════ SEARCH ═══════════════════
   export function toggleSearch() {

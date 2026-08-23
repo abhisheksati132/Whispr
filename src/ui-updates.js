@@ -1,4 +1,3 @@
-import { state } from './state.js';
 import { getProfile, getDisplayName, formatLastSeen } from './helpers.js';
 import { applyNightGlow } from './sounds.js';
 
@@ -17,10 +16,10 @@ import { applyNightGlow } from './sounds.js';
     const hNameEl     = document.getElementById('headerBestieName');
     const hStatusEl   = document.getElementById('headerBestieStatus');
 
-    let bestieDisplay = 'Our Space';
-    let bestieAvatar  = '✨';
-    let bestieStatus  = 'Waiting for bestie…';
-    let isOnline      = false;
+    let bestieDisplay;
+    let bestieAvatar;
+    let bestieStatus;
+    let isOnline = false;
 
     const cleanMyName = (myName || '').toLowerCase();
 
@@ -140,10 +139,10 @@ import { applyNightGlow } from './sounds.js';
           navigator.serviceWorker.ready.then((reg) => {
             reg.showNotification(title, options);
           }).catch(() => {
-            try { new Notification(title, options); } catch {}
+            try { new Notification(title, options); } catch { /* ignore */ }
           });
         } else {
-          try { new Notification(title, options); } catch {}
+          try { new Notification(title, options); } catch { /* ignore */ }
         }
       }
     } catch (err) {

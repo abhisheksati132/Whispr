@@ -1,4 +1,3 @@
-import { state } from './state.js';
 
   // ═══════════════════ FILE UPLOAD ═══════════════════
   export async function uploadFile(base64, mime, kind) {
