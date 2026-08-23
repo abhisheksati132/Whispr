@@ -42,8 +42,7 @@ router.post('/dm', authMw, async (req, res) => {
 // GET /api/rooms/users/search?q=xxx — search users
 router.get('/users/search', authMw, async (req, res) => {
   try {
-    const { q } = req.query;
-    if (!q || typeof q !== 'string' || q.length < 2) return res.json([]);
+    const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
     const users = await store.searchUsers(q, req.username);
     res.json(users);
   } catch (err) {

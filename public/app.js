@@ -2922,6 +2922,25 @@
     });
 
     socket.on('message', (msg) => {
+      // If message is for a different room than current active room
+      if (msg.room && msg.room !== myRoom) {
+        saveMessageToOfflineDB(msg);
+        loadChatList();
+        if (msg.user !== myName) {
+          playSound('receive');
+          sendDesktopNotification(getDisplayName(msg.user), {
+            body: msg.type === 'hug'   ? 'sent you a hug 💌'   :
+                  msg.type === 'image' ? 'sent a photo 📸'      :
+                  msg.type === 'media-group' ? 'sent photos 📸' :
+                  msg.type === 'document' ? `sent a document: ${msg.docName || ''} 📄` :
+                  msg.type === 'voice' ? 'sent a voice note 🎤' :
+                  (msg.text || 'New message'),
+            icon: '/icon-192.png'
+          });
+        }
+        return;
+      }
+
       if (msg.clientMsgId) {
         const pendingWrap = document.querySelector(`.msg-wrap[data-id="${msg.clientMsgId}"]`);
         if (pendingWrap) {
@@ -2938,6 +2957,7 @@
           allMessagesCached.push(msg);
           saveMessageToOfflineDB(msg);
           renderHeatmap();
+          loadChatList();
           return;
         }
       }
@@ -2946,7 +2966,10 @@
       saveMessageToOfflineDB(msg);
       renderMessage(msg);
       renderHeatmap();
+      loadChatList();
+
       if (msg.user !== myName) {
+        playSound('receive');
         if (document.hidden) {
           unreadCount++;
           updateUnreadBadge();
@@ -2960,6 +2983,8 @@
             icon: '/icon-192.png'
           });
           socket.emit('mark-delivered', { messageId: msg.id });
+        } else {
+          socket.emit('mark-read', { messageId: msg.id });
         }
       } else {
         localStorage.setItem('bestieLastMsgDate', new Date().toISOString().slice(0, 10));

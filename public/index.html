@@ -127,85 +127,74 @@
 
   <!-- ── SIDEBAR ── -->
   <aside id="sidebar">
-    <div class="sidebar-drawer">
-      <!-- Brand -->
-      <div class="sidebar-brand" style="display:flex; align-items:center; gap:8px;">
-        <img src="/icon-192.png?v=901" alt="Whispr" width="24" height="24" style="border-radius:6px; border:1px solid var(--border);" />
-        <span class="brand-text" style="font-weight: 700; font-size: 19px; letter-spacing: -0.03em; color: var(--text);">Whispr</span>
-        <span id="unreadBadge" class="unread-badge" style="display:none; background:#388E3C; color:#fff; font-size:11px; font-weight:700; border-radius:10px; padding:2px 8px; margin-left:auto;">0</span>
-      </div>
-
-      <!-- My Profile Card -->
-      <div class="sidebar-profile-card" onclick="BestieChat.openProfile()" title="Edit Profile">
-        <div id="sidebarMyAvatar" class="sidebar-avatar">✨</div>
-        <div class="sidebar-info">
-          <div id="sidebarMyName" class="sidebar-profile-name">@username</div>
-          <div id="sidebarMyBio" class="sidebar-profile-bio">tap to edit profile</div>
+    <div class="sidebar-drawer" style="display:flex; flex-direction:column; height:100%; width:100%; background:var(--sidebar-bg);">
+      
+      <!-- Top Profile & Actions Header -->
+      <div class="sidebar-top-bar" style="display:flex; align-items:center; justify-content:space-between; padding:12px 14px; background:var(--header-bg); border-bottom:1px solid var(--border); flex-shrink:0;">
+        <div class="sidebar-my-profile" onclick="BestieChat.openProfile()" style="display:flex; align-items:center; gap:10px; cursor:pointer; min-width:0;" title="My Profile (Click to edit)">
+          <div id="sidebarMyAvatar" class="sidebar-avatar" style="width:38px; height:38px; border-radius:50%; background:var(--surface2); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;">✨</div>
+          <div class="sidebar-info" style="line-height:1.2; min-width:0; overflow:hidden;">
+            <div id="sidebarMyName" class="sidebar-profile-name" style="font-weight:700; font-size:14px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">You</div>
+            <div id="sidebarMyBio" class="sidebar-profile-bio" style="font-size:11px; color:var(--online); font-weight:500;">● online</div>
+          </div>
+        </div>
+        
+        <div class="sidebar-top-actions" style="display:flex; align-items:center; gap:2px; flex-shrink:0;">
+          <button type="button" class="sidebar-icon-btn" onclick="BestieChat.openNewChatModal()" title="Start New Chat" style="color:var(--accent);">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button type="button" class="sidebar-icon-btn" onclick="BestieChat.openStarredModal()" title="Starred Messages">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </button>
+          <button type="button" class="sidebar-icon-btn" onclick="BestieChat.openPrefsModal()" title="Settings & Theme">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </button>
         </div>
       </div>
 
-      <div class="sidebar-divider"></div>
-
-      <!-- Streak -->
-      <div id="streakBadge" class="sidebar-streak">🔥 Start a streak!</div>
-
-      <!-- Their feeling -->
-      <div id="theirFeeling" class="sidebar-feeling"></div>
-
-      <div class="sidebar-divider"></div>
-
-      <!-- Navigation -->
-      <nav class="sidebar-nav">
-        <button class="nav-item active" id="navItemChat" onclick="BestieChat.sidebarNavTo('chat')">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          <span>Chat</span>
-        </button>
-        <button class="nav-item" id="navItemSpace" onclick="BestieChat.sidebarNavTo('space')">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-          <span>Our Space</span>
-        </button>
-        <button class="nav-item" id="navItemGallery" onclick="BestieChat.openGallery()">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-          <span>Gallery</span>
-        </button>
-        <button class="nav-item" id="navItemStarred" onclick="BestieChat.openStarredModal()">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-          <span>Starred</span>
-        </button>
-        <button class="nav-item" id="navItemGames" onclick="BestieChat.sidebarNavTo('games')">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="12" x2="18" y2="12"/><line x1="12" y1="6" x2="12" y2="18"/><rect x="2" y="2" width="20" height="20" rx="5"/></svg>
-          <span>Games</span>
-        </button>
-        <button class="nav-item" id="navItemSettings" onclick="BestieChat.sidebarNavTo('settings')">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-          <span>Settings</span>
-        </button>
-
-        <!-- Direct Messages / Chats -->
-        <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 10px 4px; margin-top:8px; border-top:1px solid var(--border);">
-          <span style="font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em;">Direct Messages</span>
-          <button type="button" onclick="BestieChat.openNewChatModal()" style="background:var(--accent-glow); border:1px solid var(--accent); color:var(--accent); border-radius:6px; font-size:11px; font-weight:700; padding:2px 8px; cursor:pointer;" title="Start New DM">+ New</button>
-        </div>
-        <div id="sidebarDmList" style="display:flex; flex-direction:column; gap:4px; padding:4px 0; max-height:180px; overflow-y:auto;"></div>
-      </nav>
-
-      <!-- Sidebar footer -->
-      <div class="sidebar-drawer-footer">
-        <div class="sidebar-footer">
-          <button class="sidebar-icon-btn" id="soundBtn" onclick="BestieChat.toggleSound()" title="Toggle sound">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-          </button>
-          <button class="sidebar-icon-btn" onclick="BestieChat.toggleTheme()" title="Toggle theme" id="themeToggle">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-          </button>
-          <button class="sidebar-icon-btn" onclick="BestieChat.leaveChat()" title="Refresh chat">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-          </button>
-          <button class="sidebar-icon-btn" onclick="BestieChat.logout()" title="Logout / Leave Space" style="color:#f87171;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          </button>
+      <!-- WhatsApp / Telegram Style Search Bar -->
+      <div class="sidebar-search-container" style="padding:8px 12px; background:var(--sidebar-bg); border-bottom:1px solid var(--border); flex-shrink:0;">
+        <div style="display:flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--border-soft); border-radius:20px; padding:6px 12px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="color:var(--muted); flex-shrink:0;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="sidebarSearchInput" type="text" placeholder="Search or start new chat…" autocomplete="off" oninput="BestieChat.handleSidebarSearch(this.value)" style="flex:1; background:none; border:none; color:var(--text); font-size:13px; outline:none;" />
+          <button id="sidebarSearchClear" type="button" onclick="BestieChat.clearSidebarSearch()" style="display:none; background:none; border:none; color:var(--muted); font-size:12px; cursor:pointer;">✕</button>
         </div>
       </div>
+
+      <!-- Filter Tabs (All, Unread, Direct) -->
+      <div id="sidebarFilters" style="display:flex; gap:6px; padding:6px 12px; background:var(--sidebar-bg); overflow-x:auto; scrollbar-width:none; flex-shrink:0;">
+        <button type="button" class="sidebar-filter-pill active" onclick="BestieChat.filterChatList('all', this)">All</button>
+        <button type="button" class="sidebar-filter-pill" onclick="BestieChat.filterChatList('unread', this)">Unread</button>
+        <button type="button" class="sidebar-filter-pill" onclick="BestieChat.openNewChatModal()">+ New Chat</button>
+      </div>
+
+      <!-- Full-Height Active Conversation & Search Results List -->
+      <div id="sidebarDmList" class="sidebar-dm-list" style="flex:1; overflow-y:auto; padding:4px 6px;"></div>
+
+      <!-- Hidden legacy elements required for JS compatibility -->
+      <div style="display:none;">
+        <div id="bestieAvatar"></div>
+        <div id="bestieName"></div>
+        <div id="bestieStatus"></div>
+        <div id="theirFeeling"></div>
+        <div id="streakBadge"></div>
+        <div id="dmList"></div>
+      </div>
+
+      <!-- Sidebar Footer -->
+      <div class="sidebar-drawer-footer" style="margin-top:auto; padding:8px 12px; border-top:1px solid var(--border); background:var(--header-bg); display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">
+        <button class="sidebar-icon-btn" onclick="BestieChat.toggleTheme()" title="Toggle theme" id="themeToggle" style="font-size:16px;">🌙</button>
+        <button class="sidebar-icon-btn" id="soundBtn" onclick="BestieChat.toggleSound()" title="Toggle sound">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+        </button>
+        <button class="sidebar-icon-btn" onclick="BestieChat.openGallery()" title="Media Gallery">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        </button>
+        <button class="sidebar-icon-btn" onclick="BestieChat.logout()" title="Logout / Switch Account" style="color:#f87171;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
+
     </div>
   </aside>
 
