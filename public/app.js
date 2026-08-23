@@ -1481,7 +1481,7 @@
           email: emailVal,
           password: rawPass,
           nickname: displayName,
-          avatar: selectedRegAvatar || '🐱',
+          avatar: '✨',
           bio: 'Available'
         })
       });
@@ -2767,6 +2767,7 @@
 
   // ═══════════════════ SOCKET.IO ═══════════════════
   function initSocket() {
+    if (!authToken) return;
     if (socket) {
       if (authToken) socket.auth = { token: authToken };
       if (!socket.connected) socket.connect();
@@ -2799,8 +2800,13 @@
     });
 
     socket.on('connect_error', (err) => {
-      console.warn('Socket connect_error:', err && err.message);
       setConnected(false);
+      if (err && (err.message === 'Authentication required' || err.message === 'Invalid token')) {
+        console.warn('Socket auth required — sign in to connect.');
+        if (socket) socket.disconnect();
+      } else {
+        console.warn('Socket connect_error:', err && err.message);
+      }
     });
 
     socket.on('disconnect', () => {
