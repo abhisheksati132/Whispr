@@ -5400,33 +5400,54 @@
   }
 
   function applyAppTheme(themeName) {
-    document.body.classList.remove('theme-dark', 'theme-ios');
-    const valid = themeName === 'dark' ? 'dark' : 'light';
-    if (valid === 'dark') {
-      document.body.classList.add('theme-dark');
-    }
-    if (els.msgInput) els.msgInput.placeholder = 'Message…';
-    localStorage.setItem('bestieChatTheme', valid);
+    document.body.classList.remove(
+      'theme-dark', 'theme-telegram-dark',
+      'theme-whatsapp-dark', 'theme-whatsapp-light',
+      'theme-signal-dark',
+      'theme-light', 'theme-telegram-light',
+      'theme-ios'
+    );
+
+    let normalized = themeName || localStorage.getItem('bestieChatTheme') || 'telegram-dark';
+    if (normalized === 'dark') normalized = 'telegram-dark';
+    if (normalized === 'light') normalized = 'telegram-light';
+
+    document.body.classList.add(`theme-${normalized}`);
+
+    localStorage.setItem('bestieChatTheme', normalized);
     const select = document.getElementById('themeSelect');
-    if (select) select.value = valid;
+    if (select) select.value = normalized;
+
     const toggleBtn = document.getElementById('themeToggle');
     if (toggleBtn) {
-      toggleBtn.textContent = valid === 'dark' ? '☀️' : '🌙';
-      toggleBtn.title = valid === 'dark' ? 'Switch to Day Mode (☀️)' : 'Switch to Night Mode (🌙)';
+      const isDark = normalized.includes('dark');
+      toggleBtn.textContent = isDark ? '☀️' : '🌙';
+      toggleBtn.title = isDark ? 'Switch to Light Mode (☀️)' : 'Switch to Dark Mode (🌙)';
+    }
+
+    if (els.msgInput) {
+      els.msgInput.placeholder = normalized.includes('whatsapp') ? 'Type a message' : 'Message…';
     }
   }
 
   function selectTheme(themeName) {
-    const valid = themeName === 'dark' ? 'dark' : 'light';
-    applyAppTheme(valid);
-    showToast(`Switched to ${valid === 'dark' ? 'Night Mode 🌙' : 'Day Mode ☀️'}`);
+    applyAppTheme(themeName);
+    const labelMap = {
+      'telegram-dark': 'Telegram Dark ✈️',
+      'whatsapp-dark': 'WhatsApp Dark 💬',
+      'whatsapp-light': 'WhatsApp Light ☀️',
+      'signal-dark': 'Signal Dark 🔒',
+      'telegram-light': 'Telegram Classic Light 📄'
+    };
+    showToast(`Switched to ${labelMap[themeName] || themeName}`);
   }
 
   function toggleTheme() {
-    const current = localStorage.getItem('bestieChatTheme') || 'light';
-    const next = current === 'dark' ? 'light' : 'dark';
+    const current = localStorage.getItem('bestieChatTheme') || 'telegram-dark';
+    const isDark = current.includes('dark');
+    const next = isDark ? 'whatsapp-light' : 'telegram-dark';
     applyAppTheme(next);
-    showToast(`Theme: ${next === 'dark' ? 'Night Mode 🌙' : 'Day Mode ☀️'}`);
+    showToast(isDark ? 'Switched to Light Mode ☀️' : 'Switched to Dark Mode 🌙');
   }
 
   let currentDailyQuestionState = null;
@@ -5944,7 +5965,7 @@
     if (!list && !sidebarList) return;
 
     if (!rooms || !rooms.length) {
-      const emptyHtml = '<div style="padding:10px 8px; font-size:11px; color:var(--muted); text-align:center;">No direct chats yet. Click "+ New" above to message a user!</div>';
+      const emptyHtml = '<div style="padding:16px 12px; font-size:12px; color:var(--muted); text-align:center; line-height:1.5;">No conversations yet.<br><button type="button" onclick="BestieChat.openNewChatModal()" style="margin-top:6px; background:var(--accent); color:#fff; border:none; border-radius:6px; padding:4px 10px; font-size:11px; font-weight:600; cursor:pointer;">+ Start New Chat</button></div>';
       if (list) list.innerHTML = emptyHtml;
       if (sidebarList) sidebarList.innerHTML = emptyHtml;
       return;
@@ -5954,22 +5975,34 @@
       const isSaved = room.isSaved;
       const avatar  = (room.otherProfile && room.otherProfile.avatar) || (isSaved ? '🔖' : '✨');
       const name    = isSaved ? 'Saved Messages' : (room.otherParticipant || room.name.replace('dm_', '').replace(/_/g, ', '));
-      const displayName = isSaved ? 'Saved Messages ⭐️' : (room.otherProfile && room.otherProfile.nickname ? `${room.otherProfile.nickname}` : `@${name}`);
+      const displayName = isSaved ? 'Saved Messages' : (room.otherProfile && room.otherProfile.nickname ? `${room.otherProfile.nickname}` : `@${name}`);
+      const isOnline = isSaved || Boolean(currentOnlineUsers && currentOnlineUsers.some(u => (u || '').toLowerCase() === (room.otherParticipant || '').toLowerCase()));
+      const onlineDot = isOnline ? '<span style="position:absolute; bottom:2px; right:2px; width:10px; height:10px; border-radius:50%; background:var(--online); border:2px solid var(--sidebar-bg);"></span>' : '';
+
+      let tickHtml = '';
+      if (room.lastMessage && room.lastMessage.user === myName) {
+        tickHtml = '<span style="color:var(--check-blue, var(--accent)); font-size:11px; font-weight:700; margin-right:2px;">✓✓ </span>';
+      }
+
       const preview = room.lastMessage
-        ? `${room.lastMessage.user === myName ? 'You: ' : ''}${room.lastMessage.text || (room.lastMessage.type === 'image' ? '📷 Photo' : room.lastMessage.type === 'voice' ? '🎤 Voice' : room.lastMessage.type === 'document' ? '📄 Document' : '💬')}`.slice(0, 28)
+        ? `${room.lastMessage.user === myName ? 'You: ' : ''}${room.lastMessage.text || (room.lastMessage.type === 'image' ? '📷 Photo' : room.lastMessage.type === 'voice' ? '🎤 Voice note' : room.lastMessage.type === 'document' ? '📄 Document' : '💬')}`.slice(0, 30)
         : (isSaved ? 'Your personal cloud notes' : 'No messages yet');
       const timeStr = room.lastActivity ? formatTimestamp(room.lastActivity) : '';
       const badge   = room.unread > 0 ? `<div class="dm-row-badge">${room.unread}</div>` : '';
       const active  = room.name === myRoom ? 'active' : '';
-      const savedBg = isSaved ? 'background:rgba(129,140,248,0.06);' : '';
+      const savedBg = isSaved ? 'background:rgba(51,144,236,0.06);' : '';
       return `<div class="dm-row ${active}" style="${savedBg}" onclick="BestieChat.switchRoom('${escapeHtml(room.name)}')">
-        <div class="dm-row-avatar">${avatar}</div>
+        <div class="dm-row-avatar" style="position:relative;">${avatar}${onlineDot}</div>
         <div class="dm-row-info">
-          <div class="dm-row-name">${escapeHtml(displayName)}</div>
-          <div class="dm-row-preview">${escapeHtml(preview)}</div>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="dm-row-name" style="font-weight:600; font-size:13.5px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(displayName)}</div>
+            <div style="font-size:0.68rem; color:var(--muted); flex-shrink:0;">${timeStr}</div>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:4px; margin-top:2px;">
+            <div class="dm-row-preview" style="font-size:12.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1;">${tickHtml}${escapeHtml(preview)}</div>
+            ${badge}
+          </div>
         </div>
-        ${badge}
-        <div style="font-size:0.65rem; color:var(--muted); flex-shrink:0;">${timeStr}</div>
       </div>`;
     }).join('');
 

@@ -2830,8 +2830,10 @@ header {
   }
 }
 
-/* ═══════════════════ 22. DARK THEME (TELEGRAM SLATE) ═══════════════════ */
-body.theme-dark {
+/* ═══════════════════ 22. AUTHENTIC MULTI-APP THEMES ═══════════════════ */
+
+/* ── 22a. TELEGRAM SLATE DARK (Default) ── */
+body.theme-dark, body.theme-telegram-dark {
   --bg:           #0e1621;
   --bg2:          #17212b;
   --sidebar-bg:   #17212b;
@@ -2842,162 +2844,268 @@ body.theme-dark {
   --border-soft:  #202b36;
   --bubble-me:    #2b5278;
   --bubble-them:  #182533;
+  --bubble-me-text:   #ffffff;
+  --bubble-them-text: #ffffff;
   --accent:       #3390ec;
   --accent2:      #2b82d9;
+  --accent-glow:  rgba(51, 144, 236, 0.18);
   --text:         #ffffff;
   --text2:        #e4ecf2;
   --muted:        #708499;
   --text-muted:   #708499;
+  --online:       #4fae4e;
   --header-bg:    #17212b;
+  --check-blue:   #3390ec;
   --shadow:       0 1px 6px rgba(0,0,0,0.4);
   --shadow-sm:    0 1px 4px rgba(0,0,0,0.3);
   --shadow-lg:    0 4px 20px rgba(0,0,0,0.5);
 }
 
-/* Dark mode: override the context menu dark glass to actually look dark */
-body.theme-dark #contextMenu {
+body.theme-dark #contextMenu, body.theme-telegram-dark #contextMenu {
   background: #17212b;
   border-color: rgba(255,255,255,0.08);
 }
-body.theme-dark .modal-overlay {
+body.theme-dark .modal-overlay, body.theme-telegram-dark .modal-overlay {
   background: rgba(0,0,0,0.75);
 }
-body.theme-dark #messages {
+body.theme-dark #messages, body.theme-telegram-dark #messages {
   background: var(--bg);
 }
-body.theme-dark .msg.me {
+body.theme-dark .msg.me, body.theme-telegram-dark .msg.me {
   background: var(--bubble-me);
   color: #ffffff;
   border-color: transparent;
 }
-body.theme-dark .msg.them {
+body.theme-dark .msg.them, body.theme-telegram-dark .msg.them {
   background: var(--bubble-them);
   color: #ffffff;
   border-color: transparent;
 }
-body.theme-dark .date-divider {
+body.theme-dark .date-divider, body.theme-telegram-dark .date-divider {
   background: var(--surface2);
   color: var(--muted);
   border: none;
 }
-body.theme-dark .toast {
+body.theme-dark .toast, body.theme-telegram-dark .toast {
   background: var(--panel);
   border-color: var(--border);
   color: var(--text);
 }
-body.theme-dark #login {
+body.theme-dark #login, body.theme-telegram-dark #login {
   background: var(--bg);
 }
-body.theme-dark .login-card {
+body.theme-dark .login-card, body.theme-telegram-dark .login-card {
   background: var(--panel);
   border-color: var(--border);
 }
-body.theme-dark input[type="text"],
-body.theme-dark input[type="password"],
-body.theme-dark input[type="date"],
-body.theme-dark input[type="datetime-local"],
-body.theme-dark textarea,
-body.theme-dark select {
+body.theme-dark input[type="text"], body.theme-telegram-dark input[type="text"],
+body.theme-dark input[type="password"], body.theme-telegram-dark input[type="password"],
+body.theme-dark input[type="date"], body.theme-telegram-dark input[type="date"],
+body.theme-dark input[type="datetime-local"], body.theme-telegram-dark input[type="datetime-local"],
+body.theme-dark textarea, body.theme-telegram-dark textarea,
+body.theme-dark select, body.theme-telegram-dark select {
   background: var(--surface2) !important;
   border-color: var(--border) !important;
   color: var(--text) !important;
 }
-body.theme-dark .meta {
-  color: var(--muted);
+
+/* ── 22b. WHATSAPP DARK ── */
+body.theme-whatsapp-dark {
+  --bg:           #111b21;
+  --bg2:          #202c33;
+  --sidebar-bg:   #111b21;
+  --panel:        #202c33;
+  --surface:      #202c33;
+  --surface2:     #182229;
+  --border:       #222d34;
+  --border-soft:  #2a3942;
+  --bubble-me:    #005c4b;
+  --bubble-them:  #202c33;
+  --bubble-me-text:   #e9edef;
+  --bubble-them-text: #e9edef;
+  --accent:       #00a884;
+  --accent2:      #025144;
+  --accent-glow:  rgba(0, 168, 132, 0.18);
+  --text:         #e9edef;
+  --text2:        #8696a0;
+  --muted:        #8696a0;
+  --online:       #00a884;
+  --header-bg:    #202c33;
+  --check-blue:   #53bdeb;
+}
+body.theme-whatsapp-dark #messages {
+  background-color: #0b141a;
+  background-image: radial-gradient(rgba(255,255,255,0.035) 0.75px, transparent 0.75px), radial-gradient(rgba(255,255,255,0.035) 0.75px, #0b141a 0.75px);
+  background-size: 30px 30px;
+  background-position: 0 0, 15px 15px;
+}
+body.theme-whatsapp-dark .msg.me {
+  background: #005c4b;
+  color: #e9edef;
+}
+body.theme-whatsapp-dark .msg.them {
+  background: #202c33;
+  color: #e9edef;
+}
+body.theme-whatsapp-dark #sendBtn {
+  background: #00a884;
+}
+body.theme-whatsapp-dark .dm-row-badge {
+  background: #00a884;
 }
 
-/* ═══════════════════ 22b. iOS / iMessage THEME ═══════════════════ */
-body.theme-ios {
-  --bg:           #F2F2F7;
-  --bg2:          #E5E5EA;
-  --sidebar-bg:   #EFEFF4;
-  --panel:        #FFFFFF;
-  --surface:      #FFFFFF;
-  --surface2:     #F2F2F7;
-  --border:       #C6C6C8;
-  --border-soft:  #D1D1D6;
-  --bubble-me:    #007AFF;
-  --bubble-them:  #FFFFFF;
-  --accent:       #007AFF;
-  --accent2:      #0056CC;
-  --accent-glow:  rgba(0, 122, 255, 0.18);
+/* ── 22c. WHATSAPP LIGHT ── */
+body.theme-whatsapp-light {
+  --bg:           #efeae2;
+  --bg2:          #f0f2f5;
+  --sidebar-bg:   #ffffff;
+  --panel:        #ffffff;
+  --surface:      #f0f2f5;
+  --surface2:     #e9edef;
+  --border:       #e9edef;
+  --border-soft:  #d1d7db;
+  --bubble-me:    #d9fdd3;
+  --bubble-them:  #ffffff;
+  --bubble-me-text:   #111b21;
+  --bubble-them-text: #111b21;
+  --accent:       #00a884;
+  --accent2:      #025144;
+  --accent-glow:  rgba(0, 168, 132, 0.15);
+  --text:         #111b21;
+  --text2:        #3b4a54;
+  --muted:        #667781;
+  --online:       #25d366;
+  --header-bg:    #f0f2f5;
+  --check-blue:   #53bdeb;
+}
+body.theme-whatsapp-light #messages {
+  background-color: #efeae2;
+  background-image: radial-gradient(#d1d7db 0.75px, transparent 0.75px), radial-gradient(#d1d7db 0.75px, #efeae2 0.75px);
+  background-size: 30px 30px;
+  background-position: 0 0, 15px 15px;
+}
+body.theme-whatsapp-light .msg.me {
+  background: #d9fdd3;
+  color: #111b21;
+  box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+}
+body.theme-whatsapp-light .msg.them {
+  background: #ffffff;
+  color: #111b21;
+  box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+}
+body.theme-whatsapp-light header {
+  background: #f0f2f5;
+  border-bottom: 1px solid #d1d7db;
+}
+body.theme-whatsapp-light #inputBarContainer {
+  background: #f0f2f5;
+  border-top: 1px solid #d1d7db;
+}
+body.theme-whatsapp-light .input-pill {
+  background: #ffffff;
+  border-color: #d1d7db;
+}
+body.theme-whatsapp-light #sendBtn {
+  background: #00a884;
+}
+body.theme-whatsapp-light .date-divider {
+  background: rgba(255,255,255,0.92);
+  color: #54656f;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+/* ── 22d. SIGNAL DARK ── */
+body.theme-signal-dark {
+  --bg:           #121212;
+  --bg2:          #1b1b1b;
+  --sidebar-bg:   #1b1b1b;
+  --panel:        #242424;
+  --surface:      #282828;
+  --surface2:     #1e1e1e;
+  --border:       rgba(255,255,255,0.08);
+  --border-soft:  rgba(255,255,255,0.12);
+  --bubble-me:    #2c6bed;
+  --bubble-them:  #282828;
+  --bubble-me-text:   #ffffff;
+  --bubble-them-text: #ffffff;
+  --accent:       #2c6bed;
+  --accent2:      #1c52b8;
+  --accent-glow:  rgba(44, 107, 237, 0.2);
+  --text:         #ffffff;
+  --text2:        #e0e0e0;
+  --muted:        #8b8b8b;
+  --online:       #4caf50;
+  --header-bg:    #1b1b1b;
+  --check-blue:   #2c6bed;
+}
+body.theme-signal-dark .msg.me {
+  background: #2c6bed;
+  color: #ffffff;
+}
+body.theme-signal-dark .msg.them {
+  background: #282828;
+  color: #ffffff;
+}
+body.theme-signal-dark #sendBtn {
+  background: #2c6bed;
+}
+
+/* ── 22e. TELEGRAM CLASSIC LIGHT ── */
+body.theme-light, body.theme-telegram-light {
+  --bg:           #f4f4f5;
+  --bg2:          #ffffff;
+  --sidebar-bg:   #ffffff;
+  --panel:        #ffffff;
+  --surface:      #f0f2f5;
+  --surface2:     #e4ecf2;
+  --border:       #e4e4e7;
+  --border-soft:  #d4d4d8;
+  --bubble-me:    #eeffde;
+  --bubble-them:  #ffffff;
+  --bubble-me-text:   #000000;
+  --bubble-them-text: #000000;
+  --accent:       #3390ec;
+  --accent2:      #2b82d9;
+  --accent-glow:  rgba(51, 144, 236, 0.15);
   --text:         #000000;
-  --text2:        #3C3C43;
-  --muted:        #8E8E93;
-  --text-muted:   #8E8E93;
-  --header-bg:    rgba(255,255,255,0.88);
-  --radius:       18px;
-  --radius-sm:    12px;
-  --shadow:       0 1px 4px rgba(0,0,0,0.08);
-  --shadow-lg:    0 8px 24px rgba(0,0,0,0.12);
-  --font:         -apple-system, 'SF Pro Text', BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --text2:        #333333;
+  --muted:        #707579;
+  --online:       #4fae4e;
+  --header-bg:    #ffffff;
+  --check-blue:   #3390ec;
 }
-
-/* iMessage style: my bubbles are blue with white text, their bubbles are white */
-body.theme-ios .msg.me {
-  background: #007AFF;
-  color: #FFFFFF;
-  border-color: #007AFF;
-  border-radius: 18px 18px 4px 18px;
+body.theme-light #messages, body.theme-telegram-light #messages {
+  background: #f4f4f5;
 }
-body.theme-ios .msg.me .meta,
-body.theme-ios .msg.me .edited-tag {
-  color: rgba(255,255,255,0.7);
-}
-body.theme-ios .msg.them {
-  background: #FFFFFF;
+body.theme-light .msg.me, body.theme-telegram-light .msg.me {
+  background: #eeffde;
   color: #000000;
-  border-color: #C6C6C8;
-  border-radius: 18px 18px 18px 4px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
 }
-body.theme-ios header {
-  background: rgba(255,255,255,0.88) !important;
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  backdrop-filter: saturate(180%) blur(20px);
-  border-bottom: 0.5px solid rgba(0,0,0,0.12);
+body.theme-light .msg.them, body.theme-telegram-light .msg.them {
+  background: #ffffff;
+  color: #000000;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
 }
-body.theme-ios #inputBarContainer {
-  background: rgba(255,255,255,0.88) !important;
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  backdrop-filter: saturate(180%) blur(20px);
-  border-top: 0.5px solid rgba(0,0,0,0.12);
+body.theme-light header, body.theme-telegram-light header {
+  background: #ffffff;
+  border-bottom: 1px solid #e4e4e7;
 }
-body.theme-ios .input-pill {
-  border-radius: 24px;
-  background: #F2F2F7;
-  border-color: #C6C6C8;
+body.theme-light #inputBarContainer, body.theme-telegram-light #inputBarContainer {
+  background: #ffffff;
+  border-top: 1px solid #e4e4e7;
 }
-body.theme-ios #sendBtn {
-  background: #007AFF;
-  border-radius: 50%;
+body.theme-light .input-pill, body.theme-telegram-light .input-pill {
+  background: #f0f2f5;
+  border-color: #e4e4e7;
 }
-body.theme-ios .date-divider {
-  background: transparent;
-  border: none;
-  color: #8E8E93;
-  font-size: 11px;
-  letter-spacing: 0;
+body.theme-light #sendBtn, body.theme-telegram-light #sendBtn {
+  background: #3390ec;
 }
-body.theme-ios .msg-wrap.me .msg .meta {
-  color: rgba(255,255,255,0.7);
-}
-body.theme-ios #messages {
-  background: #F2F2F7;
-}
-body.theme-ios .sidebar-brand,
-body.theme-ios .sidebar-nav {
-  background: var(--sidebar-bg);
-}
-body.theme-ios .modal-card {
-  border-radius: 20px 20px 0 0;
-}
-body.theme-ios .read-tick.read {
-  color: #007AFF;
-}
-body.theme-ios .reaction-pill.mine {
-  background: rgba(0,122,255,0.12);
-  border-color: #007AFF;
-  color: #007AFF;
+body.theme-light .date-divider, body.theme-telegram-light .date-divider {
+  background: rgba(0,0,0,0.25);
+  color: #ffffff;
 }
 
 /* ═══════════════════ 23. FUNCTIONAL CLASSES (RESTYLED) ═══════════════════ */
