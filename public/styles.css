@@ -851,9 +851,10 @@ header {
   -webkit-backdrop-filter: var(--glass-blur);
   border-top: var(--glass-border);
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 10px;
   z-index: 10;
+  width: 100%;
 }
 
 .input-pill {
@@ -2578,7 +2579,9 @@ button:active, .dm-row:active, .icon-btn:active, .filter-pill:active, .pill-btn:
 }
 
 #chatMain.chat-active #inputBarContainer {
-  display: block !important;
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
 }
 
 #chatMain.chat-active header {

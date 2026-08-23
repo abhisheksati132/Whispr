@@ -91,6 +91,16 @@
     } catch (_) { /* ignore */ }
   }
 
+  async function idbDeleteMessage(_roomName, messageId) {
+    const db = await dbPromise;
+    if (!db || !messageId) return;
+    try {
+      const tx = db.transaction('messages', 'readwrite');
+      const store = tx.objectStore('messages');
+      store.delete(messageId);
+    } catch (_) { /* ignore */ }
+  }
+
   async function idbGetMessages(roomName) {
     const db = await dbPromise;
     if (!db) return [];
@@ -670,6 +680,7 @@
 
     socket.on('message-deleted', data => {
       if (!data || !data.messageId) return;
+      if (myRoom) idbDeleteMessage(myRoom, data.messageId);
       const el = document.querySelector(`[data-msg-id="${data.messageId}"]`);
       if (el) {
         el.remove();
@@ -716,9 +727,10 @@
 
     // Fast IndexedDB display
     const cached = await idbGetMessages(roomName);
-    if (cached.length > 0 && els.messages) {
+    const cleanCached = (cached || []).filter(m => !m.deleted && m.text !== '🗑️ Message deleted' && m.text !== 'Message deleted');
+    if (cleanCached.length > 0 && els.messages) {
       els.messages.innerHTML = '';
-      cached.forEach(m => renderMessage(m, false));
+      cleanCached.forEach(m => renderMessage(m, false));
       scrollBottom();
     }
 
@@ -730,9 +742,10 @@
       const messages = await resp.json();
       if (els.messages) {
         els.messages.innerHTML = '';
-        if (Array.isArray(messages) && messages.length > 0) {
-          messages.forEach(m => renderMessage(m, false));
-          idbSaveMessages(roomName, messages);
+        const cleanMsgs = (messages || []).filter(m => !m.deleted && m.text !== '🗑️ Message deleted' && m.text !== 'Message deleted');
+        if (cleanMsgs.length > 0) {
+          cleanMsgs.forEach(m => renderMessage(m, false));
+          idbSaveMessages(roomName, cleanMsgs);
         } else {
           renderConversationIntro(roomName);
         }
@@ -1414,8 +1427,16 @@
   }
 
   function deleteMessage(messageId) {
-    if (!messageId || !socket) return;
-    socket.emit('delete-message', { messageId });
+    if (!messageId) return;
+    if (socket && socket.connected) {
+      socket.emit('delete-message', { messageId });
+    }
+    if (myRoom) {
+      idbDeleteMessage(myRoom, messageId);
+    }
+    const el = document.querySelector(`[data-msg-id="${messageId}"]`);
+    if (el) el.remove();
+    showToast('Message deleted');
   }
 
   function copyMessageText(text) {
