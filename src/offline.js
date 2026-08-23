@@ -126,4 +126,41 @@ import { state } from './state.js';
         req.onerror = () => resolve();
       } catch(_) { resolve(); }
     });
+  }
+
+  export function loadOutboxQueue() {
+    try {
+      const raw = localStorage.getItem('bestieOutboxQueue');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) outboxQueue = parsed;
+        else outboxQueue = [];
+      }
+    } catch (e) {
+      outboxQueue = [];
+    }
+  }
+
+  export function saveOutboxQueue() {
+    try {
+      localStorage.setItem('bestieOutboxQueue', JSON.stringify(outboxQueue));
+    } catch (e) {}
+  }
+
+  export function flushOutboxQueue() {
+    if (!socket || !socket.connected) return;
+    loadOutboxQueue();
+    if (!outboxQueue || !outboxQueue.length) return;
+    const now = Date.now();
+    outboxQueue = outboxQueue.filter(item => item && item.clientMsgId && (now - (item.time || now)) < 120000);
+    const queue = [...outboxQueue];
+    outboxQueue = [];
+    saveOutboxQueue();
+    queue.forEach((item, index) => {
+      setTimeout(() => {
+        if (socket && socket.connected && item) {
+          socket.emit('message', item);
+        }
+      }, index * 150);
+    });
   }

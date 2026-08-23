@@ -31,41 +31,6 @@ import { showToast } from './ultimate-features.js';
     doodleCtx.strokeStyle = doodleColor;
     doodleCtx.lineWidth   = doodleSize;
 
-    function getPos(e) {
-      const rect = canvas.getBoundingClientRect();
-      const src  = e.touches ? e.touches[0] : e;
-      return { x: src.clientX - rect.left, y: src.clientY - rect.top };
-    }
-
-    function startDraw(e) {
-      e.preventDefault();
-      doodleDrawing = true;
-      const { x, y } = getPos(e);
-      doodleLastX = x; doodleLastY = y;
-      doodleCtx.beginPath();
-      doodleCtx.arc(x, y, doodleCtx.lineWidth / 2, 0, Math.PI * 2);
-      doodleCtx.fillStyle = doodleTool === 'eraser' ? '#1a1a2e' : doodleColor;
-      doodleCtx.fill();
-    }
-
-    function draw(e) {
-      e.preventDefault();
-      if (!doodleDrawing) return;
-      const { x, y } = getPos(e);
-      doodleCtx.strokeStyle = doodleTool === 'eraser' ? '#1a1a2e' : doodleColor;
-      doodleCtx.lineWidth   = doodleTool === 'eraser' ? doodleSize * 3 : doodleSize;
-      doodleCtx.beginPath();
-      const midX = (doodleLastX + x) / 2;
-      const midY = (doodleLastY + y) / 2;
-      doodleCtx.moveTo(doodleLastX, doodleLastY);
-      doodleCtx.quadraticCurveTo(doodleLastX, doodleLastY, midX, midY);
-      doodleCtx.lineTo(x, y);
-      doodleCtx.stroke();
-      doodleLastX = x; doodleLastY = y;
-    }
-
-    function endDraw() { doodleDrawing = false; }
-
     canvas.addEventListener('mousedown',  startDraw);
     canvas.addEventListener('mousemove',  draw);
     canvas.addEventListener('mouseup',    endDraw);
@@ -74,6 +39,41 @@ import { showToast } from './ultimate-features.js';
     canvas.addEventListener('touchmove',  draw,      { passive: false });
     canvas.addEventListener('touchend',   endDraw);
   }
+
+  export function getPos(e) {
+    const rect = els.doodleCanvas.getBoundingClientRect();
+    const src  = e.touches ? e.touches[0] : e;
+    return { x: src.clientX - rect.left, y: src.clientY - rect.top };
+  }
+
+  export function startDraw(e) {
+    e.preventDefault();
+    doodleDrawing = true;
+    const { x, y } = getPos(e);
+    doodleLastX = x; doodleLastY = y;
+    doodleCtx.beginPath();
+    doodleCtx.arc(x, y, doodleCtx.lineWidth / 2, 0, Math.PI * 2);
+    doodleCtx.fillStyle = doodleTool === 'eraser' ? '#1a1a2e' : doodleColor;
+    doodleCtx.fill();
+  }
+
+  export function draw(e) {
+    e.preventDefault();
+    if (!doodleDrawing) return;
+    const { x, y } = getPos(e);
+    doodleCtx.strokeStyle = doodleTool === 'eraser' ? '#1a1a2e' : doodleColor;
+    doodleCtx.lineWidth   = doodleTool === 'eraser' ? doodleSize * 3 : doodleSize;
+    doodleCtx.beginPath();
+    const midX = (doodleLastX + x) / 2;
+    const midY = (doodleLastY + y) / 2;
+    doodleCtx.moveTo(doodleLastX, doodleLastY);
+    doodleCtx.quadraticCurveTo(doodleLastX, doodleLastY, midX, midY);
+    doodleCtx.lineTo(x, y);
+    doodleCtx.stroke();
+    doodleLastX = x; doodleLastY = y;
+  }
+
+  export function endDraw() { doodleDrawing = false; }
 
   export function setDoodleColor(color, btn) {
     doodleColor = color;

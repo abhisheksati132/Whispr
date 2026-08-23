@@ -631,4 +631,16 @@ import { startCallTimer, endCall } from './webrtc.js';
       sharedCalendar = cal || [];
       renderCalendarList(sharedCalendar);
     });
+  }
+
+  export function rejectPendingMessage(clientMsgId, reason) {
+    const pendingWrap = document.querySelector(`.msg-wrap[data-id="${clientMsgId}"]`);
+    if (pendingWrap) {
+      pendingWrap.classList.add('msg-failed');
+      const statusText = pendingWrap.querySelector('.msg-status-text');
+      if (statusText) statusText.textContent = reason || 'Failed to send';
+      setTimeout(() => pendingWrap.remove(), 3000);
+    }
+    outboxQueue = outboxQueue.filter(item => item.clientMsgId !== clientMsgId);
+    saveOutboxQueue();
   }
