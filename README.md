@@ -1,81 +1,62 @@
-# Whispr 💭
+<div align="center">
 
-A private, real-time encrypted messaging and collaborative space. Fast, zero noise, with WebRTC voice/video calling, ephemeral media, and Supabase (PostgreSQL) persistence.
+# tahc
 
-## Features
-- **Real-Time Messaging**: Instant full-duplex WebSocket messaging with Socket.io.
-- **WebRTC Calling**: Peer-to-peer crystal-clear Voice & Video calls with Picture-in-Picture support.
-- **Client-Side E2E Encryption**: AES-GCM + PBKDF2 Web Crypto API encryption.
-- **Supabase Backend**: Reliable PostgreSQL persistence for chat history, shared notes, and user accounts.
-- **PWA & Offline Ready**: Progressive Web App with Service Worker caching and VAPID Web Push notifications.
-- **Modern Themes**: Claude Warm Paper, Apple iMessage (iOS), and Dark Mode.
-- **Multi-Room Chat**: Groups, channels, and DMs with persistent presence.
-- **Message Forwarding**: Forward messages between chats.
-- **User Blocks**: Block unwanted users.
-- **Session Management**: View and revoke active sessions.
-- **Mute Chats**: Per-room mute with push notification respect.
-- **Server-Side Search**: Search messages across chat history.
-- **Message Pagination**: Load older messages on scroll.
-- **Multipart Uploads**: Large file support with Supabase Storage.
+### A minimal, high-performance workspace for private communication and deep collaboration.
 
-## Quick Start
+[![Status](https://img.shields.io/badge/status-active-34d399?style=flat-square)](https://chat-jh59.onrender.com)
+[![WebRTC](https://img.shields.io/badge/WebRTC-P2P_Audio%20%26%20Video-6366f1?style=flat-square)](https://chat-jh59.onrender.com)
+[![Encryption](https://img.shields.io/badge/Security-AES--GCM%20E2EE-10b981?style=flat-square)](https://chat-jh59.onrender.com)
+[![PWA](https://img.shields.io/badge/PWA-Offline%20First-f59e0b?style=flat-square)](https://chat-jh59.onrender.com)
 
-```bash
-npm install
-cp .env.example .env
-# Edit .env with your Supabase credentials
-npm start
-```
+[**Live Experience →**](https://chat-jh59.onrender.com)
 
-## Environment Variables
+</div>
 
-| Variable | Description |
-|----------|-------------|
-| `PORT` | Server port (default: 3000) |
-| `SUPABASE_URL` | Supabase project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key |
-| `JWT_SECRET` | Secret for JWT tokens |
-| `GIPHY_API_KEY` | Optional GIPHY API key |
-| `CHAT_PASSWORD` | Optional global chat password |
-| `VAPID_PUBLIC_KEY` | Web Push VAPID public key |
-| `VAPID_PRIVATE_KEY` | Web Push VAPID private key |
+---
 
-## Database Setup
+## 💭 About
 
-Run the SQL schema in your Supabase SQL Editor:
+**tahc** is an intimate, distraction-free messaging and collaboration platform crafted for speed, privacy, and aesthetic clarity. 
 
-```bash
-# See supabase_schema.sql
-```
+Designed around a fluid monochrome palette with glassmorphic depth, it strips away the noise of modern communication suites to deliver a focused environment for direct conversations, group channels, peer-to-peer calling, and encrypted personal notes.
 
-## Deployment
+---
 
-### Railway
-1. Connect your GitHub repo to Railway
-2. Add environment variables from `.env.example`
-3. Deploy — Railway auto-detects `Procfile` and `railway.toml`
+## ✨ Highlights
 
-### Render
-1. Connect your GitHub repo to Render
-2. Use the provided `render.yaml` for Blueprint deployment
-3. Add environment variables
+### 🔒 Privacy & Encryption
+- **Client-Side E2EE**: Secure room-level message payloads encrypted directly in the browser via AES-GCM (256-bit) and PBKDF2 key derivation.
+- **View-Once & Ephemeral Modes**: Send self-destructing media and disappearing messages on custom expiry timers.
+- **Zero Tracker Footprint**: No telemetry, third-party analytics, or behavioral trackers.
 
-### Docker
-```bash
-docker build -t whispr .
-docker run -p 3000:3000 -e SUPABASE_URL=... -e SUPABASE_SERVICE_ROLE_KEY=... whispr
-```
+### 📞 Peer-to-Peer Voice & Video
+- **Crystal-Clear WebRTC Calling**: Full-duplex voice and HD video calling with multi-server STUN fallback routing.
+- **Adaptive Stream Handling**: Dynamic track negotiation with picture-in-picture local preview and background audio playback.
+- **Call History & In-Call Utilities**: Live mute, camera toggling, screen sharing, and audio diagnostics.
 
-## Tests
+### ⚡ Real-Time Collaboration
+- **Direct Messages & Group Channels**: Multi-participant communication with live typing indicators and presence detection.
+- **Voice Studio**: Native audio recording with visual waveform scrubbers, pause/resume studio controls, and speed multipliers.
+- **Rich Media & File Engine**: Drag-and-drop document sharing, automatic client-side photo compression, and lightbox galleries.
+- **Note to Self**: A dedicated, end-to-end encrypted private cloud notebook accessible across all your devices.
 
-```bash
-npm test
-```
+### 📱 Native Mobile & PWA Experience
+- **Offline-First Architecture**: Powered by client-side IndexedDB caching and Service Worker background synchronization.
+- **Fluid Micro-Interactions**: Gesture-driven navigation, bottom mobile docks, and viewport handling (`100dvh`) optimized for iOS and Android.
+- **Web Push Notifications**: Background message alerts with custom vibration patterns and badge counters.
 
-## Tech Stack
-- **Backend**: Node.js, Express, Socket.io
-- **Database**: Supabase (PostgreSQL)
-- **Frontend**: Vanilla JS (ES modules ready)
-- **Real-Time**: Socket.io with heartbeat presence
-- **Storage**: Supabase Storage + local fallback
-- **Push**: Web Push API with VAPID
+---
+
+## 🛠️ Architecture & Technologies
+
+- **Frontend**: Vanilla JavaScript (ES6+), Glassmorphic CSS3, IndexedDB Local Cache, Web Audio API, WebRTC MediaStream API.
+- **Real-Time Engine**: Socket.io with heartbeat presence discovery and candidate queuing.
+- **Backend & Storage**: Node.js, Express, Multer stream processing, Supabase (PostgreSQL) persistence with in-memory resilient fallback.
+- **Security**: Web Crypto API (AES-GCM, PBKDF2), JWT session authentication, and CSP headers.
+
+---
+
+<div align="center">
+  <sub>Crafted for focus, privacy, and seamless connection.</sub>
+</div>
