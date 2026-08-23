@@ -11,7 +11,7 @@ import { openViewOnceMedia } from './send-message.js';
 import { triggerDoubleTapHeart, toggleVideoNoteAudio } from './telegram-whatsapp.js';
 import { openLightbox } from './time-capsule.js';
 import { decryptE2EE, playWaveform, seekWaveform, transcribeAudio, highlightInsideJokes, refreshMessagesLayout, showToast, sendQuickReply } from './ultimate-features.js';
-import { escapeHtml, formatBytes } from './utils.js';
+import { escapeHtml, formatBytes, formatMarkdown } from './utils.js';
 
   // ═══════════════════ RENDER HELPERS ═══════════════════
   export function renderReactionBar(msgId) {
@@ -193,7 +193,7 @@ import { escapeHtml, formatBytes } from './utils.js';
       } else {
         body = `<div class="msg ${mine ? 'me' : 'them'}">
           ${replyQuote}
-          ${msg.text ? `<div>${escapeHtml(msg.text)}</div>` : ''}
+          ${msg.text ? `<div>${formatMarkdown(msg.text)}</div>` : ''}
           <img class="chat-img" src="${escapeHtml(msg.url)}" alt="shared image" onclick="BestieChat.openLightbox('${escapeHtml(msg.url)}')" loading="lazy" decoding="async" />
           ${editedTag}
           ${bubbleMeta}
@@ -208,7 +208,7 @@ import { escapeHtml, formatBytes } from './utils.js';
       const gridClass = `grid-${Math.min(4, Math.max(1, items.length))}`;
       body = `<div class="msg ${mine ? 'me' : 'them'}">
         ${replyQuote}
-        ${msg.text ? `<div>${escapeHtml(msg.text)}</div>` : ''}
+         ${msg.text ? `<div>${formatMarkdown(msg.text)}</div>` : ''}
         <div class="media-collage-grid ${gridClass}">
           ${items.map(item => `<img class="collage-item" src="${escapeHtml(item.url)}" alt="photo" onclick="BestieChat.openLightbox('${escapeHtml(item.url)}')" loading="lazy" decoding="async" />`).join('')}
         </div>
@@ -285,7 +285,7 @@ import { escapeHtml, formatBytes } from './utils.js';
     } else if (msg.type === 'secret') {
       const decSecret = decryptE2EE(msg.text);
       body = `<div class="msg secret ${mine ? 'me' : 'them'}">
-        <div class="secret-content" onclick="this.classList.toggle('revealed')">🤫 ${escapeHtml(decSecret)}</div>
+        <div class="secret-content" onclick="this.classList.toggle('revealed')">🤫 ${formatMarkdown(decSecret)}</div>
         <div class="secret-timer" id="stimer-${msg.id}">Vanishes in 30s</div>
         ${bubbleMeta}
       </div>`;
@@ -299,7 +299,7 @@ import { escapeHtml, formatBytes } from './utils.js';
       if (isUnlocked) {
         body = `<div class="msg ${mine ? 'me' : 'them'} time-capsule-unlocked">
           <div style="font-size:11px; font-weight:700; color:#d97706; margin-bottom:4px;">🎁 TIME CAPSULE UNLOCKED!</div>
-          <div class="msg-text">${escapeHtml(decCapsule)}</div>
+          <div class="msg-text">${formatMarkdown(decCapsule)}</div>
           ${editedTag}
           ${bubbleMeta}
         </div>`;
@@ -321,7 +321,7 @@ import { escapeHtml, formatBytes } from './utils.js';
         return `<button class="poll-opt${voted ? ' voted' : ''}" data-option="${escapeHtml(o)}">${escapeHtml(o)}</button>`;
       }).join('');
       body = `<div class="msg ${mine ? 'me' : 'them'}">
-        📊 ${escapeHtml(msg.text)}
+        📊 ${formatMarkdown(msg.text)}
         <div class="poll-options">${opts}</div>
         ${editedTag}
         ${bubbleMeta}
@@ -329,7 +329,8 @@ import { escapeHtml, formatBytes } from './utils.js';
 
     } else {
       const decText = decryptE2EE(msg.text);
-      const highlightedText = highlightInsideJokes(decText);
+      const markedText = formatMarkdown(decText);
+      const highlightedText = highlightInsideJokes(markedText, true);
 
       body = `<div class="msg ${mine ? 'me' : 'them'}">
         ${replyQuote}

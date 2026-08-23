@@ -485,9 +485,9 @@ import { escapeHtml } from './utils.js';
     `).join('');
   }
 
-  export function highlightInsideJokes(text) {
-    if (!sharedGlossary || !sharedGlossary.length || !text) return escapeHtml(text);
-    let escaped = escapeHtml(text);
+  export function highlightInsideJokes(text, alreadyEscaped = false) {
+    if (!sharedGlossary || !sharedGlossary.length || !text) return alreadyEscaped ? text : escapeHtml(text);
+    let escaped = alreadyEscaped ? text : escapeHtml(text);
     // Sort glossary words by length descending so longer matching phrases take priority
     const sorted = [...sharedGlossary].sort((a,b) => b.word.length - a.word.length);
     sorted.forEach(g => {

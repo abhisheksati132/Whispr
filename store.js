@@ -591,22 +591,6 @@ function createUser({ username, pinHash, email, avatar, color, statusBio, nickna
   return data.profiles[username];
 }
 
-function updateMessageReaction(room, messageId, emoji, username, add) {
-  const state = getRoom(room);
-  const msg = state.messages.find((m) => m.id === messageId);
-  if (!msg) return null;
-  if (!msg.reactions) msg.reactions = {};
-  if (add) {
-    if (!msg.reactions[emoji]) msg.reactions[emoji] = [];
-    if (!msg.reactions[emoji].includes(username)) msg.reactions[emoji].push(username);
-  } else {
-    msg.reactions[emoji] = (msg.reactions[emoji] || []).filter((u) => u !== username);
-    if (msg.reactions[emoji].length === 0) delete msg.reactions[emoji];
-  }
-  persist();
-  return msg;
-}
-
 function updatePollVotes(room, messageId, optionIndex, username) {
   const state = getRoom(room);
   const msg = state.messages.find((m) => m.id === messageId);
