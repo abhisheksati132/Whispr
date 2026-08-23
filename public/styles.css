@@ -7,14 +7,14 @@
 :root {
   /* Frosted Glass Palette */
   --bg-primary: #000000;
-  --glass-sidebar: rgba(10, 10, 14, 0.72);
-  --glass-header: rgba(10, 10, 14, 0.75);
-  --glass-panel: rgba(16, 16, 22, 0.78);
-  --glass-card: rgba(22, 22, 30, 0.65);
-  --glass-surface: rgba(28, 28, 38, 0.55);
-  --glass-surface-hover: rgba(255, 255, 255, 0.09);
-  --glass-bubble-in: rgba(24, 24, 32, 0.75);
-  --glass-dock: rgba(8, 8, 12, 0.82);
+  --glass-sidebar: rgba(12, 12, 16, 0.75);
+  --glass-header: rgba(12, 12, 16, 0.78);
+  --glass-panel: rgba(18, 18, 24, 0.82);
+  --glass-card: rgba(24, 24, 32, 0.65);
+  --glass-surface: rgba(30, 30, 40, 0.55);
+  --glass-surface-hover: rgba(255, 255, 255, 0.08);
+  --glass-bubble-in: rgba(28, 28, 36, 0.78);
+  --glass-dock: rgba(10, 10, 14, 0.85);
   --glass-input: rgba(255, 255, 255, 0.05);
 
   /* High-Contrast Accents */
@@ -29,15 +29,15 @@
   --glass-blur-subtle: blur(14px);
 
   /* Specular Hairline Borders */
-  --glass-border: 1px solid rgba(255, 255, 255, 0.12);
-  --glass-border-subtle: 1px solid rgba(255, 255, 255, 0.07);
-  --glass-border-highlight: 1px solid rgba(255, 255, 255, 0.28);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.10);
+  --glass-border-subtle: 1px solid rgba(255, 255, 255, 0.06);
+  --glass-border-highlight: 1px solid rgba(255, 255, 255, 0.25);
 
   /* Glass Depth Shadows */
   --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
   --glass-shadow-lg: 0 20px 48px 0 rgba(0, 0, 0, 0.7);
-  --glass-inset: inset 0 1px 1px 0 rgba(255, 255, 255, 0.15);
-  --glass-inset-subtle: inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+  --glass-inset: inset 0 1px 1px 0 rgba(255, 255, 255, 0.12);
+  --glass-inset-subtle: inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
 
   /* Typography & Layout */
   --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -48,7 +48,7 @@
   --radius-md: 14px;
   --radius-lg: 20px;
   --radius-pill: 9999px;
-  --transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* ── 2. BASE & AMBIENT DEPTH ─────────────────────────────────────────────── */
@@ -159,7 +159,6 @@ input, textarea, select {
   color: var(--text-muted);
 }
 
-/* Auth Tabs */
 .auth-tabs {
   display: flex;
   background: var(--glass-input);
@@ -280,44 +279,80 @@ input, textarea, select {
   position: relative;
 }
 
+/* Sidebar Top Header (User Profile & Actions) */
 .sidebar-header {
-  padding: 16px;
+  padding: 12px 14px;
+  min-height: 60px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
   border-bottom: var(--glass-border-subtle);
 }
 
-.sidebar-brand {
+.sidebar-user {
   display: flex;
   align-items: center;
   gap: 10px;
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;
+  padding: 4px 6px;
+  border-radius: 10px;
+  transition: var(--transition);
 }
 
-.brand-circle {
-  width: 18px;
-  height: 18px;
+.sidebar-user:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.sidebar-avatar {
+  width: 38px;
+  height: 38px;
   border-radius: var(--radius-pill);
-  border: 4px solid #ffffff;
-  box-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
-}
-
-.brand-text {
-  font-size: 18px;
+  background: #ffffff;
+  color: #000000;
   font-weight: 800;
-  letter-spacing: -0.04em;
-  color: #ffffff;
-}
-
-.sidebar-header-actions {
+  font-size: 15px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 10px rgba(255, 255, 255, 0.2);
+}
+
+.sidebar-user-details {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sidebar-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.sidebar-status {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.sidebar-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
 .icon-btn {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: var(--radius-pill);
   display: flex;
   align-items: center;
@@ -334,9 +369,16 @@ input, textarea, select {
   border-color: rgba(255, 255, 255, 0.2);
 }
 
+.icon-btn.primary {
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+  box-shadow: 0 2px 10px rgba(255, 255, 255, 0.2);
+}
+
 /* Sidebar Search */
 .sidebar-search-wrap {
-  padding: 10px 16px;
+  padding: 10px 14px 6px;
   position: relative;
 }
 
@@ -363,17 +405,23 @@ input, textarea, select {
   color: #ffffff;
 }
 
+.sidebar-search-clear {
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 2px;
+}
+
 /* Filter Tabs */
 .sidebar-filters {
-  padding: 0 16px 8px;
+  padding: 4px 14px 8px;
   display: flex;
   gap: 6px;
 }
 
 .filter-pill {
-  padding: 4px 10px;
+  padding: 5px 12px;
   border-radius: var(--radius-pill);
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 600;
   color: var(--text-muted);
   background: var(--glass-surface);
@@ -387,8 +435,8 @@ input, textarea, select {
   border-color: #ffffff;
 }
 
-/* Conversation List */
-.sidebar-dm-list {
+/* Conversation List & Smooth Active Row (NO UGLY BOX BORDER!) */
+.sidebar-chats-list, .sidebar-dm-list {
   flex: 1;
   overflow-y: auto;
   padding: 4px 8px;
@@ -397,26 +445,28 @@ input, textarea, select {
   gap: 2px;
 }
 
-.dm-row {
+.dm-row, .user-result-row {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
-  border-radius: var(--radius-md);
+  border-radius: 12px;
   cursor: pointer;
-  transition: var(--transition);
-  border: 1px solid transparent;
+  transition: background 0.15s ease;
+  border: none !important;
+  outline: none !important;
+  background: transparent;
+  margin: 1px 0;
 }
 
-.dm-row:hover {
-  background: var(--glass-surface-hover);
-  border-color: var(--glass-border-subtle);
+.dm-row:hover, .user-result-row:hover {
+  background: rgba(255, 255, 255, 0.06);
 }
 
+/* Active Chat Item: Sleek solid-white accent notch, zero harsh border box */
 .dm-row.active {
-  background: var(--glass-surface);
-  border-color: var(--glass-border);
-  box-shadow: var(--glass-inset);
+  background: rgba(255, 255, 255, 0.11) !important;
+  box-shadow: inset 3px 0 0 0 #ffffff !important;
 }
 
 .dm-avatar-wrap {
@@ -508,17 +558,6 @@ input, textarea, select {
   padding: 0 4px;
 }
 
-/* User Card in Sidebar Bottom */
-.sidebar-user-card {
-  padding: 12px 16px;
-  background: var(--glass-card);
-  backdrop-filter: var(--glass-blur);
-  border-top: var(--glass-border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
 /* ── 6. MAIN CHAT AREA ───────────────────────────────────────────────────── */
 #chatMain {
   flex: 1;
@@ -532,8 +571,8 @@ input, textarea, select {
 }
 
 header {
-  height: 58px;
-  padding: 0 16px;
+  height: 60px;
+  padding: 0 18px;
   background: var(--glass-header);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
@@ -549,7 +588,7 @@ header {
 .header-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   min-width: 0;
   cursor: pointer;
 }
@@ -564,15 +603,15 @@ header {
 }
 
 .header-avatar {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   border-radius: var(--radius-pill);
   background: var(--glass-card);
   border: var(--glass-border);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   color: #ffffff;
 }
@@ -627,17 +666,17 @@ header {
 #messages {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  padding: 16px 20px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   scroll-behavior: smooth;
 }
 
 .chat-intro-card {
-  margin: 24px auto 16px;
-  max-width: 380px;
-  padding: 24px 20px;
+  margin: 28px auto 20px;
+  max-width: 400px;
+  padding: 26px 22px;
   text-align: center;
   background: var(--glass-card);
   backdrop-filter: var(--glass-blur);
@@ -647,19 +686,19 @@ header {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .chat-intro-avatar {
-  width: 52px;
-  height: 52px;
+  width: 54px;
+  height: 54px;
   border-radius: var(--radius-pill);
   background: #ffffff;
   color: #000000;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 800;
   box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
 }
@@ -678,8 +717,8 @@ header {
 
 .msg-wrap {
   display: flex;
-  max-width: 76%;
-  margin-bottom: 3px;
+  max-width: 74%;
+  margin-bottom: 2px;
   position: relative;
 }
 
@@ -693,9 +732,9 @@ header {
 }
 
 .msg {
-  padding: 9px 13px;
-  border-radius: 16px;
-  font-size: 13.5px;
+  padding: 10px 14px;
+  border-radius: 18px;
+  font-size: 14px;
   line-height: 1.45;
   word-break: break-word;
   position: relative;
@@ -806,7 +845,7 @@ header {
 
 /* ── 8. FROSTED INPUT DOCK ────────────────────────────────────────────────── */
 #inputBarContainer {
-  padding: 10px 16px 14px;
+  padding: 12px 18px 16px;
   background: var(--glass-dock);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
@@ -822,7 +861,7 @@ header {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 10px;
+  padding: 6px 12px;
   background: var(--glass-input);
   backdrop-filter: var(--glass-blur-subtle);
   border: var(--glass-border);
@@ -861,12 +900,12 @@ header {
   max-height: 120px;
   resize: none;
   line-height: 1.4;
-  padding: 4px 2px;
+  padding: 6px 4px;
 }
 
 #sendBtn {
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--radius-pill);
   background: #ffffff;
   color: #000000;
@@ -898,8 +937,8 @@ header {
 /* Floating Scroll to Bottom */
 #scrollBottomBtn {
   position: absolute;
-  bottom: 80px;
-  right: 20px;
+  bottom: 84px;
+  right: 22px;
   width: 36px;
   height: 36px;
   border-radius: var(--radius-pill);
@@ -1266,8 +1305,8 @@ mark.search-highlight {
 /* Slash Command Autocomplete */
 #slashMenu {
   position: absolute;
-  bottom: 68px;
-  left: 16px;
+  bottom: 74px;
+  left: 18px;
   background: var(--glass-panel);
   backdrop-filter: var(--glass-blur-heavy);
   -webkit-backdrop-filter: var(--glass-blur-heavy);
@@ -1375,8 +1414,8 @@ mark.search-highlight {
 /* Attachment Menu */
 #attachMenu {
   position: absolute;
-  bottom: 74px;
-  left: 16px;
+  bottom: 78px;
+  left: 18px;
   background: var(--glass-panel);
   backdrop-filter: var(--glass-blur-heavy);
   -webkit-backdrop-filter: var(--glass-blur-heavy);
@@ -1418,8 +1457,8 @@ mark.search-highlight {
 /* Emoji Picker */
 #emojiPicker {
   position: absolute;
-  bottom: 74px;
-  left: 16px;
+  bottom: 78px;
+  left: 18px;
   background: var(--glass-panel);
   backdrop-filter: var(--glass-blur-heavy);
   -webkit-backdrop-filter: var(--glass-blur-heavy);

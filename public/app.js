@@ -860,7 +860,7 @@
 
         const isSelf = cleanQ === (myName || '').toLowerCase();
         html += `
-          <div class="dm-row" onclick="BestieChat.startDMWith('${escapeHtml(cleanQ)}')" style="background:var(--bg-surface); border:1px solid #ffffff; margin-bottom:6px;">
+          <div class="dm-row" onclick="BestieChat.startDMWith('${escapeHtml(cleanQ)}')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); margin-bottom:6px;">
             <div class="dm-avatar-wrap"><div class="dm-avatar">${isSelf ? 'N' : getInitial(cleanQ)}</div></div>
             <div class="dm-info">
               <div class="dm-name">${isSelf ? 'Open Note to Self' : `Start chat with @${escapeHtml(cleanQ)}`}</div>
@@ -1777,7 +1777,7 @@
         const actionLabel = isSelf ? 'Open Note to Self' : `Start chat with @${escapeHtml(cleanQ)}`;
         const actionSub = isSelf ? 'Your private cloud notes' : 'Click or press Enter to message directly';
         html += `
-          <div class="user-result-row" onclick="BestieChat.startDMWith('${escapeHtml(cleanQ)}')" style="background:var(--bg-surface); border:1px solid #ffffff; margin-bottom:8px;">
+          <div class="user-result-row" onclick="BestieChat.startDMWith('${escapeHtml(cleanQ)}')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); margin-bottom:8px;">
             <div style="display:flex; align-items:center; gap:10px;">
               <div style="width:36px; height:36px; border-radius:50%; background:#fff; color:#000; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700;">${isSelf ? 'N' : getInitial(cleanQ)}</div>
               <div>
