@@ -13,6 +13,7 @@
   let myProfile = { avatar: 'Y', nickname: '', statusBio: '' };
   
   let currentOnlineUsers = [];
+  const renderedMsgIds = new Set(); // msg.id and 'c:'+clientMsgId — guards against echo/optimistic duplicates
   let cachedUserRooms = [];
   let _currentChatFilter = 'all';
   let replyingTo = null;
@@ -280,6 +281,26 @@
         btn.style.display = distFromBottom > 160 ? 'flex' : 'none';
       });
     }
+
+    // ── Delegated actions (XSS-safe replacement for interpolated inline handlers) ──
+    document.addEventListener('click', e => {
+      const el = e.target.closest('[data-action]');
+      if (!el) return;
+      const url = el.dataset.url || '';
+      switch (el.dataset.action) {
+        case 'open-lightbox': openLightbox(url); break;
+        case 'play-audio': playAudio(url, el); break;
+        case 'cycle-audio-speed': cycleAudioSpeed(el, url); break;
+        case 'delete-message': deleteMessage(el.dataset.id); break;
+        case 'reply-msg': replyToMessage(el.dataset.id, el.dataset.user, el.dataset.text); break;
+        case 'copy-msg': copyMessageText(el.dataset.text || ''); break;
+      }
+    });
+    document.addEventListener('dblclick', e => {
+      const el = e.target.closest('[data-action="reply-msg"]');
+      if (!el) return;
+      replyToMessage(el.dataset.id, el.dataset.user, el.dataset.text);
+    });
 
     window.addEventListener('click', e => {
       if (els.attachMenu && !e.target.closest('#attachMenu') && !e.target.closest('button[onclick*="toggleAttachMenu"]')) {
@@ -596,6 +617,32 @@
     socket.on('message', msg => {
       hideTypingIndicator();
       triggerBackgroundNotification(msg);
+
+      // Dedup: the server echoes our own messages back (room + user:<name>
+      // broadcast), and optimistic sends may have rendered already.
+      if (msg && msg.clientMsgId && renderedMsgIds.has('c:' + msg.clientMsgId)) {
+        // Adopt the server id on the optimistic element so edit/delete/receipt
+        // handlers can address it, then skip the duplicate render.
+        if (msg.id && els.messages) {
+          const optimistic = els.messages.querySelector(`[data-msg-id="${CSS.escape(String(msg.clientMsgId))}"]`);
+          if (optimistic) optimistic.dataset.msgId = String(msg.id);
+        }
+        idbSaveMessages(msg.room || myRoom, [msg]);
+        return;
+      }
+      if (msg && msg.id) {
+        const sel = `[data-msg-id="${CSS.escape(String(msg.id))}"]`;
+        if ((els.messages && els.messages.querySelector(sel)) || renderedMsgIds.has(String(msg.id))) {
+          idbSaveMessages(msg.room || myRoom, [msg]);
+          return;
+        }
+        renderedMsgIds.add(String(msg.id));
+        if (renderedMsgIds.size > 500) {
+          const it = renderedMsgIds.values().next();
+          if (!it.done) renderedMsgIds.delete(it.value);
+        }
+      }
+
       idbSaveMessages(msg.room || myRoom, [msg]);
 
       if (msg.room && msg.room !== myRoom) {
@@ -617,6 +664,10 @@
       }
     });
 
+    socket.on('room-error', data => {
+      if (data && data.error && typeof showToast === 'function') showToast(data.error);
+    });
+
     socket.on('typing', (data) => {
       if (typeof data === 'string') {
         if (data !== myName && data !== myProfile.nickname) showTypingIndicator();
@@ -627,7 +678,7 @@
 
         socket.on('message-edited', data => {
       if (!data || !data.messageId) return;
-      const el = document.querySelector(`[data-msg-id="${data.messageId}"]`);
+      const el = document.querySelector(`[data-msg-id="${CSS.escape(String(data.messageId))}"]`);
       if (el) {
         const textSpan = el.querySelector('.msg-text-content');
         if (textSpan) {
@@ -638,7 +689,7 @@
 
         socket.on('task-toggled', data => {
       if (!data || !data.messageId) return;
-      const el = document.querySelector(`[data-msg-id="${data.messageId}"]`);
+      const el = document.querySelector(`[data-msg-id="${CSS.escape(String(data.messageId))}"]`);
       if (el) {
         const textSpan = el.querySelector('.msg-text-content');
         if (textSpan) {
@@ -681,7 +732,7 @@
     socket.on('message-deleted', data => {
       if (!data || !data.messageId) return;
       if (myRoom) idbDeleteMessage(myRoom, data.messageId);
-      const el = document.querySelector(`[data-msg-id="${data.messageId}"]`);
+      const el = document.querySelector(`[data-msg-id="${CSS.escape(String(data.messageId))}"]`);
       if (el) {
         el.remove();
         showToast('Message deleted');
@@ -867,7 +918,7 @@
       const badge = room.unread > 0 ? `<div class="dm-badge">${room.unread}</div>` : '';
       const active = room.name === myRoom ? 'active' : '';
 
-      return `<div class="dm-row ${active}" onclick="BestieChat.switchRoom('${escapeHtml(room.name)}')">
+      return `<div class="dm-row ${active}" onclick="BestieChat.switchRoom(${jsAttr(room.name)})">
         <div class="dm-avatar-wrap">
           <div class="dm-avatar">${avatarInitial}</div>
           ${onlineDot}
@@ -921,13 +972,13 @@
 
         const isSelf = cleanQ === (myName || '').toLowerCase();
         html += `
-          <div class="dm-row" onclick="BestieChat.startDMWith('${escapeHtml(cleanQ)}')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); margin-bottom:6px;">
+          <div class="dm-row" onclick="BestieChat.startDMWith(${jsAttr(cleanQ)})" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); margin-bottom:6px;">
             <div class="dm-avatar-wrap"><div class="dm-avatar">${isSelf ? 'N' : getInitial(cleanQ)}</div></div>
             <div class="dm-info">
               <div class="dm-name">${isSelf ? 'Open Note to Self' : `Start chat with @${escapeHtml(cleanQ)}`}</div>
               <div style="font-size:11.5px; color:var(--text-muted);">${isSelf ? 'Your private notes' : 'Click or press Enter to message'}</div>
             </div>
-            <button type="button" class="login-btn" onclick="event.stopPropagation(); BestieChat.startDMWith('${escapeHtml(cleanQ)}')" style="padding:4px 12px; font-size:11.5px; margin:0; width:auto;">${isSelf ? 'Open' : 'Message'}</button>
+            <button type="button" class="login-btn" onclick="event.stopPropagation(); BestieChat.startDMWith(${jsAttr(cleanQ)})" style="padding:4px 12px; font-size:11.5px; margin:0; width:auto;">${isSelf ? 'Open' : 'Message'}</button>
           </div>
         `;
 
@@ -938,13 +989,13 @@
         if (otherUsers.length > 0) {
           html += '<div style="padding:8px 10px; font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Registered Users</div>';
           html += otherUsers.map(u => `
-            <div class="dm-row" onclick="BestieChat.startDMWith('${escapeHtml(u.username)}')">
+            <div class="dm-row" onclick="BestieChat.startDMWith(${jsAttr(u.username)})">
               <div class="dm-avatar-wrap"><div class="dm-avatar">${getInitial(u.nickname || u.username)}</div></div>
               <div class="dm-info">
                 <div class="dm-name">${escapeHtml(u.nickname || u.username)}</div>
                 <div style="font-size:11.5px; color:var(--text-muted);">@${escapeHtml(u.username)}</div>
               </div>
-              <button type="button" class="login-btn" onclick="event.stopPropagation(); BestieChat.startDMWith('${escapeHtml(u.username)}')" style="padding:4px 12px; font-size:11.5px; margin:0; width:auto;">Chat</button>
+              <button type="button" class="login-btn" onclick="event.stopPropagation(); BestieChat.startDMWith(${jsAttr(u.username)})" style="padding:4px 12px; font-size:11.5px; margin:0; width:auto;">Chat</button>
             </div>
           `).join('');
         }
@@ -1121,6 +1172,7 @@
     renderMessage(payload, true);
     scrollBottom();
     idbSaveMessages(myRoom, [payload]);
+    renderedMsgIds.add('c:' + clientMsgId);
 
     if (socket && socket.connected) {
       socket.emit('message', payload);
@@ -1185,9 +1237,9 @@
 
     let contentHtml = forwardedHtml;
 
-    // Quoted reply
+    // Quoted reply — id is escaped for both attribute-JS and HTML contexts
     if (msg.replyTo) {
-      contentHtml += `<div class="reply-quote" onclick="BestieChat.scrollToMessage('${msg.replyTo.id}')">
+      contentHtml += `<div class="reply-quote" onclick="BestieChat.scrollToMessage(${jsAttr(msg.replyTo.id || '')})">
         <span class="reply-quote-name">${escapeHtml(msg.replyTo.user || 'Reply')}</span>
         <span class="reply-quote-text">${escapeHtml(msg.replyTo.text || 'Message')}</span>
       </div>`;
@@ -1195,12 +1247,12 @@
 
     // Media types
     if (msg.type === 'image' && msg.url) {
-      contentHtml += `<img class="chat-photo-img" src="${escapeHtml(msg.url)}" onclick="BestieChat.openLightbox('${escapeHtml(msg.url)}')" loading="lazy" />`;
+      contentHtml += `<img class="chat-photo-img" src="${escapeHtml(msg.url)}" data-action="open-lightbox" data-url="${escapeHtml(msg.url)}" loading="lazy" />`;
     } else if (msg.type === 'voice' && msg.url) {
       contentHtml += `<div class="voice-bubble">
-        <button type="button" class="voice-play-btn" onclick="BestieChat.playAudio('${escapeHtml(msg.url)}', this)">▶</button>
+        <button type="button" class="voice-play-btn" data-action="play-audio" data-url="${escapeHtml(msg.url)}">▶</button>
         <div style="font-size:12px;">Voice note (${msg.duration || 0}s)</div>
-        <button type="button" class="voice-speed-btn" onclick="BestieChat.cycleAudioSpeed(this, '${escapeHtml(msg.url)}')">1x</button>
+        <button type="button" class="voice-speed-btn" data-action="cycle-audio-speed" data-url="${escapeHtml(msg.url)}">1x</button>
       </div>`;
     } else if (msg.type === 'poll') {
       contentHtml += renderPollHtml(msg);
@@ -1222,10 +1274,10 @@
     const tickHtml = isMe ? '<span class="msg-status-ticks"> ✓✓</span>' : '';
 
     // Action bar for power actions
-    const deleteBtn = isMe ? `<button type="button" class="msg-action-btn" onclick="BestieChat.deleteMessage('${escapeHtml(msg.id)}')" title="Delete">🗑️</button>` : '';
+    const deleteBtn = isMe ? `<button type="button" class="msg-action-btn" onclick="BestieChat.deleteMessage(${jsAttr(msg.id)})" title="Delete">🗑️</button>` : '';
 
     wrap.innerHTML = `
-      <div class="msg ${isMe ? 'me' : 'them'}" ondblclick="BestieChat.replyToMessage('${escapeHtml(msg.id || '')}', '${escapeHtml(msg.user || '')}', '${escapeHtml(msg.text || 'Media')}')" title="Double click to reply">
+      <div class="msg ${isMe ? 'me' : 'them'}" data-action="reply-msg" data-id="${escapeHtml(msg.id || '')}" data-user="${escapeHtml(msg.user || '')}" data-text="${escapeHtml(msg.text || 'Media')}" title="Double click to reply">
         ${contentHtml}
         <div class="bubble-meta">
           <span>${timeStr}</span>
@@ -1233,13 +1285,13 @@
         </div>
       </div>
       <div class="msg-action-bar">
-        <button type="button" class="msg-action-btn" onclick="BestieChat.replyToMessage('${escapeHtml(msg.id || '')}', '${escapeHtml(msg.user || '')}', '${escapeHtml(msg.text || 'Media')}')" title="Reply">↩️</button>
-        <button type="button" class="msg-action-btn" onclick="BestieChat.copyMessageText('${escapeHtml(msg.text || msg.url || '')}')" title="Copy">📋</button>
-        <button type="button" class="msg-action-btn" onclick="BestieChat.openForwardModal('${escapeHtml(msg.id)}')" title="Forward">↪️</button>
-        <button type="button" class="msg-action-btn" onclick="BestieChat.openReminderModal('${escapeHtml(msg.id)}', '${escapeHtml(msg.text || 'Message')}')" title="Remind Me">🔔</button>
-        ${(isMe && msg.type === 'text') ? `<button type="button" class="msg-action-btn" onclick="BestieChat.openEditModal('${escapeHtml(msg.id)}', '${escapeHtml(msg.text || '')}')" title="Edit">✏️</button>` : ''}
-        <button type="button" class="msg-action-btn" onclick="BestieChat.pinMessage('${escapeHtml(msg.id)}')" title="Pin">📌</button>
-        <button type="button" class="msg-action-btn" onclick="BestieChat.starMessage('${escapeHtml(msg.id)}')" title="Star">⭐</button>
+        <button type="button" class="msg-action-btn" onclick="BestieChat.replyToMessage(${jsAttr(msg.id || '')}, ${jsAttr(msg.user || '')}, ${jsAttr(msg.text || 'Media')})" title="Reply">↩️</button>
+        <button type="button" class="msg-action-btn" data-action="copy-msg" data-text="${escapeHtml(msg.text || msg.url || '')}" title="Copy">📋</button>
+        <button type="button" class="msg-action-btn" onclick="BestieChat.openForwardModal(${jsAttr(msg.id)})" title="Forward">↪️</button>
+        <button type="button" class="msg-action-btn" onclick="BestieChat.openReminderModal(${jsAttr(msg.id)}, ${jsAttr(msg.text || 'Message')})" title="Remind Me">🔔</button>
+        ${(isMe && msg.type === 'text') ? `<button type="button" class="msg-action-btn" onclick="BestieChat.openEditModal(${jsAttr(msg.id)}, ${jsAttr(msg.text || '')})" title="Edit">✏️</button>` : ''}
+        <button type="button" class="msg-action-btn" onclick="BestieChat.pinMessage(${jsAttr(msg.id)})" title="Pin">📌</button>
+        <button type="button" class="msg-action-btn" onclick="BestieChat.starMessage(${jsAttr(msg.id)})" title="Star">⭐</button>
         ${deleteBtn}
       </div>
     `;
@@ -1365,7 +1417,11 @@
 
   function scrollToMessage(id) {
     if (!id) return;
-    const el = document.querySelector(`[data-msg-id="${id}"]`);
+    const safeId = String(id).replace(/%27/g, "'");
+    let el = null;
+    try {
+      el = document.querySelector(`[data-msg-id="${CSS.escape(safeId)}"]`);
+    } catch { /* invalid selector — ignore */ }
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       el.classList.add('msg-highlight');
@@ -1407,7 +1463,7 @@
         }
 
         list.innerHTML = messages.map(m => `
-          <div class="starred-item-card" onclick="BestieChat.closeStarredModal(); BestieChat.switchRoom('${escapeHtml(m.room)}');">
+          <div class="starred-item-card" onclick="BestieChat.closeStarredModal(); BestieChat.switchRoom(${jsAttr(m.room)});">
             <div class="starred-item-header">
               <span style="font-weight:700; color:#ffffff;">@${escapeHtml(m.user)}</span>
               <span>${formatTimestamp(m.time)}</span>
@@ -1434,7 +1490,7 @@
     if (myRoom) {
       idbDeleteMessage(myRoom, messageId);
     }
-    const el = document.querySelector(`[data-msg-id="${messageId}"]`);
+    const el = document.querySelector(`[data-msg-id="${CSS.escape(String(messageId))}"]`);
     if (el) el.remove();
     showToast('Message deleted');
   }
@@ -1507,8 +1563,9 @@
     formData.append('duration', duration);
 
     try {
-      let res = await fetch('/api/upload-multipart', { method: 'POST', body: formData });
-      if (!res.ok) res = await fetch('/api/upload', { method: 'POST', body: formData });
+      const uploadHeaders = authToken ? { 'Authorization': `Bearer ${authToken}` } : {};
+      let res = await fetch('/api/upload-multipart', { method: 'POST', headers: uploadHeaders, body: formData });
+      if (!res.ok) res = await fetch('/api/upload', { method: 'POST', headers: uploadHeaders, body: formData });
       const data = await res.json();
       if (data && data.url) {
         const payload = {
@@ -1543,8 +1600,9 @@
       formData.append('room', myRoom);
 
       try {
-        let res = await fetch('/api/upload-multipart', { method: 'POST', body: formData });
-        if (!res.ok) res = await fetch('/api/upload', { method: 'POST', body: formData });
+        const uploadHeaders = authToken ? { 'Authorization': `Bearer ${authToken}` } : {};
+        let res = await fetch('/api/upload-multipart', { method: 'POST', headers: uploadHeaders, body: formData });
+        if (!res.ok) res = await fetch('/api/upload', { method: 'POST', headers: uploadHeaders, body: formData });
         const data = await res.json();
         if (data && data.url) {
           const payload = {
@@ -1558,6 +1616,7 @@
           renderMessage(payload, true);
           scrollBottom();
           idbSaveMessages(myRoom, [payload]);
+          renderedMsgIds.add(String(payload.id));
           if (socket && socket.connected) socket.emit('message', payload);
           loadChatList();
         }
@@ -1581,8 +1640,9 @@
     formData.append('room', myRoom);
 
     try {
-      let res = await fetch('/api/upload-multipart', { method: 'POST', body: formData });
-      if (!res.ok) res = await fetch('/api/upload', { method: 'POST', body: formData });
+      const uploadHeaders = authToken ? { 'Authorization': `Bearer ${authToken}` } : {};
+      let res = await fetch('/api/upload-multipart', { method: 'POST', headers: uploadHeaders, body: formData });
+      if (!res.ok) res = await fetch('/api/upload', { method: 'POST', headers: uploadHeaders, body: formData });
       const data = await res.json();
       if (data && data.url) {
         const payload = {
@@ -2009,7 +2069,7 @@
         const actionLabel = isSelf ? 'Open Note to Self' : `Start chat with @${escapeHtml(cleanQ)}`;
         const actionSub = isSelf ? 'Your private cloud notes' : 'Click or press Enter to message directly';
         html += `
-          <div class="user-result-row" onclick="BestieChat.startDMWith('${escapeHtml(cleanQ)}')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); margin-bottom:8px;">
+          <div class="user-result-row" onclick="BestieChat.startDMWith(${jsAttr(cleanQ)})" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); margin-bottom:8px;">
             <div style="display:flex; align-items:center; gap:10px;">
               <div style="width:36px; height:36px; border-radius:50%; background:#fff; color:#000; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700;">${isSelf ? 'N' : getInitial(cleanQ)}</div>
               <div>
@@ -2017,7 +2077,7 @@
                 <div style="font-size:11.5px; color:var(--text-muted);">${actionSub}</div>
               </div>
             </div>
-            <button type="button" class="login-btn" onclick="event.stopPropagation(); BestieChat.startDMWith('${escapeHtml(cleanQ)}')" style="padding:5px 14px; font-size:12px; margin:0; width:auto;">${isSelf ? 'Open' : 'Message'}</button>
+            <button type="button" class="login-btn" onclick="event.stopPropagation(); BestieChat.startDMWith(${jsAttr(cleanQ)})" style="padding:5px 14px; font-size:12px; margin:0; width:auto;">${isSelf ? 'Open' : 'Message'}</button>
           </div>
         `;
       }
@@ -2025,7 +2085,7 @@
       if (users && users.length > 0) {
         html += '<div style="padding:4px 2px; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Registered Contacts</div>';
         html += users.map(u => `
-          <div class="user-result-row" onclick="BestieChat.startDMWith('${escapeHtml(u.username)}')">
+          <div class="user-result-row" onclick="BestieChat.startDMWith(${jsAttr(u.username)})">
             <div style="display:flex; align-items:center; gap:10px;">
               <div style="width:36px; height:36px; border-radius:50%; background:var(--bg-surface); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; color:#fff;">${getInitial(u.nickname || u.username)}</div>
               <div>
@@ -2033,7 +2093,7 @@
                 <div style="font-size:11.5px; color:var(--text-muted);">@${escapeHtml(u.username)}</div>
               </div>
             </div>
-            <button type="button" class="login-btn" onclick="event.stopPropagation(); BestieChat.startDMWith('${escapeHtml(u.username)}')" style="padding:5px 14px; font-size:12px; margin:0; width:auto;">Chat</button>
+            <button type="button" class="login-btn" onclick="event.stopPropagation(); BestieChat.startDMWith(${jsAttr(u.username)})" style="padding:5px 14px; font-size:12px; margin:0; width:auto;">Chat</button>
           </div>
         `).join('');
       } else if (!cleanQ) {
@@ -2244,6 +2304,15 @@
     return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
   }
 
+  // Safe embedding of dynamic values inside inline handlers. JSON.stringify
+  // produces a valid JS string literal; HTML-escaping then makes it safe
+  // inside a double-quoted attribute (the browser decodes entities BEFORE the
+  // JS engine evaluates the attribute, so the JSON escapes survive intact and
+  // no attacker-controlled quote can break out of either context).
+  function jsAttr(value) {
+    return escapeHtml(JSON.stringify(String(value == null ? '' : value)));
+  }
+
   function escapeRegex(str) {
     return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
@@ -2274,7 +2343,7 @@
       if (/^-\s*\[([ xX])\]\s*(.*)/.test(line)) {
         const isDone = /^-\s*\[[xX]\]/.test(line);
         const taskText = line.replace(/^-\s*\[[ xX]\]\s*/, '');
-        lines[i] = `<label class="task-item ${isDone ? 'completed' : ''}"><input type="checkbox" ${isDone ? 'checked' : ''} onchange="BestieChat.toggleTaskItem(this, '${msgId || ''}', ${taskIdx})" /><span>${taskText}</span></label>`;
+        lines[i] = `<label class="task-item ${isDone ? 'completed' : ''}"><input type="checkbox" ${isDone ? 'checked' : ''} onchange="BestieChat.toggleTaskItem(this, ${jsAttr(msgId || '')}, ${taskIdx})" /><span>${taskText}</span></label>`;
         taskIdx++;
       }
     }
@@ -2375,7 +2444,7 @@
 
     socket.emit('edit-message', { messageId: editingMessageId, text: newText });
 
-    const el = document.querySelector(`[data-msg-id="${editingMessageId}"]`);
+    const el = document.querySelector(`[data-msg-id="${CSS.escape(String(editingMessageId))}"]`);
     if (el) {
       const textSpan = el.querySelector('.msg-text-content');
       if (textSpan) {
@@ -2516,7 +2585,7 @@
       const hasMyVote = votes.some(v => v.optionIndex === idx && (v.user || '').toLowerCase() === (myName || '').toLowerCase());
       
       optionsHtml += `
-        <div class="poll-option-row ${hasMyVote ? 'voted' : ''}" onclick="BestieChat.votePoll('${escapeHtml(msg.id)}', ${idx})">
+        <div class="poll-option-row ${hasMyVote ? 'voted' : ''}" onclick="BestieChat.votePoll(${jsAttr(msg.id)}, ${idx})">
           <div class="poll-bar-fill" style="width:${percent}%;"></div>
           <div class="poll-option-content">
             <span>${escapeHtml(opt.text)}</span>
@@ -2693,7 +2762,7 @@
       if (!photos.length) mediaGrid.innerHTML = '<div style="grid-column:1/-1; padding:20px; text-align:center; color:var(--text-muted); font-size:12.5px;">No photos shared yet</div>';
       else {
         mediaGrid.innerHTML = photos.map(p => `
-          <img src="${escapeHtml(p.url)}" style="width:100%; height:80px; object-fit:cover; border-radius:6px; cursor:pointer;" onclick="BestieChat.openLightbox('${escapeHtml(p.url)}')" loading="lazy" />
+          <img src="${escapeHtml(p.url)}" style="width:100%; height:80px; object-fit:cover; border-radius:6px; cursor:pointer;" data-action="open-lightbox" data-url="${escapeHtml(p.url)}" loading="lazy" />
         `).join('');
       }
     }
@@ -2702,7 +2771,7 @@
       if (!taskMsgs.length) tasksList.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-muted); font-size:12.5px;">No tasks created in this chat. Type /todo to create one!</div>';
       else {
         tasksList.innerHTML = taskMsgs.map(t => `
-          <div class="starred-item-card" onclick="BestieChat.closeSharedDrawer(); BestieChat.scrollToMessage('${t.id}');">
+          <div class="starred-item-card" onclick="BestieChat.closeSharedDrawer(); BestieChat.scrollToMessage(${jsAttr(t.id)});">
             <div class="starred-item-header">
               <span style="font-weight:700; color:#fff;">@${escapeHtml(t.user)}</span>
               <span>${formatTimestamp(t.time)}</span>
@@ -2846,7 +2915,7 @@
       const users = currentOnlineUsers.filter(u => u.toLowerCase().includes(query) && u.toLowerCase() !== (myName || '').toLowerCase());
       if (users.length > 0) {
         menu.innerHTML = users.map(u => `
-          <div class="mention-item" onclick="BestieChat.selectMention('${escapeHtml(u)}')">
+          <div class="mention-item" onclick="BestieChat.selectMention(${jsAttr(u)})">
             <div style="width:22px; height:22px; border-radius:50%; background:#fff; color:#000; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700;">${getInitial(u)}</div>
             <span>@${escapeHtml(u)}</span>
           </div>
@@ -2933,7 +3002,7 @@
         const isGroup = r.isGroup || (r.name || '').startsWith('group_');
         const displayName = r.displayName || (r.name.replace('dm_', '').replace(/_/g, ' ') || 'Chat');
         return `
-          <div class="member-picker-row" onclick="BestieChat.forwardToRoom('${escapeHtml(r.name)}')">
+          <div class="member-picker-row" onclick="BestieChat.forwardToRoom(${jsAttr(r.name)})">
             <div style="display:flex; align-items:center; gap:8px;">
               <div style="width:30px; height:30px; border-radius:50%; background:rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700;">${isGroup ? '👥' : getInitial(displayName)}</div>
               <div>
@@ -3147,7 +3216,7 @@
 
     wrap.style.display = 'block';
     ribbon.innerHTML = others.map(u => `
-      <div class="active-now-item" onclick="BestieChat.openDirectWithUser('${escapeHtml(u)}')" title="Chat with @${escapeHtml(u)}">
+      <div class="active-now-item" onclick="BestieChat.openDirectWithUser(${jsAttr(u)})" title="Chat with @${escapeHtml(u)}">
         <div class="active-now-avatar-wrap">
           <div class="active-now-avatar">${getInitial(u)}</div>
           <div class="active-now-pulse-ring"></div>
@@ -3241,7 +3310,7 @@
         mediaGrid.innerHTML = '<div style="grid-column:span 3; font-size:11.5px; color:var(--text-muted); padding:8px 0;">No photos shared yet</div>';
       } else {
         mediaGrid.innerHTML = media.map(m => `
-          <img src="${escapeHtml(m.url)}" class="info-media-thumb" onclick="BestieChat.openLightbox('${escapeHtml(m.url)}')" alt="media" />
+          <img src="${escapeHtml(m.url)}" class="info-media-thumb" data-action="open-lightbox" data-url="${escapeHtml(m.url)}" alt="media" />
         `).join('');
       }
     }

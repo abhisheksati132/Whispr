@@ -15,17 +15,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles.css?v=8000" />
+  <link rel="stylesheet" href="/styles.css?v=8001" />
 </head>
 <body>
 
   <!-- Floating Toast Notifications Container -->
   <div id="toastContainer"></div>
-
-  <!-- Fullscreen Media Lightbox -->
-  <div id="lightbox" onclick="BestieChat.closeLightbox()">
-    <img id="lightboxImg" src="" alt="Full view" />
-  </div>
 
   <!-- ═══════════════════ AUTH / SIGN IN SCREEN ═══════════════════ -->
   <div id="login">
@@ -692,6 +687,13 @@
 
   <!-- Scripts -->
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/app.js?v=9000"></script>
+  <script src="/app.js?v=9001"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => { /* offline support is best-effort */ });
+      });
+    }
+  </script>
 </body>
 </html>

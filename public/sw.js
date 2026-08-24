@@ -1,5 +1,5 @@
-// Service Worker — tahc v8000
-const CACHE = 'tahc-v8000';
+// Service Worker — tahc v8001
+const CACHE = 'tahc-v8001';
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();
