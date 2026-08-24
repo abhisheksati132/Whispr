@@ -3,8 +3,9 @@ const express = require('express');
 const router  = express.Router();
 const jwt     = require('jsonwebtoken');
 const store   = require('../supabaseStore');
-
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-me';
+const { JWT_SECRET } = require('../config');
+const { authorizeRoom, isMember, canRead } = require('../roomAuthz');
+const { sanitizePostgrestValue } = require('../chat-utils');
 
 function authMw(req, res, next) {
   try {
@@ -15,6 +16,21 @@ function authMw(req, res, next) {
   } catch (_) {
     res.status(401).json({ error: 'Unauthorized' });
   }
+}
+
+// Room-level authorization: 'member' requires explicit membership,
+// 'read' also allows legacy public rooms (empty participant list).
+function roomAccess(level) {
+  return async (req, res, next) => {
+    try {
+      const status = await authorizeRoom(store, req.params.roomName, req.username);
+      const ok = level === 'member' ? isMember(status) : canRead(status);
+      if (!ok) return res.status(403).json({ error: 'Access denied' });
+      next();
+    } catch (_) {
+      res.status(500).json({ error: 'Authorization failed' });
+    }
+  };
 }
 
 // GET /api/rooms/list — all rooms the user participates in
@@ -50,18 +66,24 @@ router.get('/users/search', authMw, async (req, res) => {
   }
 });
 
-// GET /api/rooms/messages/starred — get all starred messages for user
+// GET /api/rooms/messages/starred — get all starred messages across the user's rooms
 router.get('/messages/starred', authMw, async (req, res) => {
   try {
-    const messages = await store.getStarredMessages(req.username);
-    res.json(messages);
+    const userRooms = await store.listUserRooms(req.username);
+    const roomNames = (userRooms || [])
+      .map(r => r.roomName || r.name)
+      .filter(Boolean);
+    const results = await Promise.all(
+      roomNames.map(n => store.getStarredMessages(n, req.username).catch(() => []))
+    );
+    res.json(results.flat());
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 // POST /api/rooms/:roomName/messages/:messageId/star — toggle star
-router.post('/:roomName/messages/:messageId/star', authMw, async (req, res) => {
+router.post('/:roomName/messages/:messageId/star', authMw, roomAccess('member'), async (req, res) => {
   try {
     const { roomName, messageId } = req.params;
     const { starred } = req.body;
@@ -73,7 +95,7 @@ router.post('/:roomName/messages/:messageId/star', authMw, async (req, res) => {
 });
 
 // GET /api/rooms/:roomName/messages?before=timestamp — paginated history
-router.get('/:roomName/messages', authMw, async (req, res) => {
+router.get('/:roomName/messages', authMw, roomAccess('read'), async (req, res) => {
   try {
     const { roomName } = req.params;
     const before = req.query.before ? parseInt(req.query.before, 10) : null;
@@ -91,8 +113,8 @@ router.post('/create', authMw, async (req, res) => {
     const roomName = String(name || '').trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^[-_]+|[-_]+$/g, '') || 'group-' + Date.now();
     const roomType = ['group', 'channel', 'dm'].includes(type) ? type : 'group';
     
-    const existing = await store.getRoomMeta(roomName);
-    if (existing && existing.name) {
+    const exists = await store.roomExists(roomName);
+    if (exists) {
       return res.status(409).json({ error: 'Room already exists' });
     }
 
@@ -120,7 +142,7 @@ router.post('/create', authMw, async (req, res) => {
 });
 
 // POST /api/rooms/:roomName/members — add member to room
-router.post('/:roomName/members', authMw, async (req, res) => {
+router.post('/:roomName/members', authMw, roomAccess('member'), async (req, res) => {
   try {
     const { roomName } = req.params;
     const { username: newMember } = req.body;
@@ -148,7 +170,7 @@ router.post('/:roomName/members', authMw, async (req, res) => {
 });
 
 // DELETE /api/rooms/:roomName/members/:username — remove member from room
-router.delete('/:roomName/members/:username', authMw, async (req, res) => {
+router.delete('/:roomName/members/:username', authMw, roomAccess('member'), async (req, res) => {
   try {
     const { roomName, username: memberToRemove } = req.params;
     const meta = await store.getRoomMeta(roomName);
@@ -169,19 +191,20 @@ router.delete('/:roomName/members/:username', authMw, async (req, res) => {
 });
 
 // GET /api/rooms/:roomName/search?q=xxx — server-side message search
-router.get('/:roomName/search', authMw, async (req, res) => {
+router.get('/:roomName/search', authMw, roomAccess('read'), async (req, res) => {
   try {
     const { roomName } = req.params;
     const q = String(req.query.q || '').trim();
     if (!q || q.length < 2) return res.json([]);
     
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit || '20', 10)));
+    const safeQ = sanitizePostgrestValue(q);
     const { data, error } = await store.supabase
       .from('messages')
       .select('id, "user", text, type, time, url')
       .eq('room', roomName)
       .eq('deleted', false)
-      .or(`text.ilike.%${q}%,user.ilike.%${q}%`)
+      .or(`text.ilike.%${safeQ}%,user.ilike.%${safeQ}%`)
       .order('time', { ascending: false })
       .limit(limit);
     
@@ -249,7 +272,7 @@ router.get('/blocks', authMw, async (req, res) => {
 });
 
 // PUT /api/rooms/:roomName/mute — mute notifications for a room
-router.put('/:roomName/mute', authMw, async (req, res) => {
+router.put('/:roomName/mute', authMw, roomAccess('member'), async (req, res) => {
   try {
     const { roomName } = req.params;
     const { muteUntil } = req.body;
@@ -269,7 +292,7 @@ router.put('/:roomName/mute', authMw, async (req, res) => {
 });
 
 // DELETE /api/rooms/:roomName/mute — unmute notifications for a room
-router.delete('/:roomName/mute', authMw, async (req, res) => {
+router.delete('/:roomName/mute', authMw, roomAccess('member'), async (req, res) => {
   try {
     const { roomName } = req.params;
     await store.supabase.from('room_participants').update({ mute_until: 0 })
@@ -284,7 +307,7 @@ router.delete('/:roomName/mute', authMw, async (req, res) => {
 });
 
 // DELETE /api/rooms/:roomName — delete a room (owner only)
-router.delete('/:roomName', authMw, async (req, res) => {
+router.delete('/:roomName', authMw, roomAccess('member'), async (req, res) => {
   try {
     const { roomName } = req.params;
     const { data: participant } = await store.supabase

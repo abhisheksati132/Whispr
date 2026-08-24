@@ -16,19 +16,17 @@ const morgan   = require('morgan');
 const mStore = require('./supabaseStore');
 const { isConfigured, checkConnection, supabase } = require('./supabaseClient');
 const {
-  normalizeName, normalizeRoom, normalizeText, normalizeNickname,
+  normalizeRoom, normalizeText, normalizeNickname,
   randomJoinMessage, randomLeaveMessage, randomGamePrompt
 } = require('./chat-utils');
 
 const CHAT_PASSWORD = process.env.CHAT_PASSWORD || '';
 const GIPHY_API_KEY = process.env.GIPHY_API_KEY || '';
-const JWT_SECRET    = process.env.JWT_SECRET || 'fallback-secret-change-me';
+const { JWT_SECRET } = require('./config');
+const { dmMembers, authorizeRoom, isMember, canRead } = require('./roomAuthz');
 
 if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
   console.warn('⚠️  Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY — operating in memory-only mode.');
-}
-if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
-  console.warn('⚠️  JWT_SECRET is missing or shorter than 32 characters. Set a strong secret in production.');
 }
 
 let sentryEnabled = false;
@@ -126,8 +124,12 @@ app.get('/api/config', (_req, res) => res.json({ passwordRequired: Boolean(CHAT_
 app.get('/api/daily-question', (_req, res) => res.json({ question: mStore.getDailyQuestion() }));
 app.get('/api/export-chat', async (req, res) => {
   try {
+    const requester = requireAuth(req, res);
+    if (!requester) return;
     const room = normalizeRoom(req.query.room);
     if (!room) return res.status(400).json({ error: 'Room parameter required' });
+    const access = await authorizeRoom(mStore, room, requester);
+    if (!canRead(access)) return res.status(403).json({ error: 'Access denied' });
     const messages = await mStore.getMessages(room, 5000);
     const meta = await mStore.getRoomMeta(room);
     res.json({
@@ -255,8 +257,10 @@ app.get('/api/push-vapid-key', (_req, res) => res.json({ publicKey: vapidKeys.pu
 
 app.post('/api/push-subscribe', async (req, res) => {
   try {
-    const { username, subscription } = req.body;
-    if (!username || !subscription?.endpoint) return res.status(400).json({ error: 'Missing data' });
+    const username = requireAuth(req, res);
+    if (!username) return;
+    const { subscription } = req.body;
+    if (!subscription?.endpoint) return res.status(400).json({ error: 'Missing data' });
     await mStore.savePushSub(username, subscription);
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -264,6 +268,8 @@ app.post('/api/push-subscribe', async (req, res) => {
 
 app.post('/api/push-unsubscribe', async (req, res) => {
   try {
+    const username = requireAuth(req, res);
+    if (!username) return;
     const { endpoint } = req.body;
     if (!endpoint) return res.status(400).json({ error: 'Missing endpoint' });
     await mStore.deletePushSub(endpoint);
@@ -272,35 +278,39 @@ app.post('/api/push-unsubscribe', async (req, res) => {
 });
 
 // ── File upload ───────────────────────────────────────────────────────────────
+// SVG is intentionally NOT allowed (stored-XSS vector when served same-origin).
+const UPLOAD_ALLOWED_MIMES = new Set([
+  'image/jpeg','image/png','image/gif','image/webp','image/heic','image/heif',
+  'audio/webm','audio/ogg','audio/mp3','audio/wav','audio/mpeg','audio/mp4','audio/aac','audio/m4a','audio/x-m4a',
+  'video/mp4','video/webm','video/quicktime','video/3gpp','video/ogg',
+  'application/pdf','application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/zip','application/x-zip-compressed',
+  'text/plain','text/csv'
+]);
+const MIME_EXT_MAP = {
+  'image/jpeg': 'jpg', 'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp', 'image/heic': 'heic', 'image/heif': 'heif',
+  'audio/webm': 'webm', 'audio/ogg': 'ogg', 'audio/mp3': 'mp3', 'audio/wav': 'wav', 'audio/mpeg': 'mp3', 'audio/mp4': 'm4a', 'audio/aac': 'aac', 'audio/m4a': 'm4a', 'audio/x-m4a': 'm4a',
+  'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov', 'video/3gpp': '3gp', 'video/ogg': 'ogv',
+  'application/pdf': 'pdf', 'application/msword': 'doc',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'application/vnd.ms-excel': 'xls',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+  'application/zip': 'zip', 'application/x-zip-compressed': 'zip',
+  'text/plain': 'txt', 'text/csv': 'csv'
+};
+
 app.post('/api/upload', (req, res) => {
   try {
+    const username = requireAuth(req, res);
+    if (!username) return;
     const { data, mime, kind, name } = req.body;
     if (!data || !mime) return res.status(400).json({ error: 'Missing data' });
     const cleanMime = String(mime).split(';')[0].trim().toLowerCase();
-    const allowed = [
-      'image/jpeg','image/png','image/gif','image/webp','image/svg+xml','image/heic','image/heif',
-      'audio/webm','audio/ogg','audio/mp3','audio/wav','audio/mpeg','audio/mp4','audio/aac','audio/m4a','audio/x-m4a',
-      'video/mp4','video/webm','video/quicktime','video/3gpp','video/ogg',
-      'application/pdf','application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'application/zip','application/x-zip-compressed',
-      'text/plain','text/csv'
-    ];
-    if (!allowed.includes(cleanMime)) return res.status(400).json({ error: 'Unsupported type: ' + cleanMime });
-    const mimeExtMap = {
-      'image/jpeg': 'jpg', 'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp', 'image/svg+xml': 'svg', 'image/heic': 'heic', 'image/heif': 'heif',
-      'audio/webm': 'webm', 'audio/ogg': 'ogg', 'audio/mp3': 'mp3', 'audio/wav': 'wav', 'audio/mpeg': 'mp3', 'audio/mp4': 'm4a', 'audio/aac': 'aac', 'audio/m4a': 'm4a', 'audio/x-m4a': 'm4a',
-      'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov', 'video/3gpp': '3gp', 'video/ogg': 'ogv',
-      'application/pdf': 'pdf', 'application/msword': 'doc',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
-      'application/vnd.ms-excel': 'xls',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
-      'application/zip': 'zip', 'application/x-zip-compressed': 'zip',
-      'text/plain': 'txt', 'text/csv': 'csv'
-    };
-    const ext = mimeExtMap[cleanMime] || (cleanMime.split('/')[1] ? cleanMime.split('/')[1].replace('jpeg','jpg') : 'bin');
+    if (!UPLOAD_ALLOWED_MIMES.has(cleanMime)) return res.status(400).json({ error: 'Unsupported type: ' + cleanMime });
+    const ext = MIME_EXT_MAP[cleanMime] || 'bin';
     const base64Data = (data.includes(',') ? data.split(',')[1] : data).trim();
     if (!/^[A-Za-z0-9+/=]+$/.test(base64Data)) return res.status(400).json({ error: 'Invalid base64' });
     const buffer = Buffer.from(base64Data, 'base64');
@@ -318,23 +328,16 @@ const uploadMiddleware = multer({
 
 app.post('/api/upload-multipart', uploadMiddleware.single('file'), async (req, res) => {
   try {
+    const username = requireAuth(req, res);
+    if (!username) return;
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     const { size, mimetype, originalname } = req.file;
     const cleanMime = String(mimetype || '').split(';')[0].trim().toLowerCase();
-    const allowed = [
-      'image/jpeg','image/png','image/gif','image/webp','image/svg+xml','image/heic','image/heif',
-      'audio/webm','audio/ogg','audio/mp3','audio/wav','audio/mpeg','audio/mp4','audio/aac','audio/m4a','audio/x-m4a',
-      'video/mp4','video/webm','video/quicktime','video/3gpp','video/ogg',
-      'application/pdf','application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'application/zip','application/x-zip-compressed',
-      'text/plain','text/csv'
-    ];
-    if (!allowed.includes(cleanMime)) return res.status(400).json({ error: 'Unsupported type: ' + cleanMime });
-    
-    const ext = originalname.split('.').pop() || 'bin';
+    if (!UPLOAD_ALLOWED_MIMES.has(cleanMime)) return res.status(400).json({ error: 'Unsupported type: ' + cleanMime });
+
+    // Extension is derived from the VALIDATED mime type — never from the
+    // client-controlled filename (prevents .html/.svg extension mismatch).
+    const ext = MIME_EXT_MAP[cleanMime] || 'bin';
     const filename = `${crypto.randomUUID()}.${ext}`;
     let thumbnailUrl = '';
     
@@ -427,6 +430,30 @@ app.get('/api/gifs', async (req, res) => {
   res.json({ results: CURATED_GIFS });
 });
 
+// ── Room membership authZ (with short TTL cache to avoid per-message DB hits) ─
+const membershipCache = new Map(); // `${room}|${user}` → { status, expires }
+const MEMBERSHIP_TTL = 30 * 1000;
+
+async function cachedAuthorize(roomName, username) {
+  const key = `${roomName}|${username}`;
+  const hit = membershipCache.get(key);
+  if (hit && hit.expires > Date.now()) return hit.status;
+  const status = await authorizeRoom(mStore, roomName, username);
+  membershipCache.set(key, { status, expires: Date.now() + MEMBERSHIP_TTL });
+  return status;
+}
+
+// ── REST auth helper ──────────────────────────────────────────────────────────
+function requireAuth(req, res) {
+  const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
+  try {
+    return jwt.verify(token, JWT_SECRET).username;
+  } catch {
+    res.status(401).json({ error: 'Unauthorized' });
+    return null;
+  }
+}
+
 // ── Online users in-memory ────────────────────────────────────────────────────
 const rooms = new Map(); // room → Map<socketId, {name, profile}>
 const roomPictionaryState = new Map();
@@ -482,18 +509,34 @@ async function sendPushToRoom(room, senderName, title, body) {
   try {
     const online = new Set();
     const m = rooms.get(room);
-    if (m) for (const u of m.values()) online.add(u.name);
+    if (m) for (const u of m.values()) online.add(String(u.name).toLowerCase());
+
+    // Only notify actual members of this room — never blast every subscription.
+    const dm = dmMembers(room);
+    let members;
+    if (dm) {
+      members = dm;
+    } else {
+      const meta = await mStore.getRoomMeta(room);
+      members = ((meta && meta.participants) || []).map(p => String(p).toLowerCase());
+    }
+    if (!members || !members.length) return;
+    const memberSet = new Set(members);
+
     const subs = await mStore.getPushSubs();
     const tag = room ? `whispr-room-${room}` : 'whispr-default';
     for (const sub of subs) {
-      if (sub.username === senderName || online.has(sub.username)) continue;
-      if (room) {
-        const muted = await mStore.supabase.from('room_participants')
-          .select('mute_until')
-          .eq('room_name', room)
-          .eq('username', sub.username.toLowerCase())
-          .single();
-        if (muted.data && muted.data.mute_until && muted.data.mute_until > Date.now()) continue;
+      const un = String(sub.username || '').toLowerCase();
+      if (!memberSet.has(un) || un === String(senderName).toLowerCase() || online.has(un)) continue;
+      if (room && isConfigured()) {
+        try {
+          const muted = await supabase.from('room_participants')
+            .select('mute_until')
+            .eq('room_name', room)
+            .eq('username', un)
+            .single();
+          if (muted.data && muted.data.mute_until && muted.data.mute_until > Date.now()) continue;
+        } catch { /* ignore */ }
       }
       const payload = JSON.stringify({ title, body, icon:'/icon-192.png', url:'/', tag });
       webpush.sendNotification({ endpoint: sub.endpoint, keys: sub.keys || {} }, payload)
@@ -523,7 +566,7 @@ io.on('connection', (socket) => {
   let currentRoom = null;
 
   // ── Join ──────────────────────────────────────────────────────────────────
-  socket.on('join', async ({ name, room, nickname, _password } = {}) => {
+  socket.on('join', async ({ room, nickname, _password } = {}) => {
     try {
       if (currentRoom) {
         socket.leave(currentRoom);
@@ -535,8 +578,17 @@ io.on('connection', (socket) => {
         }
       }
 
-      username = normalizeName(name) || socket.data.authenticatedUser || 'Bestie';
+      // Identity comes exclusively from the verified JWT — never the client.
+      username = socket.data.authenticatedUser;
       currentRoom = normalizeRoom(room) || `dm_${username.toLowerCase()}_${username.toLowerCase()}`;
+
+      const access = await cachedAuthorize(currentRoom, username);
+      if (!canRead(access)) {
+        socket.emit('room-error', { error: 'You do not have access to this room.' });
+        username = null;
+        currentRoom = null;
+        return;
+      }
 
       const displayNick = normalizeNickname(nickname, username);
       let profile = await mStore.getProfile(username);
@@ -581,7 +633,10 @@ io.on('connection', (socket) => {
   // ── Clear history ─────────────────────────────────────────────────────────
   socket.on('clear-history', async () => {
     try {
-      if (!currentRoom) return;
+      if (!currentRoom || !username) return;
+      if (!isMember(await cachedAuthorize(currentRoom, username))) {
+        return socket.emit('room-error', { error: 'Only room members can clear history.' });
+      }
       await mStore.clearHistory(currentRoom);
       io.to(currentRoom).emit('history-cleared');
       io.to(currentRoom).emit('system', '🧹 Chat history was cleared.');
@@ -590,7 +645,10 @@ io.on('connection', (socket) => {
 
   socket.on('set-room-password', async (pass) => {
     try {
-      if (!currentRoom) return;
+      if (!currentRoom || !username) return;
+      if (!isMember(await cachedAuthorize(currentRoom, username))) {
+        return socket.emit('room-error', { error: 'Only room members can change the room password.' });
+      }
       const safePass = String(pass || '').trim();
       await mStore.updateRoomMeta(currentRoom, { roomPassword: safePass });
       socket.emit('password-updated', { hasPassword: Boolean(safePass) });
@@ -629,8 +687,14 @@ io.on('connection', (socket) => {
 
   // ── Message ───────────────────────────────────────────────────────────────
   socket.on('message', async (payload) => {
-    if (!username) username = normalizeName(payload && payload.user) || socket.data.authenticatedUser || 'Bestie';
+    // Identity comes exclusively from the verified JWT — never the client.
+    username = socket.data.authenticatedUser;
     const targetRoom = normalizeRoom(payload && payload.room) || currentRoom || `dm_${username.toLowerCase()}_${username.toLowerCase()}`;
+
+    const access = await cachedAuthorize(targetRoom, username);
+    if (!canRead(access)) {
+      return socket.emit('room-error', { error: 'You cannot send messages to this room.' });
+    }
     currentRoom = targetRoom;
     socket.join(targetRoom);
     socket.join('user:' + username.toLowerCase());
@@ -796,9 +860,11 @@ io.on('connection', (socket) => {
     } catch (err) { console.error('presence-status error:', err); }
   });
 
-  // ── Heartbeat (update presence DB) ─────────────────────────────────────────
+  // ── Heartbeat (update presence DB + last seen) ────────────────────────────
   socket.on('heartbeat', async () => {
-    if (username) await updatePresence(username, socket.id);
+    if (!username) return;
+    mStore.setLastSeen(username);
+    await updatePresence(username, socket.id);
   });
 
   // ── Custom User Status (e.g. ☕ In a meeting) ──────────────────────────────
@@ -820,11 +886,13 @@ io.on('connection', (socket) => {
       const groupRoom = 'group_' + cleanGroupName.toLowerCase().replace(/[^a-z0-9_-]/g, '') + '_' + Date.now().toString(36);
       const allMembers = Array.from(new Set([username.toLowerCase(), ...(Array.isArray(members) ? members.map(m => (m || '').toLowerCase()) : [])]));
       
-      await mStore.setRoomMeta(groupRoom, {
+      await mStore.updateRoomMeta(groupRoom, {
         displayName: cleanGroupName,
         isGroup: true,
+        type: 'group',
         topic: topic || '',
         admin: username.toLowerCase(),
+        participants: allMembers,
         members: allMembers,
         createdAt: Date.now()
       });
@@ -1042,8 +1110,7 @@ io.on('connection', (socket) => {
     } catch (err) { console.error('typing error:', err); }
   });
 
-  // ── Heartbeat ─────────────────────────────────────────────────────────────
-  socket.on('heartbeat', () => { if (username) mStore.setLastSeen(username); });
+  // ── Heartbeat handled above (merged: presence + lastSeen) ──────────────────
 
   // ── Games ─────────────────────────────────────────────────────────────────
   socket.on('start-game', async (type) => {
@@ -1283,8 +1350,16 @@ io.on('connection', (socket) => {
 setInterval(() => mStore.cleanExpiredRooms().catch(()=>{}), 24 * 60 * 60 * 1000).unref();
 setInterval(() => mStore.cleanDisappearingMessages().catch(()=>{}), 60 * 1000).unref();
 setInterval(async () => {
+  // Evict stale rate-limit and membership-cache entries
+  const now = Date.now();
+  for (const [k, v] of rateLimitMap) {
+    if (now > v.resetAt) rateLimitMap.delete(k);
+  }
+  for (const [k, v] of membershipCache) {
+    if (v.expires <= now) membershipCache.delete(k);
+  }
   if (!isConfigured()) return;
-  const cutoff = Date.now() - 60000;
+  const cutoff = now - 60000;
   try {
     await supabase.from('user_presence').delete().lt('last_heartbeat', cutoff).catch(() => {});
   } catch { /* ignore */ }
@@ -1305,20 +1380,18 @@ if (require.main === module) {
 }
 
 // ── Process Lifecycle & Graceful Shutdown ─────────────────────────────────────
-process.on('SIGTERM', () => {
-  console.warn('🛑 SIGTERM signal received: closing HTTP and WebSocket servers...');
-  server.close(() => {
+function shutdown() {
+  console.warn('🛑 Shutdown signal received: closing HTTP and WebSocket servers...');
+  io.close(() => {
     console.warn('✅ Server closed cleanly.');
     process.exit(0);
   });
+  // io.close() also closes the underlying HTTP server; force-exit as a safety net.
   setTimeout(() => process.exit(0), 4000).unref();
-});
+}
 
-process.on('SIGINT', () => {
-  console.warn('🛑 SIGINT signal received: exiting cleanly...');
-  server.close(() => process.exit(0));
-  setTimeout(() => process.exit(0), 4000).unref();
-});
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('⚠️ Unhandled Rejection at:', promise, 'reason:', reason);

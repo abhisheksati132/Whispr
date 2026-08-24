@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const path   = require('path');
 const fs     = require('fs');
 const { supabase, isConfigured } = require('./supabaseClient');
+const { sanitizePostgrestValue } = require('./chat-utils');
 
 // ── In-memory caches (Fallback when no Supabase configured or offline) ────────
 const profileCache  = new Map(); // username → profile obj
@@ -204,6 +205,19 @@ async function getRoomMeta(roomName) {
   } catch (err) {
     console.error('getRoomMeta error:', err.message);
     return memRoom;
+  }
+}
+
+// Pure existence probe — no insert side effects (unlike getRoomMeta).
+async function roomExists(roomName) {
+  const name = String(roomName || '');
+  if (!name) return false;
+  if (!isDbReady()) return memRooms.has(name);
+  try {
+    const { data } = await supabase.from('rooms').select('name').eq('name', name).maybeSingle();
+    return Boolean(data) || memRooms.has(name);
+  } catch (_) {
+    return memRooms.has(name);
   }
 }
 
@@ -569,7 +583,7 @@ async function getUserByEmailOrUsername(identifier) {
     const { data, error } = await supabase
       .from('users')
       .select('*')
-      .or(`username.eq.${clean},email.eq.${clean}`)
+      .or(`username.eq.${sanitizePostgrestValue(clean)},email.eq.${sanitizePostgrestValue(clean)}`)
       .limit(1);
     if (error || !data || data.length === 0) return await getUserByUsername(clean);
     return dbUserToJs(data[0]);
@@ -1119,7 +1133,7 @@ async function searchUsers(query, excludeUsername) {
         .limit(30);
 
       if (cleanQ) {
-        builder = builder.or(`username.ilike.%${cleanQ}%,nickname.ilike.%${cleanQ}%`);
+        builder = builder.or(`username.ilike.%${sanitizePostgrestValue(cleanQ)}%,nickname.ilike.%${sanitizePostgrestValue(cleanQ)}%`);
       }
 
       const { data, error } = await builder;
@@ -1348,7 +1362,7 @@ module.exports = {
   cleanExpiredRooms, cleanDisappearingMessages, persist,
   savePushSub, deletePushSub, getPushSubs,
   markMessageDelivered, markMessageRead, starMessage, getStarredMessages,
-  listUserRooms, searchUsers, getOrCreateDMRoom, getRoomMessagesPaginated,
+  listUserRooms, searchUsers, getOrCreateDMRoom, getRoomMessagesPaginated, roomExists,
   isUserBlocked, getBlockedUsers, blockUser, unblockUser,
   createSession, getSessions, revokeSession,
   resetForTests,

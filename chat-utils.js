@@ -163,6 +163,12 @@ function escapeRegex(str) {
   return toStr(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+// Strips characters that are syntactically meaningful inside PostgREST
+// filter expressions (`,`, `(`, `)`, `:`) to prevent filter injection.
+function sanitizePostgrestValue(val) {
+  return toStr(val).replace(/[,():]/g, ' ').trim().slice(0, 100);
+}
+
 function formatMarkdown(text) {
   const str = toStr(text);
   if (!str) return '';
@@ -189,6 +195,7 @@ module.exports = {
   randomGamePrompt,
   isImageUrl,
   escapeRegex,
+  sanitizePostgrestValue,
   formatMarkdown,
   JOIN_MESSAGES,
   GAME_PROMPTS

@@ -642,6 +642,10 @@ function getRoomMessagesPaginated(roomName, beforeTime, limit = 50) {
   return msgs.slice(-limit);
 }
 
+function roomExists(roomName) {
+  return Boolean(roomName) && Boolean(data.rooms[roomName]);
+}
+
 module.exports = {
   FEELINGS,
   MILESTONES,
@@ -665,6 +669,6 @@ module.exports = {
   saveDailyQuestionAnswer,
   getUploadsDir, saveUpload, getMedia,
   savePushSub, deletePushSub, getPushSubs,
-  listUserRooms, searchUsers, getOrCreateDMRoom, getRoomMessagesPaginated,
+  listUserRooms, searchUsers, getOrCreateDMRoom, getRoomMessagesPaginated, roomExists,
   resetForTests
 };

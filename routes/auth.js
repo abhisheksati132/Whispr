@@ -4,8 +4,7 @@ const router  = express.Router();
 const bcrypt  = require('bcryptjs');
 const jwt     = require('jsonwebtoken');
 const store   = require('../supabaseStore');
-
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-me';
+const { JWT_SECRET } = require('../config');
 
 const authLimiter = require('express-rate-limit')({ windowMs: 15 * 60 * 1000, max: 20, message: { error: 'Too many attempts, try again later.' } });
 router.use(authLimiter);
