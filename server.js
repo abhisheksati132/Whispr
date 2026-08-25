@@ -24,6 +24,7 @@ const CHAT_PASSWORD = process.env.CHAT_PASSWORD || '';
 const GIPHY_API_KEY = process.env.GIPHY_API_KEY || '';
 const { JWT_SECRET } = require('./config');
 const { dmMembers, authorizeRoom, isMember, canRead } = require('./roomAuthz');
+const { isSessionValid } = require('./sessionGuard');
 
 if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
   console.warn('⚠️  Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY — operating in memory-only mode.');
@@ -595,13 +596,16 @@ async function sendPushToRoom(room, senderName, title, body) {
 }
 
 // ── Socket auth middleware ────────────────────────────────────────────────────
-io.use((socket, next) => {
+io.use(async (socket, next) => {
   const token = socket.handshake.auth?.token;
   if (!token) {
     return next(new Error('Authentication required'));
   }
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
+    if (!(await isSessionValid(decoded.username, decoded.sid))) {
+      return next(new Error('Session revoked'));
+    }
     socket.data.authenticatedUser = decoded.username;
     next();
   } catch {

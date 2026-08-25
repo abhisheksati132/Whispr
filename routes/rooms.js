@@ -6,11 +6,15 @@ const store   = require('../supabaseStore');
 const { JWT_SECRET } = require('../config');
 const { authorizeRoom, isMember, canRead } = require('../roomAuthz');
 const { sanitizePostgrestValue } = require('../chat-utils');
+const { isSessionValid } = require('../sessionGuard');
 
-function authMw(req, res, next) {
+async function authMw(req, res, next) {
   try {
     const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
     const decoded = jwt.verify(token, JWT_SECRET);
+    if (!(await isSessionValid(decoded.username, decoded.sid))) {
+      return res.status(401).json({ error: 'Session revoked. Please sign in again.' });
+    }
     req.username = decoded.username;
     next();
   } catch (_) {

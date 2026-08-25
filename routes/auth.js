@@ -5,6 +5,29 @@ const bcrypt  = require('bcryptjs');
 const jwt     = require('jsonwebtoken');
 const store   = require('../supabaseStore');
 const { JWT_SECRET } = require('../config');
+const { isSessionValid, invalidateSessionCache } = require('../sessionGuard');
+
+// Verifies the bearer token AND that its session has not been revoked.
+// Returns the decoded payload, or responds 401 and returns null.
+async function requireSession(req, res) {
+  const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
+  if (!token) {
+    res.status(401).json({ error: 'No token provided' });
+    return null;
+  }
+  let decoded;
+  try {
+    decoded = jwt.verify(token, JWT_SECRET);
+  } catch {
+    res.status(401).json({ error: 'Session expired. Please sign in again.' });
+    return null;
+  }
+  if (!(await isSessionValid(decoded.username, decoded.sid))) {
+    res.status(401).json({ error: 'Session revoked. Please sign in again.' });
+    return null;
+  }
+  return decoded;
+}
 
 const authLimiter = require('express-rate-limit')({ windowMs: 15 * 60 * 1000, max: 20, message: { error: 'Too many attempts, try again later.' } });
 router.use(authLimiter);
@@ -61,8 +84,8 @@ router.post('/register', async (req, res) => {
     // Auto-create Saved Messages room for this user
     await store.getOrCreateDMRoom(clean, clean);
 
-    const token = jwt.sign({ username: clean }, JWT_SECRET, { expiresIn: '60d' });
-    const sessionId = createSession(clean, req);
+    const sessionId = await createSession(clean, req);
+    const token = jwt.sign({ username: clean, sid: sessionId }, JWT_SECRET, { expiresIn: '60d' });
     return res.status(201).json({
       token,
       sessionId,
@@ -102,8 +125,8 @@ router.post('/login', async (req, res) => {
     store.setLastSeen(user.username);
     await store.getOrCreateDMRoom(user.username, user.username);
 
-    const token = jwt.sign({ username: user.username }, JWT_SECRET, { expiresIn: '60d' });
-    const sessionId = createSession(user.username, req);
+    const sessionId = await createSession(user.username, req);
+    const token = jwt.sign({ username: user.username, sid: sessionId }, JWT_SECRET, { expiresIn: '60d' });
     res.json({
       token,
       sessionId,
@@ -122,9 +145,8 @@ router.post('/login', async (req, res) => {
 // GET /api/auth/me — verify active session token
 router.get('/me', async (req, res) => {
   try {
-    const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
-    if (!token) return res.status(401).json({ error: 'No token provided' });
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = await requireSession(req, res);
+    if (!decoded) return;
 
     const user = await store.getUserByUsername(decoded.username);
     if (!user) return res.status(401).json({ error: 'User account not found' });
@@ -144,9 +166,8 @@ router.get('/me', async (req, res) => {
 // POST /api/auth/profile — update profile
 router.post('/profile', async (req, res) => {
   try {
-    const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
-    if (!token) return res.status(401).json({ error: 'No token provided' });
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = await requireSession(req, res);
+    if (!decoded) return;
 
     const { nickname, avatar, statusBio, color } = req.body;
     const updates = {};
@@ -165,9 +186,8 @@ router.post('/profile', async (req, res) => {
 // GET /api/auth/sessions — list active sessions
 router.get('/sessions', async (req, res) => {
   try {
-    const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
-    if (!token) return res.status(401).json({ error: 'No token provided' });
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = await requireSession(req, res);
+    if (!decoded) return;
 
     const sessions = await store.getSessions(decoded.username);
     res.json(sessions || []);
@@ -179,12 +199,12 @@ router.get('/sessions', async (req, res) => {
 // DELETE /api/auth/sessions/:sessionId — revoke a session
 router.delete('/sessions/:sessionId', async (req, res) => {
   try {
-    const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
-    if (!token) return res.status(401).json({ error: 'No token provided' });
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = await requireSession(req, res);
+    if (!decoded) return;
 
     const { sessionId } = req.params;
     await store.revokeSession(decoded.username, sessionId);
+    invalidateSessionCache(decoded.username, sessionId);
 
     res.json({ ok: true });
   } catch (err) {
