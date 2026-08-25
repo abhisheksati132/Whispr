@@ -840,7 +840,7 @@
     intro.innerHTML = `
       <div class="chat-intro-avatar">${avatarChar}</div>
       <div class="chat-intro-title">${escapeHtml(title)}</div>
-      <div style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; color:#ffffff; background:rgba(255,255,255,0.08); padding:3px 8px; border-radius:12px; margin-bottom:4px;">🔒 AES-256 Direct Encrypted</div>
+      <div style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; color:#ffffff; background:rgba(255,255,255,0.08); padding:3px 8px; border-radius:12px; margin-bottom:4px;">🔒 Private messaging</div>
       <div class="chat-intro-sub">${escapeHtml(sub)}</div>
       <div class="starter-chips">
         <button type="button" class="starter-chip" onclick="BestieChat.insertStarter('hello')">👋 Say Hello</button>
@@ -926,7 +926,7 @@
 
       let tickHtml = '';
       if (room.lastMessage && room.lastMessage.user === myName) {
-        tickHtml = '<span style="font-weight:700; margin-right:3px;">✓✓ </span>';
+        tickHtml = '<span style="font-weight:700; margin-right:3px;">✓ </span>';
       }
 
       const preview = room.lastMessage
@@ -1289,7 +1289,9 @@
     }
 
     const timeStr = formatTime(msg.time || Date.now());
-    const tickHtml = isMe ? '<span class="msg-status-ticks"> ✓✓</span>' : '';
+    // Single tick = sent. Double ticks require real read receipts (not yet
+    // implemented in this tree — never fabricate delivery signals).
+    const tickHtml = isMe ? '<span class="msg-status-ticks"> ✓</span>' : '';
 
     // Action bar for power actions
     const deleteBtn = isMe ? `<button type="button" class="msg-action-btn" onclick="BestieChat.deleteMessage(${jsAttr(msg.id)})" title="Delete">🗑️</button>` : '';
