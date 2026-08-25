@@ -384,6 +384,7 @@ async function deleteMessage(roomName, messageId) {
       console.error('deleteMessage error:', err.message);
     }
   }
+  return msg || null;
 }
 
 async function clearHistory(roomName) {
