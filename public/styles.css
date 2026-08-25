@@ -2638,3 +2638,21 @@ button:active, .dm-row:active, .icon-btn:active, .filter-pill:active, .pill-btn:
     font-size: 14px !important;
   }
 }
+
+/* ── 20. ACCESSIBILITY ───────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

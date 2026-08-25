@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>tahc</title>
   <meta name="description" content="Simple, fast, private messaging in black and white." />
   <link rel="manifest" href="/manifest.json?v=6000" />
@@ -15,12 +15,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles.css?v=8001" />
+  <link rel="stylesheet" href="/styles.css?v=8002" />
 </head>
 <body>
 
   <!-- Floating Toast Notifications Container -->
-  <div id="toastContainer"></div>
+  <div id="toastContainer" role="status" aria-live="polite"></div>
 
   <!-- ═══════════════════ AUTH / SIGN IN SCREEN ═══════════════════ -->
   <div id="login">
@@ -279,7 +279,7 @@
       </div>
 
       <!-- Messages Viewport -->
-      <div id="messages"></div>
+      <div id="messages" role="log" aria-live="polite" aria-label="Chat messages"></div>
 
       <!-- Floating Scroll to Bottom Button -->
       <button id="scrollBottomBtn" type="button" onclick="BestieChat.scrollBottom()" title="Scroll to bottom">

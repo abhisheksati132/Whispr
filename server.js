@@ -149,6 +149,43 @@ const linkPreviewCache = new Map();
 const LINK_PREVIEW_TTL = 24 * 60 * 60 * 1000; // 24 hours
 const LINK_PREVIEW_MAX = 500;
 
+// ── SSRF guards for outbound fetches ──────────────────────────────────────────
+const dnsPromises = require('dns').promises;
+
+function isPrivateIp(ip) {
+  const v4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(ip);
+  if (v4) {
+    const a = Number(v4[1]), b = Number(v4[2]);
+    if (a === 0 || a === 10 || a === 127) return true;               // this-network, private, loopback
+    if (a === 169 && b === 254) return true;                          // link-local (cloud metadata)
+    if (a === 172 && b >= 16 && b <= 31) return true;                 // private
+    if (a === 192 && b === 168) return true;                          // private
+    if (a === 100 && b >= 64 && b <= 127) return true;                // CGNAT
+    if (a >= 224) return true;                                        // multicast / reserved
+    return false;
+  }
+  const lower = String(ip).toLowerCase();
+  if (lower === '::' || lower === '::1') return true;
+  if (lower.startsWith('::ffff:')) return isPrivateIp(lower.slice(7)); // IPv4-mapped
+  if (/^f[cd]/.test(lower)) return true;                               // IPv6 unique-local
+  if (/^fe[89ab]/.test(lower)) return true;                            // IPv6 link-local
+  return false;
+}
+
+// Resolves hostname and rejects if ANY resolved address is private/link-local
+// (covers DNS rebinding, IPv6, and non-dotted IP encodings).
+async function assertPublicHost(hostname) {
+  const host = String(hostname).toLowerCase().replace(/\.$/, '');
+  if (!host || host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local')) {
+    throw new Error('Disallowed host');
+  }
+  const addrs = await dnsPromises.lookup(host, { all: true }).catch(() => null);
+  if (!addrs || !addrs.length) throw new Error('Could not resolve host');
+  for (const { address } of addrs) {
+    if (isPrivateIp(address)) throw new Error('Disallowed host');
+  }
+}
+
 app.get('/api/link-preview', async (req, res) => {
   try {
     const rawUrl = req.query.url;
@@ -163,23 +200,6 @@ app.get('/api/link-preview', async (req, res) => {
       return res.status(400).json({ error: 'Malformed URL' });
     }
 
-    const host = targetUrl.hostname.toLowerCase().replace(/\.$/, '');
-    const isIP = (ip) => {
-      const parts = ip.split('.').map(Number);
-      return parts.length === 4 && parts.every(p => Number.isInteger(p) && p >= 0 && p <= 255);
-    };
-    const ip = isIP(host) ? host : null;
-    const privateIP = ip && (
-      ip === '127.0.0.1' || ip === '0.0.0.0' ||
-      /^10\./.test(ip) || /^192\.168\./.test(ip) || /^169\.254\./.test(ip) || /^172\.(1[6-9]|2[0-9]|3[01])\./.test(ip)
-    );
-    if (
-      host === 'localhost' || host === '::1' || host.endsWith('.local') || host.endsWith('.localhost') ||
-      privateIP || (!ip && /^[0-9]/.test(host) && host.includes('.'))
-    ) {
-      return res.status(400).json({ error: 'Disallowed host' });
-    }
-
     const cacheKey = targetUrl.href;
     const cached = linkPreviewCache.get(cacheKey);
     if (cached && (Date.now() - cached.cachedAt < LINK_PREVIEW_TTL)) {
@@ -187,21 +207,50 @@ app.get('/api/link-preview', async (req, res) => {
       return res.json(cached.data);
     }
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 4000);
-    let response;
-    try {
-      response = await fetch(targetUrl.href, {
-        signal: controller.signal,
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+    // Fetch with manual redirect handling so EVERY hop is SSRF-validated.
+    let response = null;
+    let currentUrl = targetUrl.href;
+    for (let hop = 0; hop < 3 && currentUrl; hop++) {
+      let hopUrl;
+      try {
+        hopUrl = new URL(currentUrl);
+        if (!['http:', 'https:'].includes(hopUrl.protocol)) {
+          return res.status(400).json({ error: 'Invalid protocol' });
         }
-      });
-    } catch {
-      response = null;
-    } finally {
-      clearTimeout(timeout);
+        await assertPublicHost(hopUrl.hostname);
+      } catch {
+        return res.status(400).json({ error: 'Disallowed host' });
+      }
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 4000);
+      try {
+        response = await fetch(hopUrl.href, {
+          signal: controller.signal,
+          redirect: 'manual',
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+          }
+        });
+      } catch {
+        response = null;
+      } finally {
+        clearTimeout(timeout);
+      }
+
+      if (response && response.status >= 300 && response.status < 400) {
+        const location = response.headers.get('location');
+        if (!location) break;
+        try {
+          currentUrl = new URL(location, hopUrl.href).href;
+        } catch {
+          currentUrl = null;
+        }
+        response = null;
+        continue;
+      }
+      break;
     }
 
     if (!response || !response.ok) {
