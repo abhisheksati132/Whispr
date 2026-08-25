@@ -1,4 +1,4 @@
-import { state } from './state.js';
+﻿import { state } from './state.js';
 import { joinChat, quickReentry } from './auth.js';
 import { sendMessage, autoExpandMsgInput, sendPhoto } from './send-message.js';
 import { toggleSendMicIcons } from './ui-helpers.js';
@@ -20,9 +20,9 @@ import { clearUnread } from './ui-updates.js';
 import { changeWallpaper } from './wallpaper.js';
 import { escapeHtml } from './utils.js';
 
-  // ═══════════════════ ULTIMATE FEATURES SET ═══════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• ULTIMATE FEATURES SET â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-  // ── Tab Navigation ──
+  // â”€â”€ Tab Navigation â”€â”€
   let activeExtrasTab = 'vibe';
   export function switchExtrasTab(tabId) {
     activeExtrasTab = tabId;
@@ -34,7 +34,7 @@ import { escapeHtml } from './utils.js';
     if (content) content.classList.add('active');
   }
 
-  // ── Accent Theme Switcher ──
+  // â”€â”€ Accent Theme Switcher â”€â”€
   const ACCENT_PRESETS = {
     indigo:   { accent: '#6366f1', accent2: '#818cf8', glow: 'rgba(99, 102, 241, 0.22)' },
     rose:     { accent: '#f43f5e', accent2: '#fb7185', glow: 'rgba(244, 63, 94, 0.22)' },
@@ -59,7 +59,7 @@ import { escapeHtml } from './utils.js';
       root.style.setProperty('--mb-accent2', p.accent2);
       root.style.setProperty('--mb-accent-glow', p.glow);
       localStorage.setItem('bestieChatAccent', accentKey);
-      showToast(`Accent updated to ${accentKey.toUpperCase()} ✨`);
+      showToast(`Accent updated to ${accentKey.toUpperCase()} âœ¨`);
     } else {
       root.style.removeProperty('--accent');
       root.style.removeProperty('--accent2');
@@ -72,12 +72,12 @@ import { escapeHtml } from './utils.js';
     }
   }
 
-  // ── Shared Notepad Sync ──
+  // â”€â”€ Shared Notepad Sync â”€â”€
   export function updateSharedPad(text) {
     if (socket) socket.emit('update-pad', { text });
   }
 
-  // ── App PIN Lock ──
+  // â”€â”€ App PIN Lock â”€â”€
   export function toggleAppPin() {
     const input = document.getElementById('appPinInput');
     const btn = document.getElementById('pinToggleBtn');
@@ -87,14 +87,14 @@ import { escapeHtml } from './utils.js';
       localStorage.removeItem('bestieBiometricEnabled');
       if (btn) btn.textContent = 'Enable';
       if (input) input.value = '';
-      showToast('🔓 App Lock PIN disabled');
+      showToast('ðŸ”“ App Lock PIN disabled');
     } else if (input && input.value.length === 4) {
       localStorage.setItem('bestieAppPin', input.value);
       if (btn) btn.textContent = 'Disable';
-      showToast('🔒 App Lock PIN enabled!');
+      showToast('ðŸ”’ App Lock PIN enabled!');
       setTimeout(enableBiometricLock, 500);
     } else {
-      showToast('⚠️ Please enter a 4-digit PIN');
+      showToast('âš ï¸ Please enter a 4-digit PIN');
     }
   }
 
@@ -129,7 +129,7 @@ import { escapeHtml } from './utils.js';
       });
       if (credential) {
         localStorage.setItem('bestieBiometricEnabled', 'true');
-        showToast('🔓 Biometric unlock enabled!');
+        showToast('ðŸ”“ Biometric unlock enabled!');
         const btn = document.getElementById('biometricUnlockBtn');
         if (btn) btn.style.display = 'inline-block';
       }
@@ -181,13 +181,13 @@ import { escapeHtml } from './utils.js';
     if (btn) btn.textContent = `${nxt}x`;
   }
 
-  // ── Sound Packs ──
+  // â”€â”€ Sound Packs â”€â”€
   export function changeSoundPack(pack) {
     currentSoundPack = pack;
     localStorage.setItem('bestieChatSoundPack', pack);
   }
 
-  // ── End-to-End Encryption (E2EE) XOR ──
+  // â”€â”€ End-to-End Encryption (E2EE) XOR â”€â”€
   export function updateE2EEKey() {
     const input = document.getElementById('e2eKeyInput');
     if (input) {
@@ -211,28 +211,28 @@ import { escapeHtml } from './utils.js';
   export function encryptE2EE(text) {
     if (!e2eEnabled || !e2eKey || typeof CryptoJS === 'undefined') return text;
     try {
-      return '🔒:' + CryptoJS.AES.encrypt(text, e2eKey).toString();
+      return 'ðŸ”’:' + CryptoJS.AES.encrypt(text, e2eKey).toString();
     } catch {
       return text;
     }
   }
 
   export function decryptE2EE(text) {
-    if (!text || !text.startsWith('🔒:')) return text;
-    if (!e2eKey) return '🔒 [Encrypted — Enter Secret Key to View]';
-    if (typeof CryptoJS === 'undefined') return '🔒 [Crypto Library Offline]';
+    if (!text || !text.startsWith('ðŸ”’:')) return text;
+    if (!e2eKey) return 'ðŸ”’ [Encrypted â€” Enter Secret Key to View]';
+    if (typeof CryptoJS === 'undefined') return 'ðŸ”’ [Crypto Library Offline]';
     try {
-      const ciphertext = text.replace(/^🔒:/, '');
+      const ciphertext = text.replace(/^ðŸ”’:/, '');
       const bytes = CryptoJS.AES.decrypt(ciphertext, e2eKey);
       const dec = bytes.toString(CryptoJS.enc.Utf8);
       if (!dec) throw new Error('Decryption empty');
       return dec;
     } catch {
-      return '🔒 [Decryption Failed]';
+      return 'ðŸ”’ [Decryption Failed]';
     }
   }
 
-  // ── Audio Waveform Controller ──
+  // â”€â”€ Audio Waveform Controller â”€â”€
   let activeAudio = null;
   let activeAudioBtn = null;
 
@@ -315,7 +315,7 @@ import { escapeHtml } from './utils.js';
     const box = document.getElementById(`transcription-${msgId}`);
     if (!box) return;
     box.style.display = 'block';
-    box.textContent = 'Transcribing voice note... 🎙️';
+    box.textContent = 'Transcribing voice note... ðŸŽ™ï¸';
     
     const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!Speech) {
@@ -325,7 +325,7 @@ import { escapeHtml } from './utils.js';
     box.textContent = 'Speech transcribing is only available for live microphone input on web platforms.';
   }
 
-  // ── Scrapbook Diary List ──
+  // â”€â”€ Scrapbook Diary List â”€â”€
   export function addDiaryEntry() {
     const input = document.getElementById('diaryTextInput');
     if (!input || !input.value.trim()) return;
@@ -338,7 +338,7 @@ import { escapeHtml } from './utils.js';
     renderDiaryList(sharedDiary);
     socket.emit('update-diary', sharedDiary);
     input.value = '';
-    showToast('📖 Scrapbook memory added!');
+    showToast('ðŸ“– Scrapbook memory added!');
   }
 
   export function deleteDiaryEntry(index) {
@@ -356,12 +356,12 @@ import { escapeHtml } from './utils.js';
           <span class="diary-date">${escapeHtml(d.date)}</span>
           <span>${escapeHtml(d.text)}</span>
         </div>
-        <button class="delete-item-btn" onclick="BestieChat.deleteDiaryEntry(${idx})">✕</button>
+        <button class="delete-item-btn" onclick="BestieChat.deleteDiaryEntry(${idx})">âœ•</button>
       </div>
     `).join('');
   }
 
-  // ── Shared Calendar & Dates ──
+  // â”€â”€ Shared Calendar & Dates â”€â”€
   export function addCalendarEvent() {
     const labelEl = document.getElementById('calLabelInput');
     const dateEl = document.getElementById('calDateInput');
@@ -371,7 +371,7 @@ import { escapeHtml } from './utils.js';
     socket.emit('update-calendar', sharedCalendar);
     labelEl.value = '';
     dateEl.value = '';
-    showToast('📅 Date saved to Calendar!');
+    showToast('ðŸ“… Date saved to Calendar!');
   }
 
   export function deleteCalendarEvent(index) {
@@ -386,15 +386,15 @@ import { escapeHtml } from './utils.js';
     container.innerHTML = (cal || []).map((c, idx) => `
       <div class="diary-item">
         <div class="diary-item-text">
-          <span class="diary-date">📅 ${new Date(c.date).toLocaleDateString()}</span>
+          <span class="diary-date">ðŸ“… ${new Date(c.date).toLocaleDateString()}</span>
           <span>${escapeHtml(c.label)}</span>
         </div>
-        <button class="delete-item-btn" onclick="BestieChat.deleteCalendarEvent(${idx})">✕</button>
+        <button class="delete-item-btn" onclick="BestieChat.deleteCalendarEvent(${idx})">âœ•</button>
       </div>
     `).join('');
   }
 
-  // ── Bucket List ──
+  // â”€â”€ Bucket List â”€â”€
   export function addBucketItem() {
     const input = document.getElementById('bucketTextInput');
     if (!input || !input.value.trim()) return;
@@ -407,7 +407,7 @@ import { escapeHtml } from './utils.js';
     renderBucketList(sharedBucketList);
     socket.emit('update-bucketlist', sharedBucketList);
     input.value = '';
-    showToast('✨ Goal added to Bucket List!');
+    showToast('âœ¨ Goal added to Bucket List!');
   }
 
   export function toggleBucketItem(index) {
@@ -435,12 +435,12 @@ import { escapeHtml } from './utils.js';
           <input type="checkbox" ${b.done ? 'checked' : ''} onchange="BestieChat.toggleBucketItem(${idx})" />
           <span>${escapeHtml(b.text)} ${b.dateCompleted ? `(Completed ${b.dateCompleted})` : ''}</span>
         </label>
-        <button class="delete-item-btn" onclick="BestieChat.deleteBucketItem(${idx})">✕</button>
+        <button class="delete-item-btn" onclick="BestieChat.deleteBucketItem(${idx})">âœ•</button>
       </div>
     `).join('');
   }
 
-  // ── Inside Joke Glossary Wiki ──
+  // â”€â”€ Inside Joke Glossary Wiki â”€â”€
   export function addGlossaryWord() {
     const wordEl = document.getElementById('glossaryWord');
     const meaningEl = document.getElementById('glossaryMeaning');
@@ -462,7 +462,7 @@ import { escapeHtml } from './utils.js';
     socket.emit('update-glossary', sharedGlossary);
     wordEl.value = '';
     meaningEl.value = '';
-    showToast('💬 Inside Joke added to Wiki!');
+    showToast('ðŸ’¬ Inside Joke added to Wiki!');
   }
 
   export function deleteGlossaryWord(index) {
@@ -480,7 +480,7 @@ import { escapeHtml } from './utils.js';
         <div class="glossary-item-text">
           <b>${escapeHtml(g.word)}</b>: ${escapeHtml(g.meaning)}
         </div>
-        <button class="delete-item-btn" onclick="BestieChat.deleteGlossaryWord(${idx})">✕</button>
+        <button class="delete-item-btn" onclick="BestieChat.deleteGlossaryWord(${idx})">âœ•</button>
       </div>
     `).join('');
   }
@@ -508,7 +508,7 @@ import { escapeHtml } from './utils.js';
     scrollBottom();
   }
 
-  // ── Conversation Heatmap ──
+  // â”€â”€ Conversation Heatmap â”€â”€
   export function renderHeatmap() {
     const container = document.getElementById('heatmapContainer');
     const totalEl = document.getElementById('statsTotalMsgs');
@@ -543,7 +543,7 @@ import { escapeHtml } from './utils.js';
     }
   }
 
-  // ── Weather Geolocation Sync ──
+  // â”€â”€ Weather Geolocation Sync â”€â”€
   export function saveWeatherCity(city) {
     localStorage.setItem('bestieWeatherCity', city);
     fetchWeatherForCity(city);
@@ -553,7 +553,7 @@ import { escapeHtml } from './utils.js';
   export function fetchWeatherForCity(city) {
     const display = document.getElementById('weatherDisplay');
     if (!display || !city) return;
-    display.textContent = 'Loading weather... 🌦️';
+    display.textContent = 'Loading weather... ðŸŒ¦ï¸';
     
     fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1`)
       .then(r => r.json())
@@ -567,7 +567,7 @@ import { escapeHtml } from './utils.js';
             const curr = weather.current_weather;
             if (!curr) { display.textContent = 'Weather unavailable'; return; }
             const emoji = weatherCodeToEmoji(curr.weathercode);
-            display.textContent = `${name}: ${emoji} ${curr.temperature}°C`;
+            display.textContent = `${name}: ${emoji} ${curr.temperature}Â°C`;
           })
           .catch(() => display.textContent = 'Weather check failed');
       })
@@ -575,19 +575,19 @@ import { escapeHtml } from './utils.js';
   }
 
   export function weatherCodeToEmoji(code) {
-    if (code === 0) return '☀️';
-    if (code <= 3) return '🌤️';
-    if (code <= 48) return '🌫️';
-    if (code <= 67) return '🌧️';
-    if (code <= 77) return '❄️';
-    if (code <= 82) return '🌦️';
-    return '⛈️';
+    if (code === 0) return 'â˜€ï¸';
+    if (code <= 3) return 'ðŸŒ¤ï¸';
+    if (code <= 48) return 'ðŸŒ«ï¸';
+    if (code <= 67) return 'ðŸŒ§ï¸';
+    if (code <= 77) return 'â„ï¸';
+    if (code <= 82) return 'ðŸŒ¦ï¸';
+    return 'â›ˆï¸';
   }
 
   let bonsaiWateringCooldown = false;
   export function waterBonsai() {
     if (bonsaiWateringCooldown) {
-      showToast('🌱 The tree is hydrated! Give it a second.');
+      showToast('ðŸŒ± The tree is hydrated! Give it a second.');
       return;
     }
     bonsaiWateringCooldown = true;
@@ -602,7 +602,7 @@ import { escapeHtml } from './utils.js';
     if (container) {
       const drop = document.createElement('div');
       drop.className = 'bonsai-drop-anim';
-      drop.textContent = '💧';
+      drop.textContent = 'ðŸ’§';
       container.appendChild(drop);
       setTimeout(() => drop.remove(), 900);
     }
@@ -645,7 +645,7 @@ import { escapeHtml } from './utils.js';
 
     if (lastBonsaiLvl !== -1 && lvl > lastBonsaiLvl) {
       confetti();
-      showToast(`🌳 Your Bonsai Tree leveled up to Level ${lvl}!`);
+      showToast(`ðŸŒ³ Your Bonsai Tree leveled up to Level ${lvl}!`);
       playSound('milestone');
       const container = document.querySelector('.bonsai-container');
       if (container) {
@@ -656,7 +656,7 @@ import { escapeHtml } from './utils.js';
     lastBonsaiLvl = lvl;
   }
 
-  // ── Co-Draw live shared canvas ──
+  // â”€â”€ Co-Draw live shared canvas â”€â”€
   let coDrawingActive = false;
   let coDrawCtx = null;
   let coDrawColor = '#ff6fae';
@@ -780,7 +780,7 @@ import { escapeHtml } from './utils.js';
     coDrawSize = size;
   }
 
-  // ── YouTube Watch Together syncer ──
+  // â”€â”€ YouTube Watch Together syncer â”€â”€
   let watchPlayerFrame = null;
 
   export function openWatchTogether() {
@@ -799,7 +799,7 @@ import { escapeHtml } from './utils.js';
     
     // Parse Video ID from YouTube link
     let vidId = '';
-    const reg = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const reg = /^.*(youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
     const match = val.match(reg);
     if (match && match[2].length === 11) vidId = match[2];
     else vidId = val;
@@ -820,7 +820,7 @@ import { escapeHtml } from './utils.js';
     }
   }
 
-  // ── Multiplayer Tic-Tac-Toe synced game ──
+  // â”€â”€ Multiplayer Tic-Tac-Toe synced game â”€â”€
   let tttBoard = Array(9).fill(null);
   let tttMySymbol = 'X';
   let tttTurnSymbol = 'X';
@@ -917,7 +917,7 @@ import { escapeHtml } from './utils.js';
         document.querySelectorAll('.ttt-cell').forEach(cell => cell.disabled = true);
         const won = tttBoard[a] === tttMySymbol;
         if (turnEl) {
-          turnEl.textContent = won ? '🏆 You Win!' : '💀 Bestie Wins!';
+          turnEl.textContent = won ? 'ðŸ† You Win!' : 'ðŸ’€ Bestie Wins!';
         }
         if (won) {
           socket.emit('game-result', { winner: myName });
@@ -928,7 +928,7 @@ import { escapeHtml } from './utils.js';
     }
     
     if (!tttBoard.includes(null)) {
-      if (turnEl) turnEl.textContent = '🤝 It\'s a Draw!';
+      if (turnEl) turnEl.textContent = 'ðŸ¤ It\'s a Draw!';
       // Emit draw so score is calculated or broadcast if needed
       socket.emit('game-result', { winner: null });
       return true;
@@ -936,7 +936,7 @@ import { escapeHtml } from './utils.js';
     return false;
   }
 
-  // ── Touch Sync Pulse Haptics ──
+  // â”€â”€ Touch Sync Pulse Haptics â”€â”€
   let hapticPulseInterval = null;
 
   export function openHapticSync() {
@@ -961,7 +961,7 @@ import { escapeHtml } from './utils.js';
     if (heart) heart.style.animationDuration = '0.5s';
     
     const status = document.getElementById('hapticStatus');
-    if (status) status.textContent = 'Holding Pulse... 💓';
+    if (status) status.textContent = 'Holding Pulse... ðŸ’“';
   }
 
   export function stopHapticPulse() {
@@ -988,10 +988,10 @@ import { escapeHtml } from './utils.js';
     }
     
     const status = document.getElementById('hapticStatus');
-    if (status) status.textContent = '💓 Feel their touch!';
+    if (status) status.textContent = 'ðŸ’“ Feel their touch!';
   }
 
-  // ── Screen Nudges ──
+  // â”€â”€ Screen Nudges â”€â”€
   export function sendNudge() {
     if (!joined) return;
     socket.emit('nudge');
@@ -1014,7 +1014,7 @@ import { escapeHtml } from './utils.js';
     }, 450);
   }
 
-  // ── Background Lo-Fi Player ──
+  // â”€â”€ Background Lo-Fi Player â”€â”€
   let lofiAudioCtx = null;
   let lofiOscillators = [];
   let lofiGain = null;
@@ -1034,7 +1034,7 @@ import { escapeHtml } from './utils.js';
         if (span) span.textContent = 'Play Lo-Fi';
         if (svg) svg.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"/>';
       }
-      showToast('🔇 Lo-Fi paused');
+      showToast('ðŸ”‡ Lo-Fi paused');
     } else {
       lofiPlaying = true;
       let streamStarted = false;
@@ -1053,7 +1053,7 @@ import { escapeHtml } from './utils.js';
         if (span) span.textContent = 'Pause Lo-Fi';
         if (svg) svg.innerHTML = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
       }
-      showToast('🎧 Cozy Lo-Fi playing');
+      showToast('ðŸŽ§ Cozy Lo-Fi playing');
     }
   }
 
@@ -1098,7 +1098,7 @@ import { escapeHtml } from './utils.js';
     }
   }
 
-  // ── Message Reactions bursts ──
+  // â”€â”€ Message Reactions bursts â”€â”€
   export function triggerEmojiReactionBurst(messageId, emoji) {
     const wrap = document.querySelector(`.msg-wrap[data-id="${messageId}"]`);
     if (!wrap) return;
@@ -1258,7 +1258,7 @@ import { escapeHtml } from './utils.js';
         }
       });
 
-      // Global click → close menus / context menu
+      // Global click â†’ close menus / context menu
       document.addEventListener('click', (e) => {
         if (!e.target.closest('#emojiPicker')  && !e.target.closest('[data-emoji-toggle]')) { if (els.emojiPicker) els.emojiPicker.classList.remove('open'); }
         if (!e.target.closest('#gameMenu')     && !e.target.closest('[data-game-toggle]'))  { if (els.gameMenu) els.gameMenu.classList.remove('open'); }
@@ -1272,11 +1272,11 @@ import { escapeHtml } from './utils.js';
 
       // Network Online / Offline Detection
       window.addEventListener('online', () => {
-        showToast('📶 Back online! Reconnecting...');
+        showToast('ðŸ“¶ Back online! Reconnecting...');
         if (socket && !socket.connected) socket.connect();
       });
       window.addEventListener('offline', () => {
-        showToast('⚠️ Network connection lost. Waiting for internet...');
+        showToast('âš ï¸ Network connection lost. Waiting for internet...');
       });
 
       // Keyboard shortcuts
@@ -1313,7 +1313,7 @@ import { escapeHtml } from './utils.js';
         const reentryText = document.getElementById('quickReentryText');
         const loginForm = document.getElementById('loginForm');
         if (reentryContainer && reentryText) {
-          reentryText.textContent = `✨ Continue as ${savedName}`;
+          reentryText.textContent = `âœ¨ Continue as ${savedName}`;
           reentryContainer.style.display = 'flex';
           if (loginForm) loginForm.style.display = 'none';
         }
@@ -1343,7 +1343,7 @@ import { escapeHtml } from './utils.js';
     }
   }
 
-  // ── Premium Additional Functions ──
+  // â”€â”€ Premium Additional Functions â”€â”€
   export function showToast(msg) {
     const container = document.getElementById('toastContainer');
     if (!container) return;
@@ -1363,28 +1363,28 @@ import { escapeHtml } from './utils.js';
     if (valid === 'dark') {
       document.body.classList.add('theme-dark');
     }
-    if (els.msgInput) els.msgInput.placeholder = 'Message…';
+    if (els.msgInput) els.msgInput.placeholder = 'Messageâ€¦';
     localStorage.setItem('bestieChatTheme', valid);
     const select = document.getElementById('themeSelect');
     if (select) select.value = valid;
     const toggleBtn = document.getElementById('themeToggle');
     if (toggleBtn) {
-      toggleBtn.textContent = valid === 'dark' ? '☀️' : '🌙';
-      toggleBtn.title = valid === 'dark' ? 'Switch to Day Mode (☀️)' : 'Switch to Night Mode (🌙)';
+      toggleBtn.textContent = valid === 'dark' ? 'â˜€ï¸' : 'ðŸŒ™';
+      toggleBtn.title = valid === 'dark' ? 'Switch to Day Mode (â˜€ï¸)' : 'Switch to Night Mode (ðŸŒ™)';
     }
   }
 
   export function selectTheme(themeName) {
     const valid = themeName === 'dark' ? 'dark' : 'light';
     applyAppTheme(valid);
-    showToast(`Switched to ${valid === 'dark' ? 'Night Mode 🌙' : 'Day Mode ☀️'}`);
+    showToast(`Switched to ${valid === 'dark' ? 'Night Mode ðŸŒ™' : 'Day Mode â˜€ï¸'}`);
   }
 
   export function toggleTheme() {
     const current = localStorage.getItem('bestieChatTheme') || 'light';
     const next = current === 'dark' ? 'light' : 'dark';
     applyAppTheme(next);
-    showToast(`Theme: ${next === 'dark' ? 'Night Mode 🌙' : 'Day Mode ☀️'}`);
+    showToast(`Theme: ${next === 'dark' ? 'Night Mode ðŸŒ™' : 'Day Mode â˜€ï¸'}`);
   }
 
   let currentDailyQuestionState = null;
@@ -1462,7 +1462,7 @@ import { escapeHtml } from './utils.js';
     const answer = input.value.trim();
     socket.emit('submit-daily-answer', { answer });
     input.value = '';
-    showToast('🔒 Answer locked! Waiting for Bestie…');
+    showToast('ðŸ”’ Answer locked! Waiting for Bestieâ€¦');
   }
 
   export async function fetchDailyQuestion() {
@@ -1499,7 +1499,7 @@ import { escapeHtml } from './utils.js';
       html += `
         <div class="score-row">
           <span>${escapeHtml(getDisplayName(player))}</span>
-          <span class="score-wins">${wCount} Win${wCount !== 1 ? 's' : ''} 🏆</span>
+          <span class="score-wins">${wCount} Win${wCount !== 1 ? 's' : ''} ðŸ†</span>
         </div>
       `;
     });
@@ -1520,7 +1520,7 @@ import { escapeHtml } from './utils.js';
       h2 = ((h2 << 5) + h2) ^ char;
     }
     const fp = `${(h1 >>> 0).toString(16).toUpperCase()}-${(h2 >>> 0).toString(16).toUpperCase()}`;
-    el.textContent = `🔒 Fingerprint: ${fp}`;
+    el.textContent = `ðŸ”’ Fingerprint: ${fp}`;
     el.classList.add('visible');
   }
 
@@ -1580,9 +1580,9 @@ import { escapeHtml } from './utils.js';
         body: JSON.stringify({ username: myName, subscription: newSub })
       });
       
-      if (statusText) statusText.textContent = 'Active 🔔';
+      if (statusText) statusText.textContent = 'Active ðŸ””';
       if (btn) btn.textContent = 'Disable Notifications';
-      showToast('🔔 Push notifications enabled!');
+      showToast('ðŸ”” Push notifications enabled!');
     } catch (err) {
       console.error('Push setup error:', err);
       showToast('Could not set up notifications');
@@ -1604,7 +1604,7 @@ import { escapeHtml } from './utils.js';
     const lines = allMessagesCached.map((m) => {
       const date = new Date(m.time).toLocaleString();
       const user = getDisplayName(m.user);
-      const text = m.type === 'hug' ? 'sent a hug 💌' : m.type === 'image' ? `[Photo: ${m.url}]` : m.type === 'voice' ? `[Voice note: ${m.url}]` : decryptE2EE(m.text || '');
+      const text = m.type === 'hug' ? 'sent a hug ðŸ’Œ' : m.type === 'image' ? `[Photo: ${m.url}]` : m.type === 'voice' ? `[Voice note: ${m.url}]` : decryptE2EE(m.text || '');
       return `[${date}] ${user}: ${text}`;
     });
     const header = `=======================================\n  WHISPR TRANSCRIPT EXPORT  \n=======================================\nExport Date: ${new Date().toLocaleString()}\nTotal Messages: ${allMessagesCached.length}\n---------------------------------------\n\n`;
@@ -1613,7 +1613,7 @@ import { escapeHtml } from './utils.js';
     a.href = URL.createObjectURL(blob);
     a.download = `whispr-export-${new Date().toISOString().slice(0, 10)}.txt`;
     a.click();
-    showToast('📥 Chat transcript exported!');
+    showToast('ðŸ“¥ Chat transcript exported!');
   }
 
   export function setRoomPassword() {
@@ -1645,7 +1645,7 @@ import { escapeHtml } from './utils.js';
           msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
           msgEl.classList.add('pinned-msg-highlight');
           setTimeout(() => msgEl.classList.remove('pinned-msg-highlight'), 1600);
-          showToast(`📅 Jumped to ${dateStr}`);
+          showToast(`ðŸ“… Jumped to ${dateStr}`);
           return;
         }
       }
@@ -1658,7 +1658,7 @@ import { escapeHtml } from './utils.js';
     const prefsAvatar = document.getElementById('prefsProfileAvatar');
     const prefsName = document.getElementById('prefsProfileName');
     const prefsStatus = document.getElementById('prefsProfileStatus');
-    if (prefsAvatar) prefsAvatar.textContent = profile.avatar || '✨';
+    if (prefsAvatar) prefsAvatar.textContent = profile.avatar || 'âœ¨';
     if (prefsName) prefsName.textContent = getDisplayName(myName);
     if (prefsStatus) prefsStatus.textContent = profile.statusBio || 'No status bio set';
   }
@@ -1672,7 +1672,7 @@ import { escapeHtml } from './utils.js';
     const nicknameInput  = document.getElementById('profileNicknameInput');
     const statMsgs       = document.getElementById('statMsgs');
     const statStreak     = document.getElementById('statStreak');
-    if (avatarDisplay) avatarDisplay.textContent = profile.avatar || '✨';
+    if (avatarDisplay) avatarDisplay.textContent = profile.avatar || 'âœ¨';
     if (statusInput)   statusInput.value = profile.statusBio || '';
     if (nicknameInput) nicknameInput.value = localStorage.getItem('bestieChatNickname') || '';
     if (statMsgs)      statMsgs.textContent = Array.isArray(allMessagesCached) ? allMessagesCached.filter(m => m.user === myName).length : 0;
@@ -1687,7 +1687,7 @@ import { escapeHtml } from './utils.js';
       localStorage.setItem('bestieChatNickname', trimmed);
       if (els.nicknameInputChat) els.nicknameInputChat.value = trimmed;
       if (joined) socket.emit('update-nickname', trimmed);
-      showToast('Nickname updated! ✨');
+      showToast('Nickname updated! âœ¨');
     }
   }
 
@@ -1706,17 +1706,17 @@ import { escapeHtml } from './utils.js';
 
   export function saveProfileStatus(bio) {
     socket.emit('update-profile-bio', { statusBio: String(bio || '').trim() });
-    showToast('Status saved! 💭');
+    showToast('Status saved! ðŸ’­');
     updatePrefsProfileDisplay();
     updateSidebarMyProfile();
   }
 
   export function saveProfileColor(color) {
     socket.emit('update-profile-bio', { color });
-    showToast('Bubble accent updated! 🎨');
+    showToast('Bubble accent updated! ðŸŽ¨');
   }
 
-  // ── Voice Note Speed Control ──────────────────────────────────────────
+  // â”€â”€ Voice Note Speed Control â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   export function toggleVoiceSpeed(btn, audioId) {
     const audio = document.getElementById(audioId);
     if (!audio) return;
@@ -1729,7 +1729,7 @@ import { escapeHtml } from './utils.js';
     if (btn) btn.textContent = `${next}x`;
   }
 
-  // ── Connect 4 Mini Game ───────────────────────────────────────────────
+  // â”€â”€ Connect 4 Mini Game â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   let c4BoardState = Array(6).fill(null).map(() => Array(7).fill(null));
   let c4Turn = 'red';
 
@@ -1795,7 +1795,7 @@ import { escapeHtml } from './utils.js';
         
         const statusEl = document.getElementById('c4Status');
         if (checkConnect4Win(c4BoardState, activeColor)) {
-          if (statusEl) statusEl.textContent = `🏆 ${activeColor === 'red' ? '🔴 Red' : '🟡 Yellow'} Wins!`;
+          if (statusEl) statusEl.textContent = `ðŸ† ${activeColor === 'red' ? 'ðŸ”´ Red' : 'ðŸŸ¡ Yellow'} Wins!`;
           confetti();
           playSound('milestone');
           if (isLocal) {
@@ -1805,7 +1805,7 @@ import { escapeHtml } from './utils.js';
         }
 
         c4Turn = c4Turn === 'red' ? 'yellow' : 'red';
-        if (statusEl) statusEl.textContent = `Turn: ${c4Turn === 'red' ? '🔴 Red' : '🟡 Yellow'}`;
+        if (statusEl) statusEl.textContent = `Turn: ${c4Turn === 'red' ? 'ðŸ”´ Red' : 'ðŸŸ¡ Yellow'}`;
         if (isLocal && socket) {
           socket.emit('c4-move', { col: c, color: activeColor });
         }
@@ -1825,13 +1825,13 @@ import { escapeHtml } from './utils.js';
   export function uploadCameraFile(input) {
     if (!input || !input.files || !input.files[0]) return;
     const file = input.files[0];
-    showToast('📸 Uploading camera photo...');
+    showToast('ðŸ“¸ Uploading camera photo...');
     (async () => {
       try {
-        const result = await uploadFileWithProgress(file, 'image', (pct) => showToast(`📸 Uploading… ${pct}%`));
+        const result = await uploadFileWithProgress(file, 'image', (pct) => showToast(`ðŸ“¸ Uploadingâ€¦ ${pct}%`));
         if (result.url) {
           socket.emit('message', { user: myName, type: 'image', url: result.url });
-          showToast('📸 Camera Moment sent!');
+          showToast('ðŸ“¸ Camera Moment sent!');
         }
       } catch (err) {
         showToast('Could not upload camera photo');
@@ -1846,7 +1846,7 @@ import { escapeHtml } from './utils.js';
     // First try WebRTC MediaDevices getUserMedia
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       try {
-        showToast('📸 Opening camera...');
+        showToast('ðŸ“¸ Opening camera...');
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'user' } }, audio: false });
         const video = document.createElement('video');
         video.srcObject = stream;
@@ -1869,7 +1869,7 @@ import { escapeHtml } from './utils.js';
         const json = await res.json();
         if (json.url) {
           socket.emit('message', { user: myName, type: 'image', url: json.url });
-          showToast('📸 Camera Moment sent!');
+          showToast('ðŸ“¸ Camera Moment sent!');
           return;
         }
       } catch (err) {

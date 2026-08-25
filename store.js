@@ -101,7 +101,21 @@ function saveData(data) {
   ensureDirs();
   const tmp = DATA_FILE + '.tmp';
   fs.writeFileSync(tmp, JSON.stringify(data, null, 2));
-  fs.renameSync(tmp, DATA_FILE);
+  // Windows: the destination file can be briefly locked (antivirus scan,
+  // concurrent reader). Retry the atomic rename a few times before failing.
+  for (let attempt = 0; ; attempt++) {
+    try {
+      fs.renameSync(tmp, DATA_FILE);
+      break;
+    } catch (err) {
+      if (attempt >= 4 || (err.code !== 'EPERM' && err.code !== 'EACCES')) {
+        try { fs.unlinkSync(tmp); } catch { /* ignore */ }
+        throw err;
+      }
+      const until = Date.now() + 50 * (attempt + 1);
+      while (Date.now() < until) { /* brief backoff */ }
+    }
+  }
 }
 
 let data = loadData();

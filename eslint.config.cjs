@@ -16,14 +16,17 @@ module.exports = [
     },
     rules: {
       'no-unused-vars': ['warn', { varsIgnorePattern: '^_', argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
-      'no-console': ['warn', { allow: ['warn', 'error'] }]
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'no-empty': ['error', { allowEmptyCatch: true }],
+      // Dormant module tree — cleanup pass required before frontend cutover.
+      'no-useless-assignment': 'warn'
     }
   },
   {
     ignores: ['node_modules/', 'dist/', 'public/dist/']
   },
   {
-    files: ['src/**/*.js', 'public/app.js'],
+    files: ['public/src/**/*.js', 'public/app.js'],
     languageOptions: {
       globals: {
         ...globals.browser,
