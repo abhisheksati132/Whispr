@@ -5,6 +5,7 @@
   "main": "server.js",
   "scripts": {
     "test": "node --test test/chat-utils.test.js test/supabase-store.test.js test/server.test.js test/store-parity.test.js",
+    "test:e2e": "node test/e2e.smoke.cjs",
     "start": "node server.js",
     "dev": "vite",
     "build": "vite build",

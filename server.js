@@ -27,6 +27,14 @@ const { dmMembers, authorizeRoom, isMember, canRead } = require('./roomAuthz');
 const { isSessionValid } = require('./sessionGuard');
 
 if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  // Memory mode wipes ALL user data (accounts, messages, sessions) on restart.
+  // That is acceptable locally and in tests — never in production.
+  if (process.env.NODE_ENV === 'production') {
+    console.error('\n❌ REFUSING TO START: NODE_ENV=production without SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY.');
+    console.error('❌ In-memory storage would silently destroy every conversation on restart.');
+    console.error('❌ Configure Supabase, or run with NODE_ENV=development for local testing.\n');
+    process.exit(1);
+  }
   console.warn('⚠️  Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY — operating in memory-only mode.');
 }
 

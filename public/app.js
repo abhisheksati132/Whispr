@@ -646,7 +646,7 @@
       idbSaveMessages(msg.room || myRoom, [msg]);
 
       if (msg.room && msg.room !== myRoom) {
-        loadChatList();
+        scheduleChatListRefresh();
         if (msg.user !== myName) playNotificationTone();
         return;
       }
@@ -657,7 +657,7 @@
 
       renderMessage(msg, true);
       scrollBottom();
-      loadChatList();
+      scheduleChatListRefresh();
       if (msg.user !== myName) {
         playNotificationTone();
         socket.emit('mark-read', { messageId: msg.id });
@@ -714,7 +714,7 @@
     });
 
     socket.on('chat-list-update', () => {
-      loadChatList();
+      scheduleChatListRefresh();
     });
 
     socket.on('pinned-message', msg => {
@@ -757,6 +757,24 @@
   }
 
   // ═══════════════════ CHAT LIST & USER SEARCH ═══════════════════
+  // Incoming messages used to trigger one /api/rooms/list round-trip EACH.
+  // Instead: mark dirty, and refresh at most every CHAT_LIST_REFRESH_MS.
+  let chatListDirty = false;
+  let chatListTimer = null;
+  const CHAT_LIST_REFRESH_MS = 3000;
+
+  function scheduleChatListRefresh() {
+    chatListDirty = true;
+    if (chatListTimer) return;
+    chatListTimer = setTimeout(async () => {
+      chatListTimer = null;
+      if (chatListDirty) {
+        chatListDirty = false;
+        await loadChatList();
+      }
+    }, CHAT_LIST_REFRESH_MS);
+  }
+
   async function loadChatList() {
     if (!authToken) return;
     try {

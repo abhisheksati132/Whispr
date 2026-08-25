@@ -113,33 +113,6 @@
     }
   ],
   "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
-  "widgets": [
-    {
-      "name": "Whispr Quick Status",
-      "short_name": "Whispr",
-      "description": "View recent messages and your status",
-      "tag": "whispr-widget",
-      "template": "widget-template",
-      "ms_ac_template": "widget-ms-template.json",
-      "data": "widget-data.json",
-      "type": "application/json",
-      "screenshots": [
-        {
-          "src": "/screenshot-mobile.png",
-          "sizes": "540x960",
-          "label": "Whispr widget preview"
-        }
-      ],
-      "icons": [
-        {
-          "src": "/icon-192.png",
-          "sizes": "192x192"
-        }
-      ],
-      "auth": false,
-      "update": 86400
-    }
-  ],
   "edge_side_panel": {
     "preferred_width": 400
   },
