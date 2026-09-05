@@ -15,6 +15,9 @@
   let currentOnlineUsers = [];
   const renderedMsgIds = new Set(); // msg.id and 'c:'+clientMsgId â€” guards against echo/optimistic duplicates
   let readBy = {}; // messageId -> { username: readMessageId, ... } from receipt-update
+  const pendingSends = new Map(); // clientMsgId -> payload awaiting server ack
+  const failedSends = new Map(); // clientMsgId -> { text, replyTo } for tap-to-retry
+  let lastPendingClientMsgId = null;
   let cachedUserRooms = [];
   let _currentChatFilter = 'all';
   let replyingTo = null;
@@ -295,6 +298,7 @@
         case 'delete-message': deleteMessage(el.dataset.id); break;
         case 'reply-msg': replyToMessage(el.dataset.id, el.dataset.user, el.dataset.text); break;
         case 'copy-msg': copyMessageText(el.dataset.text || ''); break;
+        case 'retry-send': retryFailedSend(el.dataset.retryId); break;
       }
     });
     document.addEventListener('dblclick', e => {
@@ -675,8 +679,25 @@ socket.on('receipt-update', rb => {
       }
     });
 
-    socket.on('room-error', data => {
+socket.on('room-error', data => {
       if (data && data.error && typeof showToast === 'function') showToast(data.error);
+    });
+
+    // Send acknowledgements: clear pending state, surface failures
+    socket.on('message-ack', ({ clientMsgId, id }) => {
+      if (!clientMsgId) return;
+      pendingSends.delete(clientMsgId);
+      if (lastPendingClientMsgId === clientMsgId) lastPendingClientMsgId = null;
+      const el = findMsgWrap(clientMsgId) || (id ? findMsgWrap(id) : null);
+      if (el) el.classList.remove('is-pending');
+    });
+
+    socket.on('message-error', ({ clientMsgId, error }) => {
+      rejectPendingMessage(clientMsgId, error || 'Failed to send');
+    });
+
+    socket.on('rate-limited', ({ message }) => {
+      rejectPendingMessage(lastPendingClientMsgId, message || 'Slow down! Take a breath.');
     });
 
     socket.on('typing', (data) => {
@@ -1202,9 +1223,16 @@ socket.on('receipt-update', rb => {
     scrollBottom();
     idbSaveMessages(myRoom, [payload]);
     renderedMsgIds.add('c:' + clientMsgId);
+    pendingSends.set(clientMsgId, payload);
+    lastPendingClientMsgId = clientMsgId;
+    var optimisticEl = els.messages && els.messages.querySelector(`[data-msg-id="${CSS.escape(clientMsgId)}"]`);
+    if (optimisticEl) optimisticEl.classList.add('is-pending');
 
     if (socket && socket.connected) {
       socket.emit('message', payload);
+    } else {
+      // Never silently swallow an offline send — mark it failed with retry.
+      rejectPendingMessage(clientMsgId, 'Offline — tap to retry');
     }
 
     playSendTone();
@@ -1239,6 +1267,71 @@ function updateMessageTick(msgId) {
   }
   tick.textContent = 'âœ“';
   tick.className = 'msg-status-ticks';
+}
+
+// ── Send acknowledgements: pending → delivered, failures → tap-to-retry ──
+function findMsgWrap(id) {
+  if (!id || !els.messages) return null;
+  try {
+    return els.messages.querySelector(`[data-msg-id="${CSS.escape(String(id))}"]`);
+  } catch { return null; }
+}
+
+function rejectPendingMessage(clientMsgId, reason) {
+  const payload = pendingSends.get(clientMsgId);
+  pendingSends.delete(clientMsgId);
+  renderedMsgIds.delete('c:' + clientMsgId);
+  if (lastPendingClientMsgId === clientMsgId) lastPendingClientMsgId = null;
+  if (payload && payload.type === 'text') {
+    failedSends.set(clientMsgId, { text: payload.text || '', replyTo: payload.replyTo || null });
+  }
+  const el = findMsgWrap(clientMsgId);
+  if (el) {
+    el.classList.remove('is-pending');
+    el.classList.add('msg-failed');
+    if (payload && payload.type === 'text') {
+      const retry = document.createElement('button');
+      retry.type = 'button';
+      retry.className = 'msg-retry-btn';
+      retry.dataset.action = 'retry-send';
+      retry.dataset.retryId = String(clientMsgId);
+      retry.textContent = '↻ Tap to retry';
+      el.appendChild(retry);
+    }
+  }
+  if (reason && typeof showToast === 'function') showToast(reason);
+}
+
+function retryFailedSend(clientMsgId) {
+  const failed = failedSends.get(clientMsgId);
+  if (!failed) return;
+  if (!socket || !socket.connected) {
+    if (typeof showToast === 'function') showToast('Still offline — try again later');
+    return;
+  }
+  failedSends.delete(clientMsgId);
+  const el = findMsgWrap(clientMsgId);
+  if (el) el.remove();
+  const newId = 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+  const payload = {
+    id: newId,
+    clientMsgId: newId,
+    text: failed.text,
+    user: myName,
+    room: myRoom,
+    time: Date.now(),
+    type: 'text',
+    replyTo: failed.replyTo
+  };
+  renderMessage(payload, true);
+  scrollBottom();
+  idbSaveMessages(myRoom, [payload]);
+  renderedMsgIds.add('c:' + newId);
+  pendingSends.set(newId, payload);
+  lastPendingClientMsgId = newId;
+  const optimisticEl = findMsgWrap(newId);
+  if (optimisticEl) optimisticEl.classList.add('is-pending');
+  socket.emit('message', payload);
 }
 
 // IntersectionObserver for batching read receipts

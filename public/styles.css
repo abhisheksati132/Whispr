@@ -2656,3 +2656,30 @@ button:active, .dm-row:active, .icon-btn:active, .filter-pill:active, .pill-btn:
     scroll-behavior: auto !important;
   }
 }
+
+/* ── 21. SEND STATES (pending / failed / retry) ──────────────────────────── */
+.msg-wrap.is-pending {
+  opacity: 0.55;
+}
+
+.msg-wrap.msg-failed .msg {
+  border: 1px solid rgba(239, 68, 68, 0.55);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.msg-retry-btn {
+  align-self: flex-end;
+  margin-top: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #f87171;
+  background: transparent;
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.msg-retry-btn:hover {
+  background: rgba(248, 113, 113, 0.12);
+}
