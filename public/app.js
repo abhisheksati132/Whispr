@@ -1,4 +1,4 @@
-﻿/**
+/**
  * TAHC â€” God-Level Professional Monochrome Messenger
  * Powered by IndexedDB Local Cache, Client-Side Compression & Fast WebRTC
  */
@@ -851,6 +851,7 @@ socket.on('room-error', data => {
           renderConversationIntro(roomName);
         }
         scrollBottom();
+        initReadReceiptObserver();
       }
     } catch (err) {
       console.error('fetchMessagesForRoom error:', err);
@@ -1250,22 +1251,20 @@ function updateMessageTick(msgId) {
   if (!tick) return;
   const others = Object.entries(readBy).filter(([name]) => name !== myName);
   if (!others.length) {
-    tick.textContent = 'âœ“';
+    tick.textContent = '✓';
     tick.className = 'msg-status-ticks';
     return;
   }
-  // Simplified: if the message itself is in readBy for another user, it's read
-  let hasBeenRead = false;
   for (const [name, readMsgId] of Object.entries(readBy)) {
     if (name === myName) continue;
     // If the user has read this specific message or a later one
     if (readMsgId === msgId) {
-      tick.textContent = 'âœ“âœ“';
+      tick.textContent = '✓✓';
       tick.className = 'msg-status-ticks read';
       return;
     }
   }
-  tick.textContent = 'âœ“';
+  tick.textContent = '✓';
   tick.className = 'msg-status-ticks';
 }
 
