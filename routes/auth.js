@@ -29,7 +29,8 @@ async function requireSession(req, res) {
   return decoded;
 }
 
-const authLimiter = require('express-rate-limit')({ windowMs: 15 * 60 * 1000, max: 20, message: { error: 'Too many attempts, try again later.' } });
+const { default: rateLimit, ipKeyGenerator } = require('express-rate-limit');
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, keyGenerator: ipKeyGenerator, message: { error: 'Too many attempts, try again later.' } });
 router.use(authLimiter);
 
 function createSession(username, req) {
@@ -42,12 +43,20 @@ function createSession(username, req) {
 router.post('/register', async (req, res) => {
   try {
     const { username, password, email, nickname, avatar, bio } = req.body;
+    const requiredCode = process.env.CHAT_PASSWORD || process.env.INVITE_CODE;
+    if (requiredCode) {
+      const providedCode = req.body.chatPassword || req.body.inviteCode || '';
+      if (providedCode !== requiredCode) {
+        return res.status(403).json({ error: 'Invalid registration password or invite code' });
+      }
+    }
     const rawPass = password || req.body.pin;
-    if (!username || !rawPass) {
+if (!username || !rawPass) {
+
       return res.status(400).json({ error: 'Username and password are required' });
     }
-    if (String(rawPass).trim().length < 3) {
-      return res.status(400).json({ error: 'Password must be at least 3 characters long' });
+    if (String(rawPass).trim().length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters long' });
     }
 
     const clean = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
@@ -106,20 +115,22 @@ router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
     const rawPass = password || req.body.pin;
-    if (!username || !rawPass) {
+if (!username || !rawPass) {
+
       return res.status(400).json({ error: 'Username or Email, and password are required' });
     }
     const identifier = String(username).trim().toLowerCase();
     if (!identifier) return res.status(400).json({ error: 'Please enter a valid username or email' });
 
-    let user = await store.getUserByEmailOrUsername(identifier);
+    const user = await store.getUserByEmailOrUsername(identifier);
     if (!user) {
-      return res.status(404).json({ error: `Account not found. Please check your credentials or register.` });
+      // Do not reveal whether the account exists
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     const match = await bcrypt.compare(String(rawPass), user.pinHash || '');
     if (!match) {
-      return res.status(401).json({ error: 'Incorrect password. Please try again.' });
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     store.setLastSeen(user.username);
