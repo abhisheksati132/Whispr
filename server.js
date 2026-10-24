@@ -79,7 +79,18 @@ try {
 })();
 
 // ── VAPID ─────────────────────────────────────────────────────────────────────
-let vapidKeys = { publicKey: process.env.VAPID_PUBLIC_KEY, privateKey: process.env.VAPID_PRIVATE_KEY };
+let vapidKeys = (() => {
+  const pub = process.env.VAPID_PUBLIC_KEY;
+  const priv = process.env.VAPID_PRIVATE_KEY;
+  if (pub && priv) return { publicKey: pub, privateKey: priv };
+  if (process.env.NODE_ENV === 'production') {
+    console.error('❌ VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY must be set in production');
+    process.exit(1);
+  }
+  const generated = webpush.generateVAPIDKeys();
+  console.warn('⚠️  Generated temporary VAPID keys – set VAPID_PUBLIC_KEY & VAPID_PRIVATE_KEY in .env for permanence');
+  return generated;
+})();
 if (!vapidKeys.publicKey || !vapidKeys.privateKey) vapidKeys = webpush.generateVAPIDKeys();
 webpush.setVapidDetails('mailto:whispr@app.local', vapidKeys.publicKey, vapidKeys.privateKey);
 
@@ -92,6 +103,7 @@ app.use(helmet({
   contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false
 }));
+app.set('trust proxy', true);
 app.use(cors({ origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : true, credentials: true }));
 app.use(morgan('combined'));
 app.use(express.json({ limit: '40mb' }));
@@ -129,7 +141,7 @@ require('./routes/rooms')(app);
 // ── Health ────────────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => res.send('ok'));
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', uptime: Math.floor(process.uptime()), timestamp: Date.now(), database: isConfigured() ? 'supabase' : 'memory', supabase: isConfigured() }));
-app.get('/api/config', (_req, res) => res.json({ passwordRequired: Boolean(CHAT_PASSWORD), giphyKey: GIPHY_API_KEY }));
+app.get('/api/config', (_req, res) => res.json({ passwordRequired: Boolean(CHAT_PASSWORD) }));
 app.get('/api/daily-question', (_req, res) => res.json({ question: mStore.getDailyQuestion() }));
 app.get('/api/export-chat', async (req, res) => {
   try {
