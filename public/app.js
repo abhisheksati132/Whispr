@@ -26,6 +26,24 @@
   let currentPinnedMessage = null;
   let offlineOutbox = [];
 
+  let currentStreak = { days: 0 };
+  let currentFeelings = {};
+  let _currentDailyQuestion = null;
+  let _myFeelingKey = null;
+
+  const FEELINGS_MAP = {
+    happy:    { emoji: '😊', label: 'Happy' },
+    excited:  { emoji: '🤩', label: 'Excited' },
+    loved:    { emoji: '🥰', label: 'Loved' },
+    calm:     { emoji: '😌', label: 'Calm' },
+    tired:    { emoji: '😴', label: 'Tired' },
+    sad:      { emoji: '😢', label: 'Sad' },
+    anxious:  { emoji: '😟', label: 'Anxious' },
+    stressed: { emoji: '😩', label: 'Stressed' },
+    lonely:   { emoji: '🥺', label: 'Missing you' },
+    grateful: { emoji: '🙏', label: 'Grateful' }
+  };
+
   // WebRTC Call State
   let peerConnection = null;
   let localStream = null;
@@ -238,7 +256,18 @@
       callRemoteVideoWrap: document.getElementById('callRemoteVideoWrap'),
       callAvatar: document.getElementById('callAvatar'),
       callUserName: document.getElementById('callUserName'),
-      callStatus: document.getElementById('callStatus')
+      callStatus: document.getElementById('callStatus'),
+      headerStreakBadge: document.getElementById('headerStreakBadge'),
+      theirFeelingBadge: document.getElementById('theirFeelingBadge'),
+      dailyQuestionBanner: document.getElementById('dailyQuestionBanner'),
+      dailyQText: document.getElementById('dailyQText'),
+      dailyQForm: document.getElementById('dailyQForm'),
+      dailyQInput: document.getElementById('dailyQInput'),
+      dailyQLockedNotice: document.getElementById('dailyQLockedNotice'),
+      dailyQAnswers: document.getElementById('dailyQAnswers'),
+      myFeelingBar: document.getElementById('myFeelingBar'),
+      pulseScreenOverlay: document.getElementById('pulseScreenOverlay'),
+      pulseSenderText: document.getElementById('pulseSenderText')
     };
   }
 
@@ -617,8 +646,16 @@
         currentPinnedMessage = null;
         if (els.pinnedBanner) els.pinnedBanner.style.display = 'none';
       }
+      if (payload.streak) renderStreak(payload.streak);
+      if (payload.feelings) renderFeelings(payload.feelings);
+      if (payload.dailyQuestionState) renderDailyQuestion(payload.dailyQuestionState);
       updateActiveHeader();
     });
+
+    socket.on('streak-update', streak => renderStreak(streak));
+    socket.on('feelings-update', feelings => renderFeelings(feelings));
+    socket.on('daily-answer-update', dq => renderDailyQuestion(dq));
+    socket.on('empathy-pulse', data => triggerEmpathyPulse(data));
 
     socket.on('presence', data => {
       currentOnlineUsers = data.users || [];
@@ -1152,11 +1189,13 @@ socket.on('room-error', data => {
     if (isSaved) {
       if (els.headerBestieAvatar) {
         els.headerBestieAvatar.textContent = '📝';
-        els.headerBestieAvatar.style.background = '#00a884';
+        els.headerBestieAvatar.style.background = '#f43f5e';
         els.headerBestieAvatar.style.color = '#ffffff';
       }
       if (els.headerBestieName) els.headerBestieName.textContent = 'Note to Self';
-      if (els.headerBestieStatus) els.headerBestieStatus.textContent = 'Private cloud notebook';
+      if (els.headerBestieStatus) els.headerBestieStatus.textContent = 'Private notebook';
+      if (els.headerStreakBadge) els.headerStreakBadge.style.display = 'none';
+      if (els.theirFeelingBadge) els.theirFeelingBadge.style.display = 'none';
       return;
     }
     if (isGroup) {
@@ -1168,6 +1207,8 @@ socket.on('room-error', data => {
       }
       if (els.headerBestieName) els.headerBestieName.textContent = groupName;
       if (els.headerBestieStatus) els.headerBestieStatus.textContent = 'Group Channel';
+      if (els.headerStreakBadge) els.headerStreakBadge.style.display = 'none';
+      if (els.theirFeelingBadge) els.theirFeelingBadge.style.display = 'none';
       return;
     }
 
@@ -1183,6 +1224,23 @@ socket.on('room-error', data => {
     if (els.headerBestieStatus) {
       els.headerBestieStatus.textContent = isOnline ? 'online' : 'offline';
       els.headerBestieStatus.style.color = isOnline ? 'var(--wa-green-deep)' : 'var(--wa-text-secondary)';
+    }
+
+    if (els.headerStreakBadge) {
+      const days = (currentStreak && currentStreak.days) ? currentStreak.days : 1;
+      els.headerStreakBadge.style.display = 'inline-flex';
+      els.headerStreakBadge.textContent = `🔥 ${days} Day${days === 1 ? '' : 's'}`;
+    }
+
+    if (els.theirFeelingBadge) {
+      const otherFeeling = currentFeelings[otherUser];
+      if (otherFeeling && FEELINGS_MAP[otherFeeling.key]) {
+        const f = FEELINGS_MAP[otherFeeling.key];
+        els.theirFeelingBadge.style.display = 'inline-flex';
+        els.theirFeelingBadge.textContent = `${f.emoji} ${f.label}`;
+      } else {
+        els.theirFeelingBadge.style.display = 'none';
+      }
     }
   }
 
@@ -3572,6 +3630,133 @@ function renderMessage(msg, animate = false) {
     return currentOnlineUsers.some(u => (u || '').toLowerCase() === username.toLowerCase());
   }
 
+  // ── BESTIE IDENTITY: STREAKS, FEELINGS, DAILY QUESTION, HEART PULSE ──
+  function renderStreak(streak) {
+    currentStreak = streak || { days: 0 };
+    if (els.headerStreakBadge) {
+      const days = currentStreak.days || 1;
+      els.headerStreakBadge.textContent = `🔥 ${days} Day${days === 1 ? '' : 's'}`;
+    }
+  }
+
+  function renderFeelings(feelings) {
+    currentFeelings = feelings || {};
+    updateActiveHeader();
+  }
+
+  function showStreakToast() {
+    const days = (currentStreak && currentStreak.days) ? currentStreak.days : 1;
+    showToast(`🔥 ${days} Day Streak with Bestie! Keep talking every day.`);
+  }
+
+  function showFeelingToast() {
+    const otherUser = myRoom ? myRoom.replace('dm_', '').split('_').find(p => p.toLowerCase() !== myName.toLowerCase()) : null;
+    const f = (otherUser && currentFeelings[otherUser]) ? FEELINGS_MAP[currentFeelings[otherUser].key] : null;
+    if (f) {
+      showToast(`${otherUser} is currently feeling ${f.emoji} ${f.label}`);
+    } else {
+      showToast('Bestie has not shared their vibe today yet');
+    }
+  }
+
+  function setFeeling(key) {
+    if (!socket || !socket.connected) return;
+    _myFeelingKey = key;
+    socket.emit('set-feeling', key);
+    document.querySelectorAll('.feeling-chip').forEach(c => {
+      c.classList.toggle('active', c.getAttribute('data-feeling') === key);
+    });
+    const info = FEELINGS_MAP[key];
+    if (info) {
+      showToast(`Updated your vibe to ${info.emoji} ${info.label}!`);
+    }
+  }
+
+  function sendEmpathyPulse() {
+    if (!socket || !socket.connected) return;
+    socket.emit('empathy-pulse');
+    triggerEmpathyPulse({ from: 'You' });
+    showToast('Sent an empathy pulse to Bestie 💓');
+  }
+
+  function triggerEmpathyPulse(data) {
+    playNotificationTone();
+    if (els.pulseScreenOverlay) {
+      if (els.pulseSenderText) {
+        els.pulseSenderText.textContent = data.from === 'You' ? 'You sent an empathy pulse 💓' : `${data.from} sent you an empathy pulse 💓 Thinking of you!`;
+      }
+      els.pulseScreenOverlay.style.display = 'flex';
+      setTimeout(() => {
+        if (els.pulseScreenOverlay) els.pulseScreenOverlay.style.display = 'none';
+      }, 2200);
+    }
+  }
+
+  function renderDailyQuestion(dqState) {
+    _currentDailyQuestion = dqState;
+    if (!dqState || !dqState.question) {
+      if (els.dailyQuestionBanner) els.dailyQuestionBanner.style.display = 'none';
+      return;
+    }
+    if (els.dailyQText) els.dailyQText.textContent = `"${dqState.question}"`;
+
+    const myAnswer = dqState.answers && dqState.answers[myName];
+    const isRevealed = Boolean(dqState.revealed);
+
+    if (isRevealed) {
+      if (els.dailyQForm) els.dailyQForm.style.display = 'none';
+      if (els.dailyQLockedNotice) els.dailyQLockedNotice.style.display = 'none';
+      if (els.dailyQAnswers) {
+        els.dailyQAnswers.style.display = 'flex';
+        let answersHtml = '';
+        for (const [user, ans] of Object.entries(dqState.answers || {})) {
+          const userLabel = user === myName ? 'You' : `@${user}`;
+          answersHtml += `<div style="margin-bottom:4px;"><strong>${escapeHtml(userLabel)}:</strong> "${escapeHtml(ans.text || '')}"</div>`;
+        }
+        els.dailyQAnswers.innerHTML = answersHtml;
+      }
+    } else if (myAnswer) {
+      if (els.dailyQForm) els.dailyQForm.style.display = 'none';
+      if (els.dailyQLockedNotice) els.dailyQLockedNotice.style.display = 'block';
+      if (els.dailyQAnswers) els.dailyQAnswers.style.display = 'none';
+    } else {
+      if (els.dailyQForm) els.dailyQForm.style.display = 'flex';
+      if (els.dailyQLockedNotice) els.dailyQLockedNotice.style.display = 'none';
+      if (els.dailyQAnswers) els.dailyQAnswers.style.display = 'none';
+    }
+  }
+
+  function toggleDailyQuestion() {
+    if (!els.dailyQuestionBanner) return;
+    const isVisible = els.dailyQuestionBanner.style.display === 'flex';
+    els.dailyQuestionBanner.style.display = isVisible ? 'none' : 'flex';
+    if (!isVisible && socket && socket.connected) {
+      socket.emit('get-daily-answer-state');
+    }
+  }
+
+  function submitDailyAnswer() {
+    if (!els.dailyQInput) return;
+    const answer = els.dailyQInput.value.trim();
+    if (!answer) return;
+    if (socket && socket.connected) {
+      socket.emit('submit-daily-answer', { answer });
+      els.dailyQInput.value = '';
+      showToast('Answer submitted! Waiting for Bestie to unlock 💌');
+    }
+  }
+
+  function openBestieChat() {
+    if (cachedUserRooms && cachedUserRooms.length) {
+      const bestieRoom = cachedUserRooms.find(r => !r.isSaved && !r.isGroup);
+      if (bestieRoom) {
+        switchRoom(bestieRoom.name);
+        return;
+      }
+    }
+    openNewChatModal();
+  }
+
 // ──                    EXPORTS                    ──────────────────────────────────────
   window.BestieChat = {
     switchAuthTab, handleSignIn, handleRegister, joinChat: handleAuthSubmit, logout,
@@ -3601,8 +3786,9 @@ function renderMessage(msg, animate = false) {
     pinMessage, unpinCurrentMessage, scrollToPinned, scrollToMessage,
     starMessage, openStarredModal, closeStarredModal,
     deleteMessage, copyMessageText,
+    setFeeling, sendEmpathyPulse, toggleDailyQuestion, submitDailyAnswer, openBestieChat, showStreakToast, showFeelingToast,
     toggleSound: () => showToast('Sound active'),
-    toggleTheme: () => showToast('Black & White monochrome active')
+    toggleTheme: () => showToast('Theme active')
   };
 
   window.Whispr = window.BestieChat;

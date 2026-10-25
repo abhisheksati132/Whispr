@@ -27,13 +27,10 @@
     <div class="login-card">
       <div class="login-brand">
         <div class="login-icon">
-          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            <path d="M8 10h.01M12 10h.01M16 10h.01"/>
-          </svg>
+          <span style="font-size:30px;">💖</span>
         </div>
-        <h1 class="login-title">Whispr Web</h1>
-        <p class="login-subtitle">Simple, reliable, private messaging</p>
+        <h1 class="login-title">Whispr · Just Us</h1>
+        <p class="login-subtitle">Our private sanctuary to chat, talk, and share every moment with your best friend.</p>
       </div>
 
       <!-- Auth Switcher -->
@@ -172,22 +169,32 @@
           </button>
           <div id="headerBestieAvatar" class="header-avatar">B</div>
           <div class="header-details">
-            <div id="headerBestieName" class="header-title">Select a Chat</div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div id="headerBestieName" class="header-title">Select a Chat</div>
+              <span id="headerStreakBadge" class="streak-badge" style="display:none;" onclick="event.stopPropagation(); BestieChat.showStreakToast();" title="Daily Chat Streak">🔥 0 Days</span>
+              <span id="theirFeelingBadge" class="feeling-badge" style="display:none;" onclick="event.stopPropagation(); BestieChat.showFeelingToast();" title="Bestie's Vibe">✨ Vibe</span>
+            </div>
             <div id="headerBestieStatus" class="header-subtitle">Online</div>
           </div>
         </div>
 
         <div class="header-actions">
+          <button type="button" class="icon-btn pulse-action-btn" onclick="BestieChat.sendEmpathyPulse()" title="Send Empathy Pulse 💓">
+            <span style="font-size:17px;">💓</span>
+          </button>
           <button type="button" class="icon-btn" onclick="BestieChat.startCall('audio')" title="Voice Call">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
           </button>
           <button type="button" class="icon-btn" onclick="BestieChat.startCall('video')" title="Video Call">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
           </button>
+          <button type="button" class="icon-btn" onclick="BestieChat.toggleDailyQuestion()" title="Daily Question of the Day ✨">
+            <span style="font-size:16px;">✨</span>
+          </button>
           <button type="button" class="icon-btn" onclick="BestieChat.toggleInChatSearch()" title="Search in chat (Ctrl+F)">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           </button>
-          <button type="button" class="icon-btn" onclick="BestieChat.toggleChatInfoPanel()" title="Contact & Media Details">
+          <button type="button" class="icon-btn" onclick="BestieChat.toggleChatInfoPanel()" title="Our Shared Memories & Files">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
           </button>
           <button type="button" class="icon-btn" onclick="BestieChat.toggleMoreMenu()" title="More Options">
@@ -215,42 +222,56 @@
         </div>
       </header>
 
-      <!-- Welcome Screen (WhatsApp Web style placeholder when no conversation is selected) -->
+      <!-- Daily Question of the Day Banner -->
+      <div id="dailyQuestionBanner" class="daily-q-banner" style="display:none;">
+        <div class="daily-q-header">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span style="font-size:15px;">✨</span>
+            <span style="font-weight:600; font-size:13.5px; color:var(--text-primary);">Today's Question for Us</span>
+          </div>
+          <button type="button" class="daily-q-close" onclick="BestieChat.toggleDailyQuestion()">✕</button>
+        </div>
+        <div id="dailyQText" class="daily-q-text">Loading question...</div>
+        <div id="dailyQForm" class="daily-q-form" style="display:none;">
+          <input id="dailyQInput" type="text" placeholder="Type your answer to unlock both..." maxlength="300" onkeydown="if(event.key==='Enter') BestieChat.submitDailyAnswer()" />
+          <button type="button" class="daily-q-btn" onclick="BestieChat.submitDailyAnswer()">Unlock 💌</button>
+        </div>
+        <div id="dailyQLockedNotice" class="daily-q-locked" style="display:none;">
+          🔒 You answered! Waiting for your bestie to reply and reveal both answers.
+        </div>
+        <div id="dailyQAnswers" class="daily-q-answers" style="display:none;"></div>
+      </div>
+
+      <!-- Welcome Screen (Intimate sanctuary for two best friends) -->
       <div id="welcomeDashboard" class="welcome-dashboard">
         <div class="welcome-hero-card">
           <div class="welcome-logo-wrap">
-            <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#00a884" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-              <path d="M8 10h.01M12 10h.01M16 10h.01"/>
-            </svg>
+            <span style="font-size:42px;">💖</span>
           </div>
-          <h2 id="welcomeGreeting" class="welcome-title">Whispr Web</h2>
-          <p class="welcome-subtitle">Send and receive messages without keeping your phone online.<br />Connect with your friends, family, and teams seamlessly.</p>
+          <h2 id="welcomeGreeting" class="welcome-title">Whispr · Just Us</h2>
+          <p class="welcome-subtitle">Our private sanctuary to talk, laugh, and stay close.<br />Keep our daily streak alive, share how you're feeling, and unlock today's question!</p>
 
           <div class="welcome-launcher-grid">
-            <div class="welcome-card" onclick="BestieChat.openNewChatModal()">
+            <div class="welcome-card" onclick="BestieChat.openBestieChat()">
               <div class="welcome-card-icon">💬</div>
-              <div class="welcome-card-title">New Chat</div>
-              <div class="welcome-card-desc">Start a direct message</div>
+              <div class="welcome-card-title">Chat with Bestie</div>
+              <div class="welcome-card-desc">Talk, send voice notes, share photos</div>
             </div>
-            <div class="welcome-card" onclick="BestieChat.openNewGroupModal()">
-              <div class="welcome-card-icon">👥</div>
-              <div class="welcome-card-title">New Group</div>
-              <div class="welcome-card-desc">Create a group chat</div>
+            <div class="welcome-card" onclick="BestieChat.startCall('audio')">
+              <div class="welcome-card-icon">📞</div>
+              <div class="welcome-card-title">Voice Call</div>
+              <div class="welcome-card-desc">Talk freely in crystal-clear audio</div>
             </div>
             <div class="welcome-card" onclick="BestieChat.openNoteToSelf()">
               <div class="welcome-card-icon">📝</div>
               <div class="welcome-card-title">Note to Self</div>
-              <div class="welcome-card-desc">Message yourself</div>
+              <div class="welcome-card-desc">Your private notes & scratchpad</div>
             </div>
           </div>
 
           <div class="welcome-footer-lock">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-            </svg>
-            <span>End-to-end encrypted</span>
+            <span>🔒</span>
+            <span>Private & Secure · Just for You & Your Bestie</span>
           </div>
         </div>
       </div>
@@ -363,6 +384,21 @@
         <div class="slash-item" onclick="BestieChat.applySlashCommand('/clear')">
           <span class="slash-cmd">/clear</span>
           <span>Clear current chat</span>
+        </div>
+      </div>
+
+      <!-- My Vibe / Feeling Picker Bar -->
+      <div id="myFeelingBar" class="my-feeling-bar">
+        <span class="feeling-bar-label">My Vibe:</span>
+        <div class="feeling-chips-scroll">
+          <button type="button" class="feeling-chip" onclick="BestieChat.setFeeling('happy')" data-feeling="happy">😊 Happy</button>
+          <button type="button" class="feeling-chip" onclick="BestieChat.setFeeling('loved')" data-feeling="loved">🥰 Loved</button>
+          <button type="button" class="feeling-chip" onclick="BestieChat.setFeeling('excited')" data-feeling="excited">🤩 Excited</button>
+          <button type="button" class="feeling-chip" onclick="BestieChat.setFeeling('calm')" data-feeling="calm">😌 Calm</button>
+          <button type="button" class="feeling-chip" onclick="BestieChat.setFeeling('tired')" data-feeling="tired">😴 Tired</button>
+          <button type="button" class="feeling-chip" onclick="BestieChat.setFeeling('lonely')" data-feeling="lonely">🥺 Missing you</button>
+          <button type="button" class="feeling-chip" onclick="BestieChat.setFeeling('grateful')" data-feeling="grateful">🙏 Grateful</button>
+          <button type="button" class="feeling-chip" onclick="BestieChat.setFeeling('stressed')" data-feeling="stressed">😩 Stressed</button>
         </div>
       </div>
 
@@ -687,6 +723,14 @@
     <div style="display:flex; align-items:center; gap:8px;">
       <button type="button" class="login-btn" onclick="BestieChat.acceptCall()" style="padding:6px 14px; font-size:12px; margin:0; width:auto;">Accept</button>
       <button type="button" class="login-btn secondary" onclick="BestieChat.declineCall()" style="padding:6px 12px; font-size:12px; margin:0; width:auto;">Decline</button>
+    </div>
+  </div>
+
+  <!-- Empathy Pulse Overlay Screen Animation -->
+  <div id="pulseScreenOverlay" class="pulse-overlay" style="display:none;" onclick="this.style.display='none'">
+    <div class="pulse-heart-wrap">
+      <div class="pulse-heart-anim">💓</div>
+      <div id="pulseSenderText" class="pulse-sender-text">Bestie sent you an empathy pulse</div>
     </div>
   </div>
 
