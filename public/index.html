@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Whispr</title>
-  <meta name="description" content="Simple, fast, private messaging in black and white." />
+  <title>Whispr Web</title>
+  <meta name="description" content="Simple, reliable, private messaging." />
   <link rel="manifest" href="/manifest.json?v=6000" />
   <link rel="icon" type="image/x-icon" href="/favicon.ico?v=6000" />
   <link rel="apple-touch-icon" href="/icon-192.png?v=6000" />
-  <meta name="theme-color" content="#000000" />
+  <meta name="theme-color" content="#00a884" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   <meta name="apple-mobile-web-app-title" content="Whispr" />
@@ -26,11 +26,14 @@
   <div id="login">
     <div class="login-card">
       <div class="login-brand">
-        <div class="login-icon" style="background:#000; border:1px solid rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center;">
-          <div style="width:24px; height:24px; border-radius:50%; background:#fff;"></div>
+        <div class="login-icon">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            <path d="M8 10h.01M12 10h.01M16 10h.01"/>
+          </svg>
         </div>
-        <h1 class="login-title">Whispr</h1>
-        <p class="login-subtitle">Simple, private text messaging</p>
+        <h1 class="login-title">Whispr Web</h1>
+        <p class="login-subtitle">Simple, reliable, private messaging</p>
       </div>
 
       <!-- Auth Switcher -->
@@ -208,44 +211,42 @@
         </div>
       </header>
 
-      <!-- Welcome & Productivity Dashboard (Shown when no chat selected) -->
+      <!-- Welcome Screen (WhatsApp Web style placeholder when no conversation is selected) -->
       <div id="welcomeDashboard" class="welcome-dashboard">
         <div class="welcome-hero-card">
           <div class="welcome-logo-wrap">
-            <div class="welcome-brand-glow"></div>
-            <div class="welcome-brand-icon">💭</div>
+            <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#00a884" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              <path d="M8 10h.01M12 10h.01M16 10h.01"/>
+            </svg>
           </div>
-          <h2 id="welcomeGreeting" class="welcome-title">Welcome to Whispr</h2>
-          <p class="welcome-subtitle">A private, high-performance workspace designed for deep focus and seamless real-time collaboration.</p>
-
-          <div class="welcome-badges-row">
-            <div class="welcome-badge">🔒 End-to-End Encrypted</div>
-            <div class="welcome-badge">⚡ 0ms Zero-Latency</div>
-            <div class="welcome-badge">📁 Offline Sync Ready</div>
-          </div>
+          <h2 id="welcomeGreeting" class="welcome-title">Whispr Web</h2>
+          <p class="welcome-subtitle">Send and receive messages without keeping your phone online.<br />Connect with your friends, family, and teams seamlessly.</p>
 
           <div class="welcome-launcher-grid">
             <div class="welcome-card" onclick="BestieChat.openNewChatModal()">
               <div class="welcome-card-icon">💬</div>
-              <div class="welcome-card-title">Direct Message</div>
-              <div class="welcome-card-desc">Start a private 1-on-1 encrypted conversation</div>
+              <div class="welcome-card-title">New Chat</div>
+              <div class="welcome-card-desc">Start a direct message</div>
             </div>
             <div class="welcome-card" onclick="BestieChat.openNewGroupModal()">
               <div class="welcome-card-icon">👥</div>
               <div class="welcome-card-title">New Group</div>
-              <div class="welcome-card-desc">Collaborate with teams, friends, or channels</div>
+              <div class="welcome-card-desc">Create a group chat</div>
             </div>
             <div class="welcome-card" onclick="BestieChat.openNoteToSelf()">
               <div class="welcome-card-icon">📝</div>
               <div class="welcome-card-title">Note to Self</div>
-              <div class="welcome-card-desc">Private encrypted notebook synced across devices</div>
+              <div class="welcome-card-desc">Message yourself</div>
             </div>
           </div>
 
-          <div class="welcome-shortcuts-bar">
-            <span><kbd>Ctrl</kbd> + <kbd>K</kbd> Quick Search</span>
-            <span><kbd>Ctrl</kbd> + <kbd>F</kbd> In-Chat Search</span>
-            <span><kbd>Esc</kbd> Close Modals</span>
+          <div class="welcome-footer-lock">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            <span>End-to-end encrypted</span>
           </div>
         </div>
       </div>
