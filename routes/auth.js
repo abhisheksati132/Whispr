@@ -30,8 +30,21 @@ async function requireSession(req, res) {
 }
 
 const { default: rateLimit, ipKeyGenerator } = require('express-rate-limit');
-const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, keyGenerator: ipKeyGenerator, message: { error: 'Too many attempts, try again later.' } });
-router.use(authLimiter);
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  keyGenerator: ipKeyGenerator,
+  message: { error: 'Too many attempts, try again later.' }
+});
+
+const sessionApiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  keyGenerator: ipKeyGenerator,
+  message: { error: 'Rate limit exceeded, please slow down.' }
+});
+
+const DEFAULT_AVATAR = process.env.DEFAULT_AVATAR || '✨';
 
 function createSession(username, req) {
   const userAgent = req.headers['user-agent'] || '';
@@ -40,7 +53,7 @@ function createSession(username, req) {
 }
 
 // POST /api/auth/register — create new account
-router.post('/register', async (req, res) => {
+router.post('/register', authLimiter, async (req, res) => {
   try {
     const { username, password, email, nickname, avatar, bio } = req.body;
     const requiredCode = process.env.CHAT_PASSWORD || process.env.INVITE_CODE;
@@ -82,7 +95,7 @@ if (!username || !rawPass) {
     }
 
     const pinHash = await bcrypt.hash(String(rawPass), 10);
-    const avatarEmoji = avatar || '✨';
+    const avatarEmoji = avatar || DEFAULT_AVATAR;
     const displayName = (nickname || '').trim() || clean;
 
     const user = await store.createUser({
@@ -120,7 +133,7 @@ if (!username || !rawPass) {
 });
 
 // POST /api/auth/login — sign in to existing account
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
     const rawPass = password || req.body.pin;
@@ -161,7 +174,7 @@ if (!username || !rawPass) {
       token,
       sessionId,
       username: user.username,
-      avatar: user.avatar || '✨',
+      avatar: user.avatar || DEFAULT_AVATAR,
       color: user.color || '#3390ec',
       statusBio: user.statusBio || '',
       nickname: user.nickname || user.username
@@ -171,6 +184,9 @@ if (!username || !rawPass) {
     res.status(500).json({ error: 'Login failed. Please try again.' });
   }
 });
+
+// Apply session rate limiter for authenticated account operations
+router.use(sessionApiLimiter);
 
 // GET /api/auth/me — verify active session token
 router.get('/me', async (req, res) => {
