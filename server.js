@@ -1109,13 +1109,23 @@ io.on('connection', (socket) => {
   });
 
   // ── Read & Delivery Receipts ──────────────────────────────────────────────
-  socket.on('mark-read', async ({ messageIds } = {}) => {
+  socket.on('mark-read', async (payload = {}) => {
     try {
-      if (!currentRoom || !username || !Array.isArray(messageIds) || !messageIds.length) return;
-      for (const id of messageIds) {
+      if (!currentRoom || !username) return;
+      const ids = Array.isArray(payload.messageIds)
+        ? payload.messageIds
+        : (payload.messageId ? [payload.messageId] : []);
+      if (!ids.length) return;
+      let lastId = null;
+      for (const id of ids) {
         await mStore.markMessageRead(currentRoom, id, username);
+        lastId = id;
       }
-      socket.to(currentRoom).emit('messages-read', { messageIds, reader: username });
+      if (lastId) {
+        const readBy = await mStore.updateReadReceipt(currentRoom, username, lastId);
+        io.to(currentRoom).emit('receipt-update', readBy);
+      }
+      socket.to(currentRoom).emit('messages-read', { messageIds: ids, reader: username });
     } catch (err) { console.error('mark-read error:', err); }
   });
 

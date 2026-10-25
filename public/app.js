@@ -685,6 +685,17 @@ socket.on('receipt-update', rb => {
       }
     });
 
+    socket.on('messages-read', ({ messageIds } = {}) => {
+      if (!Array.isArray(messageIds)) return;
+      messageIds.forEach(id => {
+        const tick = document.getElementById('tick-' + id);
+        if (tick) {
+          tick.textContent = '✓✓';
+          tick.className = 'msg-status-ticks read';
+        }
+      });
+    });
+
 socket.on('room-error', data => {
       if (data && data.error && typeof showToast === 'function') showToast(data.error);
     });
@@ -1460,7 +1471,7 @@ function renderMessage(msg, animate = false) {
     const timeStr = formatTime(msg.time || Date.now());
     // Single tick = sent. Double ticks require real read receipts (not yet
     // implemented in this tree â€” never fabricate delivery signals).
-    const tickHtml = isMe ? `<span id="tick-${msg.id}" class="msg-status-ticks"> âœ“</span>` : '';
+    const tickHtml = isMe ? `<span id="tick-${msg.id}" class="msg-status-ticks"> ✓</span>` : '';
 
     // Action bar for power actions
     const deleteBtn = isMe ? `<button type="button" class="msg-action-btn" onclick="BestieChat.deleteMessage(${jsAttr(msg.id)})" title="Delete">ðŸ—‘ï¸</button>` : '';

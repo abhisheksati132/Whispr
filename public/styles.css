@@ -782,6 +782,23 @@ header {
   color: rgba(0, 0, 0, 0.7);
 }
 
+.msg-status-ticks {
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: -1.5px;
+  margin-left: 2px;
+  color: inherit;
+  font-weight: 500;
+  display: inline-block;
+  vertical-align: middle;
+  transition: color 0.15s ease;
+}
+
+.msg-status-ticks.read {
+  color: #0284c7 !important;
+  font-weight: 700;
+}
+
 .reply-quote {
   padding: 4px 8px;
   background: rgba(0, 0, 0, 0.12);
