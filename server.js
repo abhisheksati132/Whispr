@@ -12,6 +12,7 @@ const multer   = require('multer');
 const helmet   = require('helmet');
 const cors     = require('cors');
 const morgan   = require('morgan');
+const { default: rateLimit, ipKeyGenerator } = require('express-rate-limit');
 
 const mStore = require('./supabaseStore');
 const { isConfigured, checkConnection, supabase } = require('./supabaseClient');
@@ -97,14 +98,24 @@ webpush.setVapidDetails('mailto:whispr@app.local', vapidKeys.publicKey, vapidKey
 // ── Express ───────────────────────────────────────────────────────────────────
 const app    = express();
 const server = http.createServer(app);
-const io     = new Server(server);
+
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map((s) => s.trim()).filter(Boolean)
+  : (process.env.NODE_ENV === 'production' ? false : true);
+
+const io     = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    credentials: true
+  }
+});
 
 app.use(helmet({
   contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false
 }));
 app.set('trust proxy', true);
-app.use(cors({ origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : true, credentials: true }));
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(morgan('combined'));
 app.use(express.json({ limit: '40mb' }));
 app.use(express.static(path.join(__dirname, 'public'), { index: 'index.html' }));
@@ -145,7 +156,7 @@ app.get('/api/config', (_req, res) => res.json({ passwordRequired: Boolean(CHAT_
 app.get('/api/daily-question', (_req, res) => res.json({ question: mStore.getDailyQuestion() }));
 app.get('/api/export-chat', async (req, res) => {
   try {
-    const requester = requireAuth(req, res);
+    const requester = await requireAuth(req, res);
     if (!requester) return;
     const room = normalizeRoom(req.query.room);
     if (!room) return res.status(400).json({ error: 'Room parameter required' });
@@ -327,7 +338,7 @@ app.get('/api/push-vapid-key', (_req, res) => res.json({ publicKey: vapidKeys.pu
 
 app.post('/api/push-subscribe', async (req, res) => {
   try {
-    const username = requireAuth(req, res);
+    const username = await requireAuth(req, res);
     if (!username) return;
     const { subscription } = req.body;
     if (!subscription?.endpoint) return res.status(400).json({ error: 'Missing data' });
@@ -338,7 +349,7 @@ app.post('/api/push-subscribe', async (req, res) => {
 
 app.post('/api/push-unsubscribe', async (req, res) => {
   try {
-    const username = requireAuth(req, res);
+    const username = await requireAuth(req, res);
     if (!username) return;
     const { endpoint } = req.body;
     if (!endpoint) return res.status(400).json({ error: 'Missing endpoint' });
@@ -372,9 +383,16 @@ const MIME_EXT_MAP = {
   'text/plain': 'txt', 'text/csv': 'csv'
 };
 
-app.post('/api/upload', (req, res) => {
+const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  keyGenerator: ipKeyGenerator,
+  message: { error: 'Too many upload requests. Please try again later.' }
+});
+
+app.post('/api/upload', uploadLimiter, async (req, res) => {
   try {
-    const username = requireAuth(req, res);
+    const username = await requireAuth(req, res);
     if (!username) return;
     const { data, mime, kind, name } = req.body;
     if (!data || !mime) return res.status(400).json({ error: 'Missing data' });
@@ -396,9 +414,9 @@ const uploadMiddleware = multer({
   limits: { fileSize: 25 * 1024 * 1024 }
 });
 
-app.post('/api/upload-multipart', uploadMiddleware.single('file'), async (req, res) => {
+app.post('/api/upload-multipart', uploadLimiter, uploadMiddleware.single('file'), async (req, res) => {
   try {
-    const username = requireAuth(req, res);
+    const username = await requireAuth(req, res);
     if (!username) return;
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     const { size, mimetype, originalname } = req.file;
@@ -514,14 +532,24 @@ async function cachedAuthorize(roomName, username) {
 }
 
 // ── REST auth helper ──────────────────────────────────────────────────────────
-function requireAuth(req, res) {
+async function requireAuth(req, res) {
   const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
+  if (!token) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return null;
+  }
+  let decoded;
   try {
-    return jwt.verify(token, JWT_SECRET).username;
+    decoded = jwt.verify(token, JWT_SECRET);
   } catch {
     res.status(401).json({ error: 'Unauthorized' });
     return null;
   }
+  if (!(await isSessionValid(decoded.username, decoded.sid))) {
+    res.status(401).json({ error: 'Session revoked. Please sign in again.' });
+    return null;
+  }
+  return decoded.username;
 }
 
 // ── Online users in-memory ────────────────────────────────────────────────────
