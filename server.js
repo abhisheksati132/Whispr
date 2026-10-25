@@ -83,12 +83,32 @@ let vapidKeys = (() => {
   const pub = process.env.VAPID_PUBLIC_KEY;
   const priv = process.env.VAPID_PRIVATE_KEY;
   if (pub && priv) return { publicKey: pub, privateKey: priv };
-  if (process.env.NODE_ENV === 'production') {
-    console.error('❌ VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY must be set in production');
-    process.exit(1);
-  }
+
+  const vapidFilePath = path.join(__dirname, 'data', 'vapid.json');
+  try {
+    if (fs.existsSync(vapidFilePath)) {
+      const saved = JSON.parse(fs.readFileSync(vapidFilePath, 'utf8'));
+      if (saved.publicKey && saved.privateKey) {
+        console.warn('🔑 Loaded persisted VAPID keys from data/vapid.json');
+        return saved;
+      }
+    }
+  } catch { /* ignore */ }
+
   const generated = webpush.generateVAPIDKeys();
-  console.warn('⚠️  Generated temporary VAPID keys – set VAPID_PUBLIC_KEY & VAPID_PRIVATE_KEY in .env for permanence');
+  try {
+    const dataDir = path.join(__dirname, 'data');
+    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+    fs.writeFileSync(vapidFilePath, JSON.stringify(generated, null, 2), 'utf8');
+    console.warn('🔑 Generated and saved new VAPID keys to data/vapid.json');
+  } catch { /* ignore */ }
+
+  if (process.env.NODE_ENV === 'production') {
+    console.warn('⚠️  VAPID_PUBLIC_KEY & VAPID_PRIVATE_KEY not found in environment — using auto-generated keys.');
+    console.warn('👉 To keep push subscriptions across service redeployments, set in Render Dashboard:');
+    console.warn(`   VAPID_PUBLIC_KEY=${generated.publicKey}`);
+    console.warn(`   VAPID_PRIVATE_KEY=${generated.privateKey}`);
+  }
   return generated;
 })();
 if (!vapidKeys.publicKey || !vapidKeys.privateKey) vapidKeys = webpush.generateVAPIDKeys();
