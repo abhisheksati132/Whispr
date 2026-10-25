@@ -1,37 +1,38 @@
 /* ==========================================================================
-   TAHC — FROSTED GLASSMORHPISM DESIGN SYSTEM (PURE MONOCHROME)
-   Precision Translucency, Specular Refractions, and Deep Optical Blur
+   WHISPR — MINIMALIST GLASS & MONOCHROME WORKSPACE DESIGN SYSTEM
+   Precision Translucency, Specular Refractions, and High-Contrast Typography
    ========================================================================== */
 
 /* ── 1. DESIGN TOKENS & GLASS MATRICES ───────────────────────────────────── */
 :root {
   /* Frosted Glass Palette */
   --bg-primary: #000000;
-  --glass-sidebar: rgba(12, 12, 16, 0.75);
-  --glass-header: rgba(12, 12, 16, 0.78);
-  --glass-panel: rgba(18, 18, 24, 0.82);
-  --glass-card: rgba(24, 24, 32, 0.65);
+  --glass-sidebar: rgba(12, 12, 16, 0.78);
+  --glass-header: rgba(12, 12, 16, 0.82);
+  --glass-panel: rgba(18, 18, 24, 0.85);
+  --glass-card: rgba(24, 24, 32, 0.70);
   --glass-surface: rgba(30, 30, 40, 0.55);
   --glass-surface-hover: rgba(255, 255, 255, 0.08);
-  --glass-bubble-in: rgba(28, 28, 36, 0.78);
-  --glass-dock: rgba(10, 10, 14, 0.85);
+  --glass-bubble-in: rgba(26, 26, 34, 0.88);
+  --glass-dock: rgba(10, 10, 14, 0.88);
   --glass-input: rgba(255, 255, 255, 0.05);
 
   /* High-Contrast Accents */
-  --text-primary: #ffffff;
-  --text-secondary: #e4e4e7;
-  --text-muted: #a1a1aa;
-  --text-dim: #71717a;
+  --text-primary: #f8fafc;
+  --text-secondary: #e2e8f0;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+  --accent-read: #0284c7;
 
   /* Frosted Optical Blurs */
-  --glass-blur: blur(24px) saturate(180%);
-  --glass-blur-heavy: blur(36px) saturate(200%);
-  --glass-blur-subtle: blur(14px);
+  --glass-blur: blur(20px) saturate(170%);
+  --glass-blur-heavy: blur(32px) saturate(190%);
+  --glass-blur-subtle: blur(12px);
 
   /* Specular Hairline Borders */
   --glass-border: 1px solid rgba(255, 255, 255, 0.10);
   --glass-border-subtle: 1px solid rgba(255, 255, 255, 0.06);
-  --glass-border-highlight: 1px solid rgba(255, 255, 255, 0.25);
+  --glass-border-highlight: 1px solid rgba(255, 255, 255, 0.22);
 
   /* Glass Depth Shadows */
   --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
@@ -40,13 +41,13 @@
   --glass-inset-subtle: inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
 
   /* Typography & Layout */
-  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Text', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', 'SFMono-Regular', Consolas, Menlo, monospace;
   
   --radius-xs: 6px;
-  --radius-sm: 10px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
   --radius-pill: 9999px;
   --transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -109,16 +110,16 @@ input, textarea, select {
 .login-card {
   width: 100%;
   max-width: 400px;
-  padding: 36px 32px;
+  padding: 40px 32px;
   background: var(--glass-panel);
   backdrop-filter: var(--glass-blur-heavy);
   -webkit-backdrop-filter: var(--glass-blur-heavy);
   border: var(--glass-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--glass-shadow-lg), var(--glass-inset);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75), var(--glass-inset);
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 22px;
 }
 
 .login-brand {
@@ -130,33 +131,34 @@ input, textarea, select {
 }
 
 .login-icon-wrap {
-  width: 58px;
-  height: 58px;
+  width: 52px;
+  height: 52px;
   background: #ffffff;
   border-radius: var(--radius-pill);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 24px rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 32px rgba(255, 255, 255, 0.22);
 }
 
 .login-icon-circle {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   background: #000000;
   border-radius: var(--radius-pill);
 }
 
 .login-title {
   font-size: 26px;
-  font-weight: 800;
-  letter-spacing: -0.04em;
+  font-weight: 700;
+  letter-spacing: -0.035em;
   color: #ffffff;
 }
 
 .login-subtitle {
   font-size: 13px;
   color: var(--text-muted);
+  letter-spacing: -0.01em;
 }
 
 .auth-tabs {
@@ -215,41 +217,45 @@ input, textarea, select {
 
 .login-input {
   width: 100%;
-  padding: 12px 14px;
-  background: var(--glass-input);
+  height: 42px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.04);
   backdrop-filter: var(--glass-blur-subtle);
-  border: var(--glass-border);
-  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: var(--radius-sm);
   color: #ffffff;
   font-size: 14px;
   transition: var(--transition);
 }
 
 .login-input:focus {
-  border-color: #ffffff;
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.10);
 }
 
 .login-btn {
   width: 100%;
-  padding: 13px;
+  height: 44px;
+  padding: 0 16px;
   background: #ffffff;
   color: #000000;
   font-size: 14px;
-  font-weight: 700;
-  border-radius: var(--radius-md);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   transition: var(--transition);
-  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.18);
 }
 
 .login-btn:hover {
   background: #f4f4f5;
   transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(255, 255, 255, 0.24);
 }
 
 .login-btn.secondary {
@@ -535,6 +541,8 @@ input, textarea, select {
   font-size: 11px;
   color: var(--text-dim);
   flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 
 .dm-sub-row {
@@ -742,11 +750,12 @@ header {
 
 .msg {
   padding: 10px 14px;
-  border-radius: 18px;
+  border-radius: 16px;
   font-size: 14px;
-  line-height: 1.45;
+  line-height: 1.48;
   word-break: break-word;
   position: relative;
+  letter-spacing: -0.01em;
 }
 
 /* Incoming Frosted Glass Bubble */
@@ -754,18 +763,18 @@ header {
   background: var(--glass-bubble-in);
   backdrop-filter: var(--glass-blur-subtle);
   -webkit-backdrop-filter: var(--glass-blur-subtle);
-  color: #ffffff;
+  color: #f1f5f9;
   border: var(--glass-border-subtle);
   border-bottom-left-radius: 4px;
-  box-shadow: var(--glass-shadow), var(--glass-inset);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), var(--glass-inset);
 }
 
 /* Outgoing Solid White Contrast Bubble */
 .msg.me {
   background: #ffffff;
-  color: #000000;
+  color: #0f172a;
   border-bottom-right-radius: 4px;
-  box-shadow: 0 4px 18px rgba(255, 255, 255, 0.16);
+  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.12);
 }
 
 .bubble-meta {
@@ -773,13 +782,18 @@ header {
   align-items: center;
   justify-content: flex-end;
   gap: 4px;
-  font-size: 10px;
-  opacity: 0.65;
+  font-size: 10.5px;
+  opacity: 0.75;
   margin-top: 3px;
+  font-variant-numeric: tabular-nums;
 }
 
 .msg.me .bubble-meta {
-  color: rgba(0, 0, 0, 0.7);
+  color: rgba(15, 23, 42, 0.75);
+}
+
+.msg.them .bubble-meta {
+  color: var(--text-muted);
 }
 
 .msg-status-ticks {
@@ -2071,7 +2085,7 @@ button:active, .dm-row:active, .icon-btn:active, .filter-pill:active, .pill-btn:
   align-items: center;
   justify-content: center;
   padding: 32px 24px;
-  background: radial-gradient(circle at center, rgba(129, 140, 248, 0.05) 0%, transparent 70%);
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.03) 0%, transparent 70%);
   overflow-y: auto;
   z-index: 5;
 }
@@ -2088,8 +2102,8 @@ button:active, .dm-row:active, .icon-btn:active, .filter-pill:active, .pill-btn:
 
 .welcome-logo-wrap {
   position: relative;
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   margin-bottom: 18px;
   display: flex;
   align-items: center;
@@ -2099,23 +2113,23 @@ button:active, .dm-row:active, .icon-btn:active, .filter-pill:active, .pill-btn:
 .welcome-brand-glow {
   position: absolute;
   inset: -8px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.25) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.18) 0%, transparent 70%);
   border-radius: 50%;
   filter: blur(10px);
 }
 
 .welcome-brand-icon {
-  font-size: 40px;
+  font-size: 34px;
   position: relative;
   z-index: 2;
   animation: pulseRec 3s infinite ease-in-out;
 }
 
 .welcome-title {
-  font-size: 26px;
-  font-weight: 800;
+  font-size: 24px;
+  font-weight: 700;
   color: #ffffff;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.035em;
   margin-bottom: 8px;
 }
 
