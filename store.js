@@ -2,9 +2,9 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const DATA_DIR = path.join(__dirname, 'data');
-const DATA_FILE = path.join(DATA_DIR, 'bestie-data.json');
-const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
+const DATA_FILE = process.env.DATA_FILE || path.join(DATA_DIR, 'bestie-data.json');
+const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(DATA_DIR, 'uploads');
 
 const AVATARS = ['🐱', '🦋', '🌸', '🐻', '🌙', '✨', '🍓', '🐰', '💫', '🌈', '🦄', '🐼'];
 const COLORS = ['#8b5cf6', '#ff6fae', '#f59e0b', '#06b6d4', '#84cc16', '#ec4899', '#a78bfa', '#fb7185'];
@@ -99,22 +99,25 @@ function loadData() {
 
 function saveData(data) {
   ensureDirs();
-  const tmp = DATA_FILE + '.tmp';
-  fs.writeFileSync(tmp, JSON.stringify(data, null, 2));
-  // Windows: the destination file can be briefly locked (antivirus scan,
-  // concurrent reader). Retry the atomic rename a few times before failing.
-  for (let attempt = 0; ; attempt++) {
-    try {
-      fs.renameSync(tmp, DATA_FILE);
-      break;
-    } catch (err) {
-      if (attempt >= 4 || (err.code !== 'EPERM' && err.code !== 'EACCES')) {
-        try { fs.unlinkSync(tmp); } catch { /* ignore */ }
-        throw err;
+  const tmp = `${DATA_FILE}.${process.pid}.${Date.now()}.${crypto.randomBytes(6).toString('hex')}.tmp`;
+  try {
+    fs.writeFileSync(tmp, JSON.stringify(data, null, 2));
+    for (let attempt = 0; ; attempt++) {
+      try {
+        fs.renameSync(tmp, DATA_FILE);
+        break;
+      } catch (err) {
+        if (attempt >= 5) {
+          try { fs.unlinkSync(tmp); } catch { /* ignore */ }
+          throw err;
+        }
+        const until = Date.now() + 50 * (attempt + 1);
+        while (Date.now() < until) { /* brief backoff */ }
       }
-      const until = Date.now() + 50 * (attempt + 1);
-      while (Date.now() < until) { /* brief backoff */ }
     }
+  } catch (err) {
+    try { if (fs.existsSync(tmp)) fs.unlinkSync(tmp); } catch { /* ignore */ }
+    throw err;
   }
 }
 
