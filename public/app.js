@@ -1,11 +1,11 @@
 /**
- * TAHC â€” God-Level Professional Monochrome Messenger
+ * TAHC — God-Level Professional Monochrome Messenger
  * Powered by IndexedDB Local Cache, Client-Side Compression & Fast WebRTC
  */
 (() => {
   'use strict';
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• STATE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ──                    STATE                    ──────────────────────────────────────
   let socket = null;
   let authToken = localStorage.getItem('bestieChatToken') || null;
   let myName = localStorage.getItem('bestieChatName') || '';
@@ -13,7 +13,7 @@
   let myProfile = { avatar: 'Y', nickname: '', statusBio: '' };
   
   let currentOnlineUsers = [];
-  const renderedMsgIds = new Set(); // msg.id and 'c:'+clientMsgId â€” guards against echo/optimistic duplicates
+  const renderedMsgIds = new Set(); // msg.id and 'c:'+clientMsgId — guards against echo/optimistic duplicates
   let readBy = {}; // messageId -> { username: readMessageId, ... } from receipt-update
   const pendingSends = new Map(); // clientMsgId -> payload awaiting server ack
   const failedSends = new Map(); // clientMsgId -> { text, replyTo } for tap-to-retry
@@ -57,9 +57,9 @@
   // DOM Elements cache
   let els = {};
 
-  const EMOJIS = ['â¤ï¸','ðŸ‘','ðŸ”¥','ðŸŽ‰','ðŸ˜','ðŸ˜‚','ðŸ¥º','âœ¨','ðŸ’¯','ðŸ™Œ','ðŸ‘','ðŸ™','ðŸ˜Ž','ðŸ˜´','ðŸ˜­','ðŸ¤”'];
+  const EMOJIS = ['❤️', '👍', '🔥', '🎉', '😍', '😂', '🥺', '✨', '💯', '🙌', '👏', '🙏', '😎', '😴', '😭', '🤔'];
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• INDEXEDDB LOCAL STORAGE ENGINE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ──                    INDEXEDDB LOCAL STORAGE ENGINE                    ──────────────────────────────────────
   let dbPromise = null;
 
   function initIndexedDB() {
@@ -155,7 +155,7 @@
     });
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• INIT â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ──                    INIT                    ──────────────────────────────────────
   async function init() {
     initIndexedDB();
     cacheElements();
@@ -286,7 +286,7 @@
       });
     }
 
-    // â”€â”€ Delegated actions (XSS-safe replacement for interpolated inline handlers) â”€â”€
+    // ── Delegated actions (XSS-safe replacement for interpolated inline handlers) ──
     document.addEventListener('click', e => {
       const el = e.target.closest('[data-action]');
       if (!el) return;
@@ -406,7 +406,7 @@
     });
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• CLIENT-SIDE IMAGE AUTO-COMPRESSOR â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ──                    CLIENT-SIDE IMAGE AUTO-COMPRESSOR                    ──────────────────────────────────────
   async function compressImageFile(file, maxWidth = 1600, maxHeight = 1600, quality = 0.85) {
     if (!file || !file.type.startsWith('image/') || file.type.includes('gif') || file.type.includes('svg')) {
       return file;
@@ -447,7 +447,7 @@
     });
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• AUTHENTICATION â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ──                    AUTHENTICATION                    ──────────────────────────────────────
   let currentAuthTab = 'signin';
 
   function switchAuthTab(tab) {
@@ -586,7 +586,7 @@
     window.location.reload();
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• SOCKET CONNECTION â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ──                    SOCKET CONNECTION                    ──────────────────────────────────────
   function initSocket() {
     if (!authToken || (socket && socket.connected)) return;
     if (typeof io === 'undefined') return;
@@ -753,7 +753,7 @@ socket.on('room-error', data => {
       if (pollCard && pollCard.parentElement) {
         const parentMsg = pollCard.closest('.msg-wrap');
         if (parentMsg) {
-          const fakeMsg = { id: data.messageId, type: 'poll', question: pollCard.querySelector('.poll-question').textContent.replace('ðŸ“Š ', ''), options: [], votes: data.votes };
+          const fakeMsg = { id: data.messageId, type: 'poll', question: pollCard.querySelector('.poll-question').textContent.replace('📊 ', ''), options: [], votes: data.votes };
           // parse options from DOM
           const optRows = pollCard.querySelectorAll('.poll-option-content > span:first-child');
           fakeMsg.options = Array.from(optRows).map(span => ({ text: span.textContent }));
@@ -805,7 +805,7 @@ socket.on('room-error', data => {
     });
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• CHAT LIST & USER SEARCH â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ──                    CHAT LIST & USER SEARCH                    ──────────────────────────────────────
   // Incoming messages used to trigger one /api/rooms/list round-trip EACH.
   // Instead: mark dirty, and refresh at most every CHAT_LIST_REFRESH_MS.
   let chatListDirty = false;
@@ -845,7 +845,7 @@ socket.on('room-error', data => {
 
     // Fast IndexedDB display
     const cached = await idbGetMessages(roomName);
-    const cleanCached = (cached || []).filter(m => !m.deleted && m.text !== 'ðŸ—‘ï¸ Message deleted' && m.text !== 'Message deleted');
+    const cleanCached = (cached || []).filter(m => !m.deleted && !m.text?.includes('Message deleted'));
     if (cleanCached.length > 0 && els.messages) {
       els.messages.innerHTML = '';
       cleanCached.forEach(m => renderMessage(m, false));
@@ -860,7 +860,7 @@ socket.on('room-error', data => {
       const messages = await resp.json();
       if (els.messages) {
         els.messages.innerHTML = '';
-        const cleanMsgs = (messages || []).filter(m => !m.deleted && m.text !== 'ðŸ—‘ï¸ Message deleted' && m.text !== 'Message deleted');
+        const cleanMsgs = (messages || []).filter(m => !m.deleted && !m.text?.includes('Message deleted'));
         if (cleanMsgs.length > 0) {
           cleanMsgs.forEach(m => renderMessage(m, false));
           idbSaveMessages(roomName, cleanMsgs);
@@ -890,12 +890,12 @@ socket.on('room-error', data => {
     intro.innerHTML = `
       <div class="chat-intro-avatar">${avatarChar}</div>
       <div class="chat-intro-title">${escapeHtml(title)}</div>
-      <div style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; color:#ffffff; background:rgba(255,255,255,0.08); padding:3px 8px; border-radius:12px; margin-bottom:4px;">ðŸ”’ Private messaging</div>
+      <div style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; color:#ffffff; background:rgba(255,255,255,0.08); padding:3px 8px; border-radius:12px; margin-bottom:4px;">🔒 Private messaging</div>
       <div class="chat-intro-sub">${escapeHtml(sub)}</div>
       <div class="starter-chips">
-        <button type="button" class="starter-chip" onclick="BestieChat.insertStarter('hello')">ðŸ‘‹ Say Hello</button>
+        <button type="button" class="starter-chip" onclick="BestieChat.insertStarter('hello')">👋 Say Hello</button>
         <button type="button" class="starter-chip" onclick="BestieChat.insertStarter('task')">â˜‘ï¸ Create Task</button>
-        <button type="button" class="starter-chip" onclick="BestieChat.insertStarter('file')">ðŸ“ Share File</button>
+        <button type="button" class="starter-chip" onclick="BestieChat.insertStarter('file')">📁 Share File</button>
       </div>
     `;
     els.messages.appendChild(intro);
@@ -904,7 +904,7 @@ socket.on('room-error', data => {
   function insertStarter(type) {
     if (type === 'hello') {
       if (els.msgInput) {
-        els.msgInput.value = 'Hello! ðŸ‘‹';
+        els.msgInput.value = 'Hello! 👋';
         sendMessage();
       }
     } else if (type === 'task') {
@@ -953,11 +953,11 @@ socket.on('room-error', data => {
 
     let html = '';
     if (pinnedChats.length) {
-      html += '<div class="sidebar-section-title">ðŸ“Œ Pinned & Note to Self</div>';
+      html += '<div class="sidebar-section-title">📌 Pinned & Note to Self</div>';
       html += renderChatListItems(pinnedChats);
     }
     if (regularChats.length) {
-      html += `<div class="sidebar-section-title">${currentActiveRailTab === 'groups' ? 'ðŸ‘¥ Groups & Channels' : 'ðŸ’¬ Direct Messages'}</div>`;
+      html += `<div class="sidebar-section-title">${currentActiveRailTab === 'groups' ? '👥 Groups & Channels' : '💬 Direct Messages'}</div>`;
       html += renderChatListItems(regularChats);
     }
 
@@ -970,13 +970,14 @@ socket.on('room-error', data => {
       const isGroup = room.isGroup || (room.name || '').startsWith('group_');
       const name = isSaved ? 'Note to Self' : (room.otherParticipant || room.displayName || room.name.replace('dm_', '').replace(/_/g, ', '));
       const displayName = isSaved ? 'Note to Self' : (room.otherProfile && room.otherProfile.nickname ? room.otherProfile.nickname : (isGroup ? (room.displayName || name) : `@${name}`));
-      const avatarInitial = isSaved ? 'N' : (isGroup ? 'ðŸ‘¥' : getInitial(displayName));
+      const avatarInitial = isSaved ? '📝' : (isGroup ? '👥' : getInitial(displayName));
+      const avatarBg = isSaved ? '#00a884' : (isGroup ? '#128c7e' : getAvatarBg(displayName));
       const isOnline = !isSaved && !isGroup && currentOnlineUsers.some(u => (u || '').toLowerCase() === (room.otherParticipant || '').toLowerCase());
       const onlineDot = isOnline ? '<span class="dm-online-dot"></span>' : '';
 
       let tickHtml = '';
       if (room.lastMessage && room.lastMessage.user === myName) {
-        tickHtml = '<span style="font-weight:700; margin-right:3px;">âœ“ </span>';
+        tickHtml = '<span style="font-weight:700; margin-right:3px; color:var(--wa-text-muted);">✓ </span>';
       }
 
       const preview = room.lastMessage
@@ -988,7 +989,7 @@ socket.on('room-error', data => {
 
       return `<div class="dm-row ${active}" onclick="BestieChat.switchRoom(${jsAttr(room.name)})">
         <div class="dm-avatar-wrap">
-          <div class="dm-avatar">${avatarInitial}</div>
+          <div class="dm-avatar" style="background:${avatarBg}; color:#ffffff;">${avatarInitial}</div>
           ${onlineDot}
         </div>
         <div class="dm-info">
@@ -1149,14 +1150,22 @@ socket.on('room-error', data => {
     const isSaved = myRoom === `dm_${myName.toLowerCase()}_${myName.toLowerCase()}`;
     const isGroup = (myRoom || '').startsWith('group_');
     if (isSaved) {
-      if (els.headerBestieAvatar) els.headerBestieAvatar.textContent = 'N';
+      if (els.headerBestieAvatar) {
+        els.headerBestieAvatar.textContent = '📝';
+        els.headerBestieAvatar.style.background = '#00a884';
+        els.headerBestieAvatar.style.color = '#ffffff';
+      }
       if (els.headerBestieName) els.headerBestieName.textContent = 'Note to Self';
       if (els.headerBestieStatus) els.headerBestieStatus.textContent = 'Private cloud notebook';
       return;
     }
     if (isGroup) {
       const groupName = myRoom.replace('group_', '').replace(/_/g, ' ');
-      if (els.headerBestieAvatar) els.headerBestieAvatar.textContent = 'ðŸ‘¥';
+      if (els.headerBestieAvatar) {
+        els.headerBestieAvatar.textContent = '👥';
+        els.headerBestieAvatar.style.background = '#128c7e';
+        els.headerBestieAvatar.style.color = '#ffffff';
+      }
       if (els.headerBestieName) els.headerBestieName.textContent = groupName;
       if (els.headerBestieStatus) els.headerBestieStatus.textContent = 'Group Channel';
       return;
@@ -1165,10 +1174,15 @@ socket.on('room-error', data => {
     const otherUser = myRoom.replace('dm_', '').split('_').find(p => p.toLowerCase() !== myName.toLowerCase()) || 'User';
     const isOnline = currentOnlineUsers.some(u => (u || '').toLowerCase() === otherUser.toLowerCase());
 
-    if (els.headerBestieAvatar) els.headerBestieAvatar.textContent = getInitial(otherUser);
+    if (els.headerBestieAvatar) {
+      els.headerBestieAvatar.textContent = getInitial(otherUser);
+      els.headerBestieAvatar.style.background = getAvatarBg(otherUser);
+      els.headerBestieAvatar.style.color = '#ffffff';
+    }
     if (els.headerBestieName) els.headerBestieName.textContent = `@${otherUser}`;
     if (els.headerBestieStatus) {
-      els.headerBestieStatus.textContent = isOnline ? 'Online' : 'Offline';
+      els.headerBestieStatus.textContent = isOnline ? 'online' : 'offline';
+      els.headerBestieStatus.style.color = isOnline ? 'var(--wa-green-deep)' : 'var(--wa-text-secondary)';
     }
   }
 
@@ -1179,7 +1193,7 @@ socket.on('room-error', data => {
     }
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• MESSAGING (OPTIMISTIC UI) â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ──                    MESSAGING (OPTIMISTIC UI)                    ──────────────────────────────────────
   function sendMessage() {
     if (!els.msgInput) return;
     const text = els.msgInput.value.trim();
@@ -1414,7 +1428,7 @@ function renderMessage(msg, animate = false) {
     // Forwarded attribution
     let forwardedHtml = '';
     if (msg.forwardedFrom) {
-      forwardedHtml = `<div class="forwarded-tag">â†ªï¸ Forwarded from @${escapeHtml(msg.forwardedFrom)}</div>`;
+      forwardedHtml = `<div class="forwarded-tag">↪ï¸ Forwarded from @${escapeHtml(msg.forwardedFrom)}</div>`;
     }
 
     // Message Grouping / Stacking with previous message
@@ -1435,7 +1449,7 @@ function renderMessage(msg, animate = false) {
 
     let contentHtml = forwardedHtml;
 
-    // Quoted reply â€” id is escaped for both attribute-JS and HTML contexts
+    // Quoted reply — id is escaped for both attribute-JS and HTML contexts
     if (msg.replyTo) {
       contentHtml += `<div class="reply-quote" onclick="BestieChat.scrollToMessage(${jsAttr(msg.replyTo.id || '')})">
         <span class="reply-quote-name">${escapeHtml(msg.replyTo.user || 'Reply')}</span>
@@ -1448,7 +1462,7 @@ function renderMessage(msg, animate = false) {
       contentHtml += `<img class="chat-photo-img" src="${escapeHtml(msg.url)}" data-action="open-lightbox" data-url="${escapeHtml(msg.url)}" loading="lazy" />`;
     } else if (msg.type === 'voice' && msg.url) {
       contentHtml += `<div class="voice-bubble">
-        <button type="button" class="voice-play-btn" data-action="play-audio" data-url="${escapeHtml(msg.url)}">â–¶</button>
+        <button type="button" class="voice-play-btn" data-action="play-audio" data-url="${escapeHtml(msg.url)}">▶</button>
         <div style="font-size:12px;">Voice note (${msg.duration || 0}s)</div>
         <button type="button" class="voice-speed-btn" data-action="cycle-audio-speed" data-url="${escapeHtml(msg.url)}">1x</button>
       </div>`;
@@ -1456,7 +1470,7 @@ function renderMessage(msg, animate = false) {
       contentHtml += renderPollHtml(msg);
     } else if (msg.type === 'document' && msg.url) {
       contentHtml += `<a href="${escapeHtml(msg.url)}" download class="doc-card" style="text-decoration:none; color:inherit;">
-        <div class="doc-icon">ðŸ“„</div>
+        <div class="doc-icon">📄</div>
         <div>
           <div class="doc-name">${escapeHtml(msg.docName || 'Document')}</div>
           <div class="doc-size">${msg.docSize ? Math.round(msg.docSize / 1024) + ' KB' : 'Download'}</div>
@@ -1470,11 +1484,11 @@ function renderMessage(msg, animate = false) {
 
     const timeStr = formatTime(msg.time || Date.now());
     // Single tick = sent. Double ticks require real read receipts (not yet
-    // implemented in this tree â€” never fabricate delivery signals).
+    // implemented in this tree — never fabricate delivery signals).
     const tickHtml = isMe ? `<span id="tick-${msg.id}" class="msg-status-ticks"> ✓</span>` : '';
 
     // Action bar for power actions
-    const deleteBtn = isMe ? `<button type="button" class="msg-action-btn" onclick="BestieChat.deleteMessage(${jsAttr(msg.id)})" title="Delete">ðŸ—‘ï¸</button>` : '';
+    const deleteBtn = isMe ? `<button type="button" class="msg-action-btn" onclick="BestieChat.deleteMessage(${jsAttr(msg.id)})" title="Delete">🗑️</button>` : '';
 
     wrap.innerHTML = `
       <div class="msg ${isMe ? 'me' : 'them'}" data-action="reply-msg" data-id="${escapeHtml(msg.id || '')}" data-user="${escapeHtml(msg.user || '')}" data-text="${escapeHtml(msg.text || 'Media')}" title="Double click to reply">
@@ -1485,12 +1499,12 @@ function renderMessage(msg, animate = false) {
         </div>
       </div>
       <div class="msg-action-bar">
-        <button type="button" class="msg-action-btn" onclick="BestieChat.replyToMessage(${jsAttr(msg.id || '')}, ${jsAttr(msg.user || '')}, ${jsAttr(msg.text || 'Media')})" title="Reply">â†©ï¸</button>
-        <button type="button" class="msg-action-btn" data-action="copy-msg" data-text="${escapeHtml(msg.text || msg.url || '')}" title="Copy">ðŸ“‹</button>
-        <button type="button" class="msg-action-btn" onclick="BestieChat.openForwardModal(${jsAttr(msg.id)})" title="Forward">â†ªï¸</button>
-        <button type="button" class="msg-action-btn" onclick="BestieChat.openReminderModal(${jsAttr(msg.id)}, ${jsAttr(msg.text || 'Message')})" title="Remind Me">ðŸ””</button>
+        <button type="button" class="msg-action-btn" onclick="BestieChat.replyToMessage(${jsAttr(msg.id || '')}, ${jsAttr(msg.user || '')}, ${jsAttr(msg.text || 'Media')})" title="Reply">↩ï¸</button>
+        <button type="button" class="msg-action-btn" data-action="copy-msg" data-text="${escapeHtml(msg.text || msg.url || '')}" title="Copy">📋</button>
+        <button type="button" class="msg-action-btn" onclick="BestieChat.openForwardModal(${jsAttr(msg.id)})" title="Forward">↪ï¸</button>
+        <button type="button" class="msg-action-btn" onclick="BestieChat.openReminderModal(${jsAttr(msg.id)}, ${jsAttr(msg.text || 'Message')})" title="Remind Me">🔔</button>
         ${(isMe && msg.type === 'text') ? `<button type="button" class="msg-action-btn" onclick="BestieChat.openEditModal(${jsAttr(msg.id)}, ${jsAttr(msg.text || '')})" title="Edit">âœï¸</button>` : ''}
-        <button type="button" class="msg-action-btn" onclick="BestieChat.pinMessage(${jsAttr(msg.id)})" title="Pin">ðŸ“Œ</button>
+        <button type="button" class="msg-action-btn" onclick="BestieChat.pinMessage(${jsAttr(msg.id)})" title="Pin">📌</button>
         <button type="button" class="msg-action-btn" onclick="BestieChat.starMessage(${jsAttr(msg.id)})" title="Star">â­</button>
         ${deleteBtn}
       </div>
@@ -1526,7 +1540,7 @@ function renderMessage(msg, animate = false) {
     else toggleRecord();
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• IN-CHAT MESSAGE SEARCH â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ──                    IN-CHAT MESSAGE SEARCH                    ──────────────────────────────────────
   function toggleInChatSearch() {
     if (!els.inChatSearchBar) return;
     const isOpen = els.inChatSearchBar.style.display === 'flex';
@@ -1587,7 +1601,7 @@ function renderMessage(msg, animate = false) {
     }
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• PIN & STARRED MESSAGES â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ──                    PIN & STARRED MESSAGES                    ──────────────────────────────────────
   function pinMessage(messageId) {
     if (socket && messageId) {
       socket.emit('pin-message', { messageId });
@@ -1621,7 +1635,7 @@ function renderMessage(msg, animate = false) {
     let el = null;
     try {
       el = document.querySelector(`[data-msg-id="${CSS.escape(safeId)}"]`);
-    } catch { /* invalid selector â€” ignore */ }
+    } catch { /* invalid selector — ignore */ }
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       el.classList.add('msg-highlight');
@@ -1698,13 +1712,13 @@ function renderMessage(msg, animate = false) {
   function copyMessageText(text) {
     if (!text) return;
     navigator.clipboard.writeText(text).then(() => {
-      showToast('ðŸ“‹ Copied to clipboard');
+      showToast('📋 Copied to clipboard');
     }).catch(() => {
       showToast('Could not copy text');
     });
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• VOICE RECORDING â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ──                    VOICE RECORDING                    ──────────────────────────────────────
   async function toggleRecord() {
     if (mediaRecorder && mediaRecorder.state === 'recording') {
       mediaRecorder.stop();
@@ -1788,7 +1802,7 @@ function renderMessage(msg, animate = false) {
     }
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• FILE / PHOTO UPLOAD WITH AUTO-COMPRESSION â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ──                    FILE PHOTO UPLOAD WITH AUTO-COMPRESSION                    ──────────────────────────────────────
   async function sendPhoto(files) {
     if (!files || !files.length) return;
     if (!myRoom) { showToast('Select a chat to send photos'); return; }
@@ -1870,7 +1884,7 @@ function renderMessage(msg, animate = false) {
     if (input && input.files) sendPhoto(input.files);
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• COMPLETE WEBRTC CALLS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ──                    COMPLETE WEBRTC CALLS                    ──────────────────────────────────────
   async function startCall(type) {
     if (!myRoom) return;
     const isSaved = myRoom === `dm_${myName.toLowerCase()}_${myName.toLowerCase()}`;
@@ -1898,7 +1912,7 @@ function renderMessage(msg, animate = false) {
         if (type === 'video') {
           localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
           type = 'audio';
-          showToast('Camera unavailable â€” switching to voice call');
+          showToast('Camera unavailable — switching to voice call');
         } else {
           throw mediaErr;
         }
@@ -2186,7 +2200,7 @@ function renderMessage(msg, animate = false) {
     showToast(isCameraOff ? 'Camera Off' : 'Camera On');
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• TYPING INDICATOR & SCROLL â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ──                    TYPING INDICATOR & SCROLL                    ──────────────────────────────────────
   let _typingTimer = null;
   function showTypingIndicator() {
     clearTimeout(_typingTimer);
@@ -2217,7 +2231,7 @@ function renderMessage(msg, animate = false) {
     if (btn) btn.style.display = 'none';
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• MODALS & HELPERS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ──                    MODALS & HELPERS                    ──────────────────────────────────────
   function toggleSidebar() {
     document.body.classList.toggle('in-chat');
   }
@@ -2479,9 +2493,26 @@ function renderMessage(msg, animate = false) {
     setTimeout(() => toast.remove(), 2400);
   }
 
+  const AVATAR_COLORS = [
+    '#00a884', '#128c7e', '#0284c7', '#25d366', '#059669',
+    '#7c3aed', '#d97706', '#ea580c', '#e11d48', '#0891b2'
+  ];
+
+  function getAvatarBg(name) {
+    if (!name) return '#00a884';
+    if (name.includes('Note to Self')) return '#00a884';
+    let hash = 0;
+    const clean = String(name).toLowerCase().replace(/^[@#\s]+/, '');
+    for (let i = 0; i < clean.length; i++) {
+      hash = clean.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+  }
+
   function getInitial(str) {
     if (!str) return 'U';
-    return String(str).trim().charAt(0).toUpperCase();
+    const clean = String(str).trim().replace(/^[@#\s]+/, '');
+    return clean ? clean.charAt(0).toUpperCase() : 'U';
   }
 
   function formatTime(ts) {
@@ -2591,7 +2622,7 @@ function renderMessage(msg, animate = false) {
     if (!audio) {
       audio = new Audio(url);
       activeAudioPlayers.set(url, audio);
-      audio.onended = () => { if (btn) btn.textContent = 'â–¶'; };
+      audio.onended = () => { if (btn) btn.textContent = '▶'; };
     }
 
     if (audio.paused) {
@@ -2599,7 +2630,7 @@ function renderMessage(msg, animate = false) {
       if (btn) btn.textContent = 'â¸';
     } else {
       audio.pause();
-      if (btn) btn.textContent = 'â–¶';
+      if (btn) btn.textContent = '▶';
     }
   }
 
@@ -2731,7 +2762,7 @@ function renderMessage(msg, animate = false) {
   }
 
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• PRODUCTIVITY: TASKS, POLLS, SLASH & SCHEDULE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ──                    PRODUCTIVITY: TASKS, POLLS, SLASH & SCHEDULE                    ──────────────────────────────────────
   function handleSlashInput() {
     const slashMenu = document.getElementById('slashMenu');
     if (!slashMenu || !els.msgInput) return;
@@ -2797,7 +2828,7 @@ function renderMessage(msg, animate = false) {
 
     return `
       <div class="poll-card" data-poll-id="${escapeHtml(msg.id)}">
-        <div class="poll-question">ðŸ“Š ${question}</div>
+        <div class="poll-question">📊 ${question}</div>
         <div class="poll-options">${optionsHtml}</div>
         <div class="poll-footer">
           <span>${totalVotes} vote${totalVotes === 1 ? '' : 's'}</span>
@@ -2890,12 +2921,12 @@ function renderMessage(msg, animate = false) {
     const saved = { ...targetReminderMsg };
     setTimeout(() => {
       playNotificationTone();
-      showToast(`ðŸ”” Reminder: "${saved.text.slice(0, 35)}"`);
+      showToast(`🔔 Reminder: "${saved.text.slice(0, 35)}"`);
       if (saved.id) scrollToMessage(saved.id);
     }, delayMs);
 
     closeReminderModal();
-    showToast(`ðŸ”” Reminder set for ${new Date(Date.now() + delayMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
+    showToast(`🔔 Reminder set for ${new Date(Date.now() + delayMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
   }
 
   // Shared Files & Tasks Drawer
@@ -2948,10 +2979,10 @@ function renderMessage(msg, animate = false) {
       else {
         docsList.innerHTML = docs.map(d => `
           <a href="${escapeHtml(d.url)}" download class="doc-card" style="text-decoration:none; color:inherit;">
-            <div class="doc-icon">ðŸ“„</div>
+            <div class="doc-icon">📄</div>
             <div style="flex:1; overflow:hidden;">
               <div class="doc-name" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(d.docName || 'Document')}</div>
-              <div class="doc-size">${d.docSize ? Math.round(d.docSize / 1024) + ' KB' : 'Download'} Â· ${formatTimestamp(d.time)}</div>
+              <div class="doc-size">${d.docSize ? Math.round(d.docSize / 1024) + ' KB' : 'Download'} · ${formatTimestamp(d.time)}</div>
             </div>
           </a>
         `).join('');
@@ -2986,7 +3017,7 @@ function renderMessage(msg, animate = false) {
 
 
   
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• 3-PANE NAVIGATION & CATEGORIZED CHAT LIST â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ──                    3-PANE NAVIGATION & CATEGORIZED CHAT LIST                    ──────────────────────────────────────
   function switchRail(tab) {
     currentActiveRailTab = tab;
     ['railBtnDirect', 'railBtnGroups'].forEach(id => {
@@ -3020,7 +3051,7 @@ function renderMessage(msg, animate = false) {
     }
   });
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• REAL-WORLD: GROUPS, FORWARDING, NOTIFICATIONS & PREVIEWS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ──                    REAL-WORLD: GROUPS, FORWARDING, NOTIFICATIONS & PREVIEWS                    ──────────────────────────────────────
   let _unreadCount = 0;
   let ringtoneInterval = null;
   let targetForwardMsg = null;
@@ -3204,13 +3235,13 @@ function renderMessage(msg, animate = false) {
         return `
           <div class="member-picker-row" onclick="BestieChat.forwardToRoom(${jsAttr(r.name)})">
             <div style="display:flex; align-items:center; gap:8px;">
-              <div style="width:30px; height:30px; border-radius:50%; background:rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700;">${isGroup ? 'ðŸ‘¥' : getInitial(displayName)}</div>
+              <div style="width:30px; height:30px; border-radius:50%; background:rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700;">${isGroup ? '👥' : getInitial(displayName)}</div>
               <div>
                 <div style="font-size:13px; font-weight:600; color:#fff;">${escapeHtml(displayName)}</div>
                 <div style="font-size:11px; color:var(--text-muted);">${isGroup ? 'Group Chat' : 'Direct Message'}</div>
               </div>
             </div>
-            <button type="button" class="filter-pill" style="padding:4px 10px; font-size:11px;">Send â†ªï¸</button>
+            <button type="button" class="filter-pill" style="padding:4px 10px; font-size:11px;">Send ↪ï¸</button>
           </div>
         `;
       }).join('');
@@ -3246,7 +3277,7 @@ function renderMessage(msg, animate = false) {
       scrollBottom();
     }
     closeForwardModal();
-    showToast('â†ªï¸ Message forwarded!');
+    showToast('↪ï¸ Message forwarded!');
   }
 
   // Call Ringtones & History
@@ -3305,10 +3336,10 @@ function renderMessage(msg, animate = false) {
         list.innerHTML = _callHistory.map(c => `
           <div class="call-history-row">
             <div style="display:flex; align-items:center; gap:10px;">
-              <div style="font-size:16px;">${c.type === 'video' ? 'ðŸ“¹' : 'ðŸ“ž'}</div>
+              <div style="font-size:16px;">${c.type === 'video' ? '📹' : '📞'}</div>
               <div>
                 <div style="font-size:13px; font-weight:700; color:#fff;">@${escapeHtml(c.user)}</div>
-                <div style="font-size:11px; color:var(--text-muted);">${c.direction === 'incoming' ? 'Incoming' : 'Outgoing'} Â· ${formatTimestamp(c.time)}</div>
+                <div style="font-size:11px; color:var(--text-muted);">${c.direction === 'incoming' ? 'Incoming' : 'Outgoing'} · ${formatTimestamp(c.time)}</div>
               </div>
             </div>
             <div class="${c.status === 'missed' ? 'call-badge-missed' : 'call-badge-completed'}">${c.status.toUpperCase()} ${c.duration ? '(' + c.duration + 's)' : ''}</div>
@@ -3371,7 +3402,7 @@ function renderMessage(msg, animate = false) {
     if (mediaRecorder.state === 'recording') {
       mediaRecorder.pause();
       _isRecordingPaused = true;
-      if (btn) btn.textContent = 'â–¶ï¸ Resume';
+      if (btn) btn.textContent = '▶ï¸ Resume';
       if (status) status.textContent = 'Recording paused';
       if (previewBtn) previewBtn.style.display = 'flex';
     } else if (mediaRecorder.state === 'paused') {
@@ -3389,7 +3420,7 @@ function renderMessage(msg, animate = false) {
       if (audioPreviewObj) audioPreviewObj.pause();
       audioPreviewObj = new Audio(URL.createObjectURL(blob));
       audioPreviewObj.play();
-      showToast('ðŸŽ§ Playing recording preview');
+      showToast('🎧 Playing recording preview');
     }
   }
 
@@ -3401,7 +3432,7 @@ function renderMessage(msg, animate = false) {
 
 
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• ACTIVE NOW & DESKTOP INFO PANEL & MOBILE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ──                    ACTIVE NOW & DESKTOP INFO PANEL & MOBILE                    ──────────────────────────────────────
 
   function renderActiveNowRibbon() {
     const wrap = document.getElementById('activeNowWrap');
@@ -3485,7 +3516,7 @@ function renderMessage(msg, animate = false) {
     const isSaved = myRoom === `dm_${myName.toLowerCase()}_${myName.toLowerCase()}`;
     const isGroup = (myRoom || '').startsWith('group_');
     const otherUser = isSaved ? 'Note to Self' : (myRoom.replace('dm_', '').split('_').find(p => p.toLowerCase() !== myName.toLowerCase()) || 'User');
-    const avatarChar = isSaved ? 'N' : (isGroup ? 'ðŸ‘¥' : getInitial(otherUser));
+    const avatarChar = isSaved ? 'N' : (isGroup ? '👥' : getInitial(otherUser));
     const title = isSaved ? 'Note to Self' : (isGroup ? myRoom.replace('group_', '').replace(/_/g, ' ') : `@${otherUser}`);
 
     const avatarEl = document.getElementById('infoAvatar');
@@ -3521,7 +3552,7 @@ function renderMessage(msg, animate = false) {
       } else {
         docsList.innerHTML = docs.map(d => `
           <a href="${escapeHtml(d.url)}" target="_blank" download class="info-doc-row">
-            <span>ðŸ“„</span>
+            <span>📄</span>
             <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;">${escapeHtml(d.docName || 'Document')}</span>
           </a>
         `).join('');
@@ -3541,7 +3572,7 @@ function renderMessage(msg, animate = false) {
     return currentOnlineUsers.some(u => (u || '').toLowerCase() === username.toLowerCase());
   }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• EXPORTS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ──                    EXPORTS                    ──────────────────────────────────────
   window.BestieChat = {
     switchAuthTab, handleSignIn, handleRegister, joinChat: handleAuthSubmit, logout,
     toggleSidebar, closeSidebar,
