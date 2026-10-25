@@ -575,7 +575,7 @@
     doSocketJoin();
     loadChatList();
     fetchMessagesForRoom(myRoom);
-    showToast(`Welcome to tahc, ${myProfile.nickname}!`);
+    showToast(`Welcome to Whispr, ${myProfile.nickname}!`);
   }
 
   function logout() {
@@ -598,6 +598,12 @@
 
     socket.on('connect', () => {
       doSocketJoin();
+      if (offlineOutbox.length > 0) {
+        const queue = [...offlineOutbox];
+        offlineOutbox = [];
+        queue.forEach((p) => socket.emit('message', p));
+        showToast(`Sent ${queue.length} queued offline message${queue.length > 1 ? 's' : ''}`);
+      }
     });
 
     socket.on('joined', payload => {
@@ -2667,7 +2673,7 @@ function renderMessage(msg, animate = false) {
       const messages = await resp.json();
       
       const otherUser = myRoom === `dm_${myName.toLowerCase()}_${myName.toLowerCase()}` ? 'Note_to_Self' : myRoom.replace('dm_', '');
-      let transcript = '=== tahc Chat Transcript for room: @' + otherUser + ' ===\n';
+      let transcript = '=== Whispr Chat Transcript for room: @' + otherUser + ' ===\n';
       transcript += 'Exported on: ' + new Date().toLocaleString() + '\n\n';
 
       if (Array.isArray(messages)) {
@@ -2682,11 +2688,11 @@ function renderMessage(msg, animate = false) {
       const blob = new Blob([transcript], { type: 'text/plain;charset=utf-8' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = 'tahc_chat_' + otherUser + '_' + Date.now() + '.txt';
+      a.download = 'whispr_chat_' + otherUser + '_' + Date.now() + '.txt';
       document.body.appendChild(a);
       a.click();
       a.remove();
-      showToast('ðŸ“¥ Chat transcript downloaded');
+      showToast('📥 Chat transcript downloaded');
     } catch (_) {
       showToast('Could not export chat');
     }
@@ -2704,7 +2710,7 @@ function renderMessage(msg, animate = false) {
       socket.emit('message', payload);
     } else {
       offlineOutbox.push(payload);
-      showToast('Offline â€” message queued');
+      showToast('Offline — message queued');
     }
 
     playSendTone();
@@ -3019,7 +3025,7 @@ function renderMessage(msg, animate = false) {
     }
     window.addEventListener('focus', () => {
       _unreadCount = 0;
-      document.title = 'tahc';
+      document.title = 'Whispr';
     });
   }
 
@@ -3027,11 +3033,11 @@ function renderMessage(msg, animate = false) {
     if (!msg || (msg.user || '').toLowerCase() === (myName || '').toLowerCase()) return;
     if (document.hidden) {
       _unreadCount++;
-      document.title = `(${_unreadCount}) tahc`;
+      document.title = `(${_unreadCount}) Whispr`;
       if ('Notification' in window && Notification.permission === 'granted') {
         try {
-          new Notification(`@${msg.user} in tahc`, {
-            body: msg.text || (msg.type === 'image' ? 'ðŸ“· Sent a photo' : 'ðŸ“„ Sent a document'),
+          new Notification(`@${msg.user} in Whispr`, {
+            body: msg.text || (msg.type === 'image' ? '📷 Sent a photo' : '📄 Sent a document'),
             icon: '/icon-192.png'
           });
         } catch (_) { /* ignore */ }
@@ -3556,6 +3562,8 @@ function renderMessage(msg, animate = false) {
     toggleSound: () => showToast('Sound active'),
     toggleTheme: () => showToast('Black & White monochrome active')
   };
+
+  window.Whispr = window.BestieChat;
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

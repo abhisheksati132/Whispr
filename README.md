@@ -1,6 +1,6 @@
 <div align="center">
 
-# tahc
+# Whispr
 
 ### A minimal, high-performance workspace for private communication and deep collaboration.
 
@@ -17,7 +17,7 @@
 
 ## 💭 About
 
-**tahc** is an intimate, distraction-free messaging and collaboration platform crafted for speed, privacy, and aesthetic clarity. 
+**Whispr** is an intimate, distraction-free messaging and collaboration platform crafted for speed, privacy, and aesthetic clarity. 
 
 Designed around a fluid monochrome palette with glassmorphic depth, it strips away the noise of modern communication suites to deliver a focused environment for direct conversations, group channels, peer-to-peer calling, and encrypted personal notes.
 
