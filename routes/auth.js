@@ -70,8 +70,13 @@ if (!username || !rawPass) {
     }
     
     if (email && email.trim()) {
-      let existingEmail = await store.getUserByEmailOrUsername(email);
-      if (existingEmail && existingEmail.email === email.trim().toLowerCase()) {
+      const emailTrimmed = email.trim().toLowerCase();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(emailTrimmed)) {
+        return res.status(400).json({ error: 'Please enter a valid email address' });
+      }
+      let existingEmail = await store.getUserByEmailOrUsername(emailTrimmed);
+      if (existingEmail && existingEmail.email === emailTrimmed) {
         return res.status(409).json({ error: `Email address is already registered.` });
       }
     }
@@ -91,7 +96,11 @@ if (!username || !rawPass) {
     });
 
     // Auto-create Saved Messages room for this user
-    await store.getOrCreateDMRoom(clean, clean);
+    try {
+      await store.getOrCreateDMRoom(clean, clean);
+    } catch (e) {
+      console.warn('Could not auto-create Saved Messages room on register:', e?.message || e);
+    }
 
     const sessionId = await createSession(clean, req);
     const token = jwt.sign({ username: clean, sid: sessionId }, JWT_SECRET, { expiresIn: '60d' });
@@ -121,6 +130,12 @@ if (!username || !rawPass) {
     }
     const identifier = String(username).trim().toLowerCase();
     if (!identifier) return res.status(400).json({ error: 'Please enter a valid username or email' });
+    if (identifier.includes('@')) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(identifier)) {
+        return res.status(400).json({ error: 'Please enter a valid email address' });
+      }
+    }
 
     const user = await store.getUserByEmailOrUsername(identifier);
     if (!user) {
@@ -134,7 +149,11 @@ if (!username || !rawPass) {
     }
 
     store.setLastSeen(user.username);
-    await store.getOrCreateDMRoom(user.username, user.username);
+    try {
+      await store.getOrCreateDMRoom(user.username, user.username);
+    } catch (e) {
+      console.warn('Could not auto-create Saved Messages room on login:', e?.message || e);
+    }
 
     const sessionId = await createSession(user.username, req);
     const token = jwt.sign({ username: user.username, sid: sessionId }, JWT_SECRET, { expiresIn: '60d' });
