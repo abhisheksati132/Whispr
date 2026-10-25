@@ -22,7 +22,6 @@ const {
 } = require('./chat-utils');
 
 const CHAT_PASSWORD = process.env.CHAT_PASSWORD || '';
-const GIPHY_API_KEY = process.env.GIPHY_API_KEY || '';
 const { JWT_SECRET } = require('./config');
 const { dmMembers, authorizeRoom, isMember, canRead } = require('./roomAuthz');
 const { isSessionValid } = require('./sessionGuard');

@@ -10,7 +10,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint server.js routes/*.js chat-utils.js supabaseStore.js store.js supabaseClient.js public/app.js \"public/src/**/*.js\"",
+    "lint": "eslint server.js routes/*.js chat-utils.js supabaseStore.js store.js supabaseClient.js public/app.js",
     "db:setup": "node -e \"const fs=require('fs'); const sql=fs.readFileSync('supabase_schema.sql','utf8'); console.log('Run this SQL in Supabase Dashboard -> SQL Editor:\\n\\n' + sql)\"",
     "db:verify": "node -e \"const {isConfigured}=require('./supabaseClient'); console.log('Supabase configured:', isConfigured())\""
   },

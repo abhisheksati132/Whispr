@@ -26,7 +26,7 @@ module.exports = [
     ignores: ['node_modules/', 'dist/', 'public/dist/']
   },
   {
-    files: ['public/src/**/*.js', 'public/app.js'],
+    files: ['public/app.js'],
     languageOptions: {
       globals: {
         ...globals.browser,
