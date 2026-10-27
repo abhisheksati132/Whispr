@@ -1495,16 +1495,26 @@ setInterval(async () => {
   } catch { /* ignore */ }
 }, 60 * 1000).unref();
 
+// ── Error Handling ────────────────────────────────────────────────────────────
+if (sentryEnabled) {
+  try {
+    const Sentry = require('@sentry/node');
+    if (typeof Sentry.setupExpressErrorHandler === 'function') {
+      Sentry.setupExpressErrorHandler(app);
+    }
+  } catch (err) {
+    console.error('Failed to setup Sentry Express error handler:', err);
+  }
+}
+
+app.use((err, req, res, _next) => {
+  console.error('Unhandled error:', err);
+  if (res.headersSent) return _next(err);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
 // ── Start ─────────────────────────────────────────────────────────────────────
 if (require.main === module) {
-  if (sentryEnabled) {
-    const Sentry = require('@sentry/node');
-    app.use(Sentry.Handlers.errorHandler());
-    app.use((err, req, res, _next) => {
-      console.error('Unhandled error:', err);
-      res.status(500).json({ error: 'Internal server error' });
-    });
-  }
   const PORT = process.env.PORT || 3000;
   server.listen(PORT, '0.0.0.0', () => console.warn(`✨ Whispr running on port ${PORT}`));
 }
@@ -1529,6 +1539,7 @@ process.on('unhandledRejection', (reason, promise) => {
 
 process.on('uncaughtException', (err) => {
   console.error('❌ Uncaught Exception:', err);
+  process.exit(1);
 });
 
 module.exports = { app, server };
