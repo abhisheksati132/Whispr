@@ -682,7 +682,7 @@ io.use(async (socket, next) => {
 
 // ── Socket.io ─────────────────────────────────────────────────────────────────
 io.on('connection', (socket) => {
-  let username = null;
+  const username = socket.data.authenticatedUser;
   let currentRoom = null;
 
   // ── Join ──────────────────────────────────────────────────────────────────
@@ -699,13 +699,11 @@ io.on('connection', (socket) => {
       }
 
       // Identity comes exclusively from the verified JWT — never the client.
-      username = socket.data.authenticatedUser;
       currentRoom = normalizeRoom(room) || `dm_${username.toLowerCase()}_${username.toLowerCase()}`;
 
       const access = await cachedAuthorize(currentRoom, username);
       if (!canRead(access)) {
         socket.emit('room-error', { error: 'You do not have access to this room.' });
-        username = null;
         currentRoom = null;
         return;
       }
@@ -808,7 +806,6 @@ io.on('connection', (socket) => {
   // ── Message ───────────────────────────────────────────────────────────────
   socket.on('message', async (payload) => {
     // Identity comes exclusively from the verified JWT — never the client.
-    username = socket.data.authenticatedUser;
     const targetRoom = normalizeRoom(payload && payload.room) || currentRoom || `dm_${username.toLowerCase()}_${username.toLowerCase()}`;
 
     const access = await cachedAuthorize(targetRoom, username);
