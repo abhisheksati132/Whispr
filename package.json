@@ -2,17 +2,12 @@
   "name": "whispr",
   "version": "1.0.0",
   "description": "",
-  "main": "server.js",
+  "main": "server/index.js",
   "scripts": {
-    "test": "node --test --test-concurrency=1 test/chat-utils.test.js test/supabase-store.test.js test/server.test.js test/store-parity.test.js",
-    "test:e2e": "node test/e2e.smoke.cjs",
-    "start": "node server.js",
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "lint": "eslint server.js routes/*.js chat-utils.js supabaseStore.js store.js supabaseClient.js public/app.js",
-    "db:setup": "node -e \"const fs=require('fs'); const sql=fs.readFileSync('supabase_schema.sql','utf8'); console.log('Run this SQL in Supabase Dashboard -> SQL Editor:\\n\\n' + sql)\"",
-    "db:verify": "node -e \"const {isConfigured}=require('./supabaseClient'); console.log('Supabase configured:', isConfigured())\""
+    "test": "node --test test/*.test.js",
+    "start": "node server/index.js",
+    "lint": "eslint server/**/*.js public/js/*.js test/*.test.js",
+    "db:setup": "node -e \"const fs=require('fs'); const sql=fs.readFileSync('supabase_schema.sql','utf8'); console.log('Run this SQL in Supabase Dashboard -> SQL Editor:\\n\\n' + sql)\""
   },
   "keywords": [],
   "author": "",
@@ -28,19 +23,17 @@
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.11.0",
-    "multer": "^1.4.5-lts.2",
+    "multer": "^2.0.0-rc.4",
     "sharp": "^0.35.3",
     "socket.io": "^4.8.3",
     "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@vitejs/plugin-react": "^6.1.0",
     "eslint": "^10.9.0",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.11.0",
     "prettier": "^3.9.6",
-    "socket.io-client": "^4.8.4",
-    "vite": "^8.2.2"
+    "socket.io-client": "^4.8.4"
   }
 }
