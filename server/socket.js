@@ -18,6 +18,7 @@ const rateLimits = new Map();
 
 // Active call state
 let currentCall = null; // { caller, callee, type, timer, active: boolean }
+const RING_TIMEOUT_MS = process.env.TEST_RING_TIMEOUT_MS ? Number(process.env.TEST_RING_TIMEOUT_MS) : 30000;
 
 function isUserOnline(username) {
   const set = userConnections.get(String(username).toLowerCase());
@@ -259,7 +260,7 @@ function setupSocket(io) {
             io.to('user:' + username).emit('message', missedMsg);
             io.to('user:' + partner).emit('message', missedMsg);
           }
-        }, 30000);
+        }, RING_TIMEOUT_MS);
 
         currentCall = {
           caller: username,
