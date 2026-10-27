@@ -43,3 +43,40 @@ export function createSocketConnection(token, onStatusChange) {
 
   return socket;
 }
+
+export async function registerPushNotifications(authToken) {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window) || !authToken) return;
+  try {
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    const keyRes = await fetch('/api/push/public-key');
+    if (!keyRes.ok) return;
+    const { publicKey } = await keyRes.json();
+    if (!publicKey) return;
+
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      const padding = '='.repeat((4 - (publicKey.length % 4)) % 4);
+      const base64 = (publicKey + padding).replace(/-/g, '+').replace(/_/g, '/');
+      const rawData = window.atob(base64);
+      const applicationServerKey = new Uint8Array(rawData.length);
+      for (let i = 0; i < rawData.length; ++i) {
+        applicationServerKey[i] = rawData.charCodeAt(i);
+      }
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey
+      });
+    }
+
+    await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`
+      },
+      body: JSON.stringify(sub)
+    });
+  } catch (err) {
+    console.warn('Push registration notice:', err.message);
+  }
+}

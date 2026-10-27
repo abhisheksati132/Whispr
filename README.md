@@ -1,62 +1,126 @@
-<div align="center">
+# WHISPR // TERMINAL HUD
 
-# Whispr
-
-### A minimal, high-performance workspace for private communication and deep collaboration.
-
-[![Status](https://img.shields.io/badge/status-active-34d399?style=flat-square)](https://chat-jh59.onrender.com)
-[![WebRTC](https://img.shields.io/badge/WebRTC-P2P_Audio%20%26%20Video-6366f1?style=flat-square)](https://chat-jh59.onrender.com)
-[![Encryption](https://img.shields.io/badge/Security-AES--GCM%20E2EE-10b981?style=flat-square)](https://chat-jh59.onrender.com)
-[![PWA](https://img.shields.io/badge/PWA-Offline%20First-f59e0b?style=flat-square)](https://chat-jh59.onrender.com)
-
-[**Live Experience →**](https://chat-jh59.onrender.com)
-
-</div>
+Minimal, private, high-contrast terminal chat designed for **exactly two people**.
 
 ---
 
-## 💭 About
+## Architecture & Security Model
 
-**Whispr** is an intimate, distraction-free messaging and collaboration platform crafted for speed, privacy, and aesthetic clarity. 
-
-Designed around a fluid monochrome palette with glassmorphic depth, it strips away the noise of modern communication suites to deliver a focused environment for direct conversations, group channels, peer-to-peer calling, and encrypted personal notes.
-
----
-
-## ✨ Highlights
-
-### 🔒 Privacy & Encryption
-- **Client-Side E2EE**: Secure room-level message payloads encrypted directly in the browser via AES-GCM (256-bit) and PBKDF2 key derivation.
-- **View-Once & Ephemeral Modes**: Send self-destructing media and disappearing messages on custom expiry timers.
-- **Zero Tracker Footprint**: No telemetry, third-party analytics, or behavioral trackers.
-
-### 📞 Peer-to-Peer Voice & Video
-- **Crystal-Clear WebRTC Calling**: Full-duplex voice and HD video calling with multi-server STUN fallback routing.
-- **Adaptive Stream Handling**: Dynamic track negotiation with picture-in-picture local preview and background audio playback.
-- **Call History & In-Call Utilities**: Live mute, camera toggling, screen sharing, and audio diagnostics.
-
-### ⚡ Real-Time Collaboration
-- **Direct Messages & Group Channels**: Multi-participant communication with live typing indicators and presence detection.
-- **Voice Studio**: Native audio recording with visual waveform scrubbers, pause/resume studio controls, and speed multipliers.
-- **Rich Media & File Engine**: Drag-and-drop document sharing, automatic client-side photo compression, and lightbox galleries.
-- **Note to Self**: A dedicated, end-to-end encrypted private cloud notebook accessible across all your devices.
-
-### 📱 Native Mobile & PWA Experience
-- **Offline-First Architecture**: Powered by client-side IndexedDB caching and Service Worker background synchronization.
-- **Fluid Micro-Interactions**: Gesture-driven navigation, bottom mobile docks, and viewport handling (`100dvh`) optimized for iOS and Android.
-- **Web Push Notifications**: Background message alerts with custom vibration patterns and badge counters.
+- **Two-Account Limit:** The database enforces a hard atomic cap of exactly 2 accounts via a PostgreSQL trigger (`enforce_two_users_limit`). Any 3rd registration attempt is rejected with HTTP `403 Forbidden` (`"link closed"`).
+- **Single Direct Stream:** No rooms, channels, groups, or public directories. All communications exist exclusively between the two authenticated partners.
+- **Security & Privacy:**
+  - Transport Security: TLS 1.3 in transit.
+  - Authentication: Passwords hashed with bcrypt (min 8 chars, timing-attack mitigated with dummy hash comparisons). Revocable JWT session tokens.
+  - Row Level Security (RLS): Supabase tables have deny-all policies for public/anon roles; the backend server connects exclusively via the Supabase Service Role key.
+  - Content Security Policy (CSP): Strict HTTP CSP headers via Helmet (no inline scripts, self-hosted assets only).
+  - Uploads: Authenticated endpoints, magic-byte binary header inspection, private storage bucket, 25MB cap.
+  - Note: Whispr is **not** client-side end-to-end encrypted (E2EE). Messages are protected by TLS in transit and stored in Supabase with RLS.
 
 ---
 
-## 🛠️ Architecture & Technologies
+## Features
 
-- **Frontend**: Vanilla JavaScript (ES6+), Glassmorphic CSS3, IndexedDB Local Cache, Web Audio API, WebRTC MediaStream API.
-- **Real-Time Engine**: Socket.io with heartbeat presence discovery and candidate queuing.
-- **Backend & Storage**: Node.js, Express, Multer stream processing, Supabase (PostgreSQL) persistence with in-memory resilient fallback.
-- **Security**: Web Crypto API (AES-GCM, PBKDF2), JWT session authentication, and CSP headers.
+- **Text Messaging:** Instant 1:1 stream with reply-to (`re: ...`), edit own messages `(edited)`, and delete `[deleted]`.
+- **Delivered & Read Receipts:** `[SENT]`, `[DLVD]`, and `[READ]` status indicators in dim terminal typography.
+- **Photos:** Client-side canvas compression, authenticated upload, 1px bordered HUD frame, tap-to-view fullscreen lightbox.
+- **Voice Notes:** Built-in `MediaRecorder` with Safari MP4/AAC fallback, live recording timer, max 5 minutes (25MB cap), block-character waveform (`▁▃▅▇▅▃▁`).
+- **1:1 Voice & Video Calls:** WebRTC signaling relayed strictly to the partner. 30-second ring timeout, busy detection, offline missed call logging (`[MISSED CALL]`), and in-call controls (`[MUTE]`, `[CAM]`, `[END]`).
+- **Presence:** Online status and last-seen timestamp visible only to the conversation partner. Multi-device / multi-tab connection tracking.
+- **PWA & Web Push:** Background service worker notifications for incoming messages and missed calls when closed.
+- **Terminal HUD Interface:** Self-hosted JetBrains Mono font, amber monochrome palette (`--accent #FFB000`, `--bg #0B0A08`), zero emojis, optional scanlines overlay toggled via `[FX]`.
 
 ---
 
-<div align="center">
-  <sub>Crafted for focus, privacy, and seamless connection.</sub>
-</div>
+## Setup & Deployment
+
+### 1. Database Setup (Supabase)
+
+1. Create a Supabase project at [supabase.com](https://supabase.com).
+2. Go to the **SQL Editor** in the Supabase Dashboard.
+3. Paste and run the contents of [`supabase_schema.sql`](./supabase_schema.sql).
+4. Create a private bucket named `whispr-media` in **Storage**.
+
+### 2. Environment Variables
+
+Copy `.env.example` to `.env`:
+
+```bash
+PORT=3000
+NODE_ENV=production
+JWT_SECRET=generate_at_least_32_characters_random_string
+
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+VAPID_PUBLIC_KEY=your-vapid-public-key
+VAPID_PRIVATE_KEY=your-vapid-private-key
+VAPID_SUBJECT=https://your-domain.com
+
+TURN_URL=turn:turn.your-domain.com:3478
+TURN_USERNAME=your-turn-username
+TURN_CREDENTIAL=your-turn-password
+
+ALLOWED_ORIGINS=https://your-domain.com
+```
+
+To generate VAPID keys:
+```bash
+npx web-push generate-vapid-keys
+```
+
+### 3. Setting Up TURN for WebRTC
+
+WebRTC direct P2P connections frequently fail across mobile cellular networks (4G/5G) and symmetric NATs. A TURN relay server is required for reliable voice and video calls.
+
+#### Option A: Self-hosted coturn
+1. On an Ubuntu/Debian VPS:
+   ```bash
+   sudo apt-get update && sudo apt-get install -y coturn
+   ```
+2. Configure `/etc/turnserver.conf`:
+   ```conf
+   listening-port=3478
+   fingerprint
+   lt-cred-mech
+   use-auth-secret
+   static-auth-secret=your_strong_secret
+   realm=turn.your-domain.com
+   ```
+3. Start coturn: `sudo systemctl restart coturn`.
+
+#### Option B: Hosted TURN Service
+Use a managed provider such as [Metered.ca](https://www.metered.ca/tools/openrelay/), Twilio Network Traversal, or Xirsys, and supply the resulting credentials to `TURN_URL`, `TURN_USERNAME`, and `TURN_CREDENTIAL`.
+
+### 4. Deploying to Render
+
+A [`render.yaml`](./render.yaml) blueprint is provided.
+
+1. Connect your repository to [Render.com](https://render.com).
+2. Select **New > Blueprint**.
+3. Supply the environment variables (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `VAPID_*`, `TURN_*`).
+4. Render will run `npm ci --omit=dev` and start `node server/index.js`.
+
+---
+
+## Deletions & Cleanups Completed
+
+The following bloated and extraneous features were completely purged:
+
+- **Rooms & Public Channels:** Purged `rooms`, `room_participants`, `roomAuthz.js`, public legacy rooms, room passwords, and member role management.
+- **Legacy Storage:** Deleted `store.js` (unserialized file-based JSON store) and replaced with clean `server/db.js`.
+- **Gamification & Social Bloat:** Deleted Pictionary, Drawing, Watch-Sync, Bonsai tree, Diary, Bucket list, Shared Calendar, Glossary, Jokes, Daily Question, Streaks, Mood palette, Feelings tracker, Nudge, and Empathy pulse.
+- **Ephemeral & Gimmick Messages:** Deleted Secret messages, Time capsules, View-once messages, and Disappearing messages.
+- **External Integrations:** Purged Giphy/Tenor integrations and link preview scrapers.
+- **Obsolete Tooling & Dead Configs:** Purged `.kilo/`, `FRONTEND_MIGRATION.md`, `DEPLOY.md`, `SUPABASE_SETUP.md`, `railway.toml`, `Procfile`, Vite/React configs, and redundant base64 endpoints.
+
+---
+
+## Verification & Manual Checklist
+
+- [ ] **Account Gate:** Register 2 accounts; confirm 3rd attempt returns `403 Forbidden` (`"link closed"`).
+- [ ] **Cross-Browser Verification:** Test on desktop Chrome and mobile Safari (iOS).
+- [ ] **Layout Responsiveness:** Verify 100dvh mobile layout and ensure on-screen virtual keyboard does not obscure input prompt.
+- [ ] **PWA Installation:** Install as standalone PWA to home screen; verify terminal icon and theme color.
+- [ ] **Push Notifications:** Close the browser/PWA on one device; send a message from the other and confirm background push notification arrives.
+- [ ] **Voice Note Playback:** Record and play voice note on both desktop Chrome and iOS Safari.
+- [ ] **1:1 Audio/Video Call:** Place a call across two different networks (e.g. WiFi to cellular LTE) and verify TURN relay audio/video streams.

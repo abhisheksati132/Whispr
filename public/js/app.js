@@ -10,7 +10,7 @@ import {
   openLightbox
 } from './terminal-ui.js';
 import { compressImage, uploadMedia, VoiceRecorder } from './media.js';
-import { createSocketConnection } from './socket.js';
+import { createSocketConnection, registerPushNotifications } from './socket.js';
 import { WebRTCManager } from './webrtc.js';
 
 let currentUser = null;
@@ -216,7 +216,7 @@ function initAppSession() {
     }
   });
 
-  registerPushNotifications();
+  registerPushNotifications(authToken);
 }
 
 // ── Messaging Handlers ────────────────────────────────────────────────────────
@@ -376,48 +376,6 @@ if (els.btnStartCall) {
     const isVideo = confirm('Start with video camera enabled? (Cancel = Voice only)');
     webrtc.startCall(currentPartner || 'Partner', isVideo);
   });
-}
-
-// ── Push Registration ─────────────────────────────────────────────────────────
-async function registerPushNotifications() {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-  try {
-    const reg = await navigator.serviceWorker.register('/sw.js');
-    const keyRes = await fetch('/api/push/public-key');
-    if (!keyRes.ok) return;
-    const { publicKey } = await keyRes.json();
-    if (!publicKey) return;
-
-    let sub = await reg.pushManager.getSubscription();
-    if (!sub) {
-      sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlB64ToUint8Array(publicKey)
-      });
-    }
-
-    await fetch('/api/push/subscribe', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${authToken}`
-      },
-      body: JSON.stringify(sub)
-    });
-  } catch (err) {
-    console.warn('Push registration notice:', err.message);
-  }
-}
-
-function urlB64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
 }
 
 // ── Setup UI Controls & Start ─────────────────────────────────────────────────

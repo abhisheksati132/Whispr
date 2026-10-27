@@ -2,11 +2,29 @@ services:
   - type: web
     name: whispr
     env: node
-    buildCommand: npm install
-    startCommand: node server.js
+    buildCommand: npm ci --omit=dev
+    startCommand: node server/index.js
     plan: free
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 3000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
+        sync: false
+      - key: TURN_URL
+        sync: false
+      - key: TURN_USERNAME
+        sync: false
+      - key: TURN_CREDENTIAL
+        sync: false

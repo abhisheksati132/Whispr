@@ -1,7 +1,7 @@
 {
   "name": "whispr",
-  "version": "1.0.0",
-  "description": "",
+  "version": "2.0.0",
+  "description": "Minimal private chat for exactly two people with a technical terminal HUD UI",
   "main": "server/index.js",
   "scripts": {
     "test": "node --test test/*.test.js",
@@ -9,9 +9,14 @@
     "lint": "eslint server/**/*.js public/js/*.js test/*.test.js",
     "db:setup": "node -e \"const fs=require('fs'); const sql=fs.readFileSync('supabase_schema.sql','utf8'); console.log('Run this SQL in Supabase Dashboard -> SQL Editor:\\n\\n' + sql)\""
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "chat",
+    "terminal-hud",
+    "webrtc",
+    "private-chat"
+  ],
+  "author": "Whispr Contributors",
+  "license": "MIT",
   "dependencies": {
     "@sentry/node": "^10.70.0",
     "@supabase/supabase-js": "^2.112.3",
