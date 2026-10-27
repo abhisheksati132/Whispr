@@ -4,6 +4,9 @@ const http = require('node:http');
 const jwt = require('jsonwebtoken');
 const { io: Client } = require('socket.io-client');
 const { JWT_SECRET } = require('../config');
+const { authorizeRoom } = require('../roomAuthz');
+const mStore = require('../supabaseStore');
+const fileStore = require('../store');
 const { app, server } = require('../server');
 
 let listeningServer;
@@ -110,6 +113,7 @@ test('failed join does not mutate username or break subsequent operations', asyn
     const errorPayload = await roomErrorPromise;
     assert.equal(errorPayload.error, 'You do not have access to this room.');
 
+    await mStore.getOrCreateDMRoom('alice', 'alice');
     const joinedPromise = new Promise((resolve) => client.once('joined', resolve));
     client.emit('join', { room: 'dm_alice_alice' });
     const joinedPayload = await joinedPromise;
@@ -138,6 +142,7 @@ test('message handler rejects messages sent to a room other than the joined one'
       client.on('connect_error', reject);
     });
 
+    await mStore.getOrCreateDMRoom('alice', 'alice');
     const joinedPromise = new Promise((resolve) => client.once('joined', resolve));
     client.emit('join', { room: 'dm_alice_alice' });
     await joinedPromise;
@@ -154,5 +159,26 @@ test('message handler rejects messages sent to a room other than the joined one'
   } finally {
     client.disconnect();
     await new Promise((resolve, reject) => listeningServer.close((err) => (err ? reject(err) : resolve())));
+  }
+});
+
+test('DM rooms with underscores in usernames do not collide and authorize against stored participants', async () => {
+  for (const store of [fileStore, mStore]) {
+    const dm1 = await store.getOrCreateDMRoom('a_b', 'c');
+    const dm2 = await store.getOrCreateDMRoom('a', 'b_c');
+
+    assert.notEqual(dm1.roomName, dm2.roomName, 'DM room names must not collide');
+
+    // dm1: participants ['a_b', 'c']
+    assert.equal(await authorizeRoom(store, dm1.roomName, 'a_b'), 'member');
+    assert.equal(await authorizeRoom(store, dm1.roomName, 'c'), 'member');
+    assert.equal(await authorizeRoom(store, dm1.roomName, 'a'), 'denied');
+    assert.equal(await authorizeRoom(store, dm1.roomName, 'b_c'), 'denied');
+
+    // dm2: participants ['a', 'b_c']
+    assert.equal(await authorizeRoom(store, dm2.roomName, 'a'), 'member');
+    assert.equal(await authorizeRoom(store, dm2.roomName, 'b_c'), 'member');
+    assert.equal(await authorizeRoom(store, dm2.roomName, 'a_b'), 'denied');
+    assert.equal(await authorizeRoom(store, dm2.roomName, 'c'), 'denied');
   }
 });

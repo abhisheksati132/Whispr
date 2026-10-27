@@ -618,10 +618,19 @@ function savePushSub(_username, _subscription) { return; }
 function deletePushSub(_endpoint) { return; }
 function getPushSubs(_username) { return []; }
 
+function getDMRoomName(user1, user2) {
+  const u1 = String(user1).toLowerCase();
+  const u2 = String(user2).toLowerCase();
+  if (u1 === u2) return `dm_${u1}_${u2}`;
+  const sorted = [u1, u2].sort();
+  const hasUnderscore = sorted[0].includes('_') || sorted[1].includes('_');
+  return hasUnderscore ? `dm_${sorted[0]}--${sorted[1]}` : `dm_${sorted[0]}_${sorted[1]}`;
+}
+
 function listUserRooms(username) {
   const clean = String(username || '').toLowerCase();
   if (!clean) return [];
-  const savedRoomName = `dm_${clean}_${clean}`;
+  const savedRoomName = getDMRoomName(clean, clean);
   const result = [];
   for (const [name, room] of Object.entries(data.rooms)) {
     if (room.participants && room.participants.map(p => String(p).toLowerCase()).includes(clean)) {
@@ -644,7 +653,7 @@ function searchUsers(query, excludeUsername) {
 
 function getOrCreateDMRoom(user1, user2) {
   const sorted = [user1.toLowerCase(), user2.toLowerCase()].sort();
-  const dmName = `dm_${sorted.join('_')}`;
+  const dmName = getDMRoomName(user1, user2);
   if (!data.rooms[dmName]) {
     data.rooms[dmName] = { ...defaultRoom(), type: 'dm', participants: sorted };
     persist();
@@ -686,6 +695,6 @@ module.exports = {
   saveDailyQuestionAnswer,
   getUploadsDir, saveUpload, getMedia,
   savePushSub, deletePushSub, getPushSubs,
-  listUserRooms, searchUsers, getOrCreateDMRoom, getRoomMessagesPaginated, roomExists,
+  listUserRooms, searchUsers, getOrCreateDMRoom, getDMRoomName, getRoomMessagesPaginated, roomExists,
   resetForTests
 };

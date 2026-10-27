@@ -981,11 +981,20 @@ async function saveDailyQuestionAnswer(roomName, username, answer) {
   return getDailyQuestionState(roomName, username);
 }
 
+function getDMRoomName(user1, user2) {
+  const u1 = String(user1).toLowerCase();
+  const u2 = String(user2).toLowerCase();
+  if (u1 === u2) return `dm_${u1}_${u2}`;
+  const sorted = [u1, u2].sort();
+  const hasUnderscore = sorted[0].includes('_') || sorted[1].includes('_');
+  return hasUnderscore ? `dm_${sorted[0]}--${sorted[1]}` : `dm_${sorted[0]}_${sorted[1]}`;
+}
+
 // ── Multi-Room & DM queries ──────────────────────────────────────────────────
 async function listUserRooms(username) {
   const clean = String(username || '').toLowerCase();
   if (!clean) return [];
-  const savedRoomName = `dm_${clean}_${clean}`;
+  const savedRoomName = getDMRoomName(clean, clean);
 
   // Ensure Saved Messages room exists in memory
   if (!memRooms.has(savedRoomName)) {
@@ -1160,7 +1169,7 @@ async function searchUsers(query, excludeUsername) {
 
 async function getOrCreateDMRoom(user1, user2) {
   const sorted = [user1.toLowerCase(), user2.toLowerCase()].sort();
-  const dmName = `dm_${sorted.join('_')}`;
+  const dmName = getDMRoomName(user1, user2);
 
   if (!isDbReady()) {
     if (!memRooms.has(dmName)) {
@@ -1363,7 +1372,7 @@ module.exports = {
   cleanExpiredRooms, cleanDisappearingMessages, persist,
   savePushSub, deletePushSub, getPushSubs,
   markMessageDelivered, markMessageRead, starMessage, getStarredMessages,
-  listUserRooms, searchUsers, getOrCreateDMRoom, getRoomMessagesPaginated, roomExists,
+  listUserRooms, searchUsers, getOrCreateDMRoom, getDMRoomName, getRoomMessagesPaginated, roomExists,
   isUserBlocked, getBlockedUsers, blockUser, unblockUser,
   createSession, getSessions, revokeSession,
   resetForTests,

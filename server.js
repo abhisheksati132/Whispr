@@ -629,13 +629,11 @@ async function sendPushToRoom(room, senderName, title, body) {
     if (m) for (const u of m.values()) online.add(String(u.name).toLowerCase());
 
     // Only notify actual members of this room — never blast every subscription.
-    const dm = dmMembers(room);
-    let members;
-    if (dm) {
-      members = dm;
-    } else {
-      const meta = await mStore.getRoomMeta(room);
-      members = ((meta && meta.participants) || []).map(p => String(p).toLowerCase());
+    const meta = await mStore.getRoomMeta(room);
+    let members = ((meta && meta.participants) || []).map(p => String(p).toLowerCase());
+    if (!members.length) {
+      const dm = dmMembers(room);
+      if (dm) members = dm.map(p => String(p).toLowerCase());
     }
     if (!members || !members.length) return;
     const memberSet = new Set(members);
@@ -699,7 +697,7 @@ io.on('connection', (socket) => {
       }
 
       // Identity comes exclusively from the verified JWT — never the client.
-      currentRoom = normalizeRoom(room) || `dm_${username.toLowerCase()}_${username.toLowerCase()}`;
+      currentRoom = normalizeRoom(room) || (mStore.getDMRoomName ? mStore.getDMRoomName(username, username) : `dm_${username.toLowerCase()}_${username.toLowerCase()}`);
 
       const access = await cachedAuthorize(currentRoom, username);
       if (!canRead(access)) {
@@ -886,8 +884,10 @@ io.on('connection', (socket) => {
 
       io.to(targetRoom).emit('message', message);
       if (targetRoom.startsWith('dm_')) {
-        const parts = targetRoom.replace('dm_', '').split('_');
-        for (const p of parts) {
+        const meta = await mStore.getRoomMeta(targetRoom);
+        const participants = ((meta && meta.participants) || []).map(p => String(p).toLowerCase());
+        const targets = participants.length ? participants : (dmMembers(targetRoom) || []);
+        for (const p of targets) {
           io.to('user:' + p.toLowerCase()).emit('message', message);
           io.to('user:' + p.toLowerCase()).emit('chat-list-update', { roomName: targetRoom });
         }
