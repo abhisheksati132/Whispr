@@ -164,11 +164,9 @@ test('media 08: authenticated download with Bearer token returns 200 with media 
   assert.ok(res.data.length > 0);
 });
 
-test('media 09: authenticated download with query token parameter returns 200', async () => {
+test('media 09: download with query token parameter rejected with 401 (token in query string disallowed)', async () => {
   const res = await getMedia(`${pngPath}?token=${token}`, null);
-  assert.equal(res.status, 200);
-  assert.equal(res.headers['content-type'], 'image/png');
-  assert.ok(res.data.length > 0);
+  assert.equal(res.status, 401);
 });
 
 test('media 10: download nonexistent file returns 404', async () => {

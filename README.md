@@ -112,6 +112,22 @@ TURN_CREDENTIAL=mypassword
 ALLOWED_ORIGINS=https://yourdomain.com
 ```
 
+### 5. Lost Password / Replacing a Person
+
+Because Whispr strictly enforces a hard 2-account limit in the database, if a user loses access, forgets their password, or replaces a device:
+
+Run the administrative CLI tool on the server with environment variables configured:
+
+```bash
+node scripts/reset-password.js <username> <new-password>
+```
+
+This utility:
+1. Validates the username and verifies the new password is >= 8 characters.
+2. Hashes the new password with `bcrypt`.
+3. Updates the user in PostgreSQL/Supabase.
+4. Atomically revokes all active JWT sessions for that user across all devices, forcing a fresh login.
+
 ### 4. Deploying to Render
 
 A [`render.yaml`](./render.yaml) blueprint is provided.

@@ -199,3 +199,18 @@ test('auth 16: logout revokes session and subsequent requests return 401', async
   assert.equal(meRevoked.status, 401);
   assert.equal(meRevoked.body.error, 'Session revoked');
 });
+
+test('auth 17: resetUserPassword CLI utility updates password and revokes all active sessions', async () => {
+  const { resetUserPassword } = require('../scripts/reset-password');
+  const res = await resetUserPassword('bob', 'brandnewpassword123');
+  assert.equal(res.status, 'password_reset_and_sessions_revoked');
+
+  // Old password must fail
+  const oldLogin = await post(`${base}/login`, { username: 'bob', password: 'password456' });
+  assert.equal(oldLogin.status, 401);
+
+  // New password must succeed
+  const newLogin = await post(`${base}/login`, { username: 'bob', password: 'brandnewpassword123' });
+  assert.equal(newLogin.status, 200);
+  assert.ok(newLogin.body.token);
+});

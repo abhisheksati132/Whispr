@@ -79,8 +79,14 @@ app.use(helmet({
 }));
 
 app.use(cors({ origin: allowedOrigins, credentials: true }));
+
+// Sanitized access logger: query strings and Authorization headers are NEVER logged
+morgan.token('safe-url', (req) => {
+  return (req.originalUrl || req.url || '').split('?')[0];
+});
+
 if (process.env.NODE_ENV !== 'test') {
-  app.use(morgan('combined'));
+  app.use(morgan(':remote-addr - :remote-user [:date[clf]] ":method :safe-url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent"'));
 }
 
 // Global JSON body limit ~100kb

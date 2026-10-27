@@ -200,6 +200,41 @@ async function revokeSession(username, sid) {
   }
 }
 
+async function revokeAllUserSessions(username) {
+  const clean = String(username).toLowerCase().trim();
+  for (const key of sessionCache.keys()) {
+    if (key.startsWith(`${clean}|`)) {
+      sessionCache.delete(key);
+    }
+  }
+
+  if (isConfigured()) {
+    const { error } = await supabase.from('sessions').delete().eq('username', clean);
+    if (error) throw new Error('Database error revoking sessions');
+  } else {
+    for (const [sid, sess] of memSessions.entries()) {
+      if (sess.username === clean) {
+        memSessions.delete(sid);
+      }
+    }
+  }
+}
+
+async function updateUserPassword(username, passwordHash) {
+  const clean = String(username).toLowerCase().trim();
+  if (isConfigured()) {
+    const { error } = await supabase
+      .from('users')
+      .update({ password_hash: passwordHash })
+      .eq('username', clean);
+    if (error) throw new Error('Database error updating password');
+  } else {
+    const u = memUsers.get(clean);
+    if (!u) throw new Error('User not found');
+    u.passwordHash = passwordHash;
+  }
+}
+
 // ── Messages ──────────────────────────────────────────────────────────────────
 
 async function addMessage({ id, sender, type, body, mediaPath, durationMs, replyTo }) {
@@ -458,6 +493,8 @@ module.exports = {
   createSession,
   isSessionValid,
   revokeSession,
+  revokeAllUserSessions,
+  updateUserPassword,
   addMessage,
   getMessages,
   findMessage,

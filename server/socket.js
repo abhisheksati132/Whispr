@@ -86,7 +86,12 @@ function setupSocket(io) {
 
   io.on('connection', async (socket) => {
     const username = socket.data.authenticatedUser;
-    const partner = await db.getPartner(username);
+    let partner = await db.getPartner(username);
+
+    const resolvePartner = async () => {
+      if (!partner) partner = await db.getPartner(username);
+      return partner;
+    };
 
     // Track connections for multi-device presence
     if (!userConnections.has(username)) {
@@ -101,6 +106,7 @@ function setupSocket(io) {
     // If newly online, notify partner
     if (wasOffline && partner) {
       io.to('user:' + partner).emit('presence', { user: username, online: true });
+      io.to('user:' + partner).emit('partner-status', { partner: username, online: true, lastSeen: null });
     }
 
     // Send initial partner status and recent messages to connecting socket
@@ -153,16 +159,17 @@ function setupSocket(io) {
 
         // Relay to both users
         io.to('user:' + username).emit('message', message);
-        if (partner) {
-          io.to('user:' + partner).emit('message', message);
+        const targetPartner = await resolvePartner();
+        if (targetPartner) {
+          io.to('user:' + targetPartner).emit('message', message);
 
           // If partner is online, mark as delivered
-          if (isUserOnline(partner)) {
-            const deliveredAt = await db.markDelivered(partner);
+          if (isUserOnline(targetPartner)) {
+            const deliveredAt = await db.markDelivered(targetPartner);
             io.to('user:' + username).emit('receipt', { type: 'delivered', upTo: deliveredAt });
           } else if (pushModule && typeof pushModule.sendPushToUser === 'function') {
             const snippet = type === 'image' ? '[Photo]' : (type === 'voice' ? '[Voice note]' : body);
-            pushModule.sendPushToUser(partner, `${username}`, snippet).catch(() => {});
+            pushModule.sendPushToUser(targetPartner, `${username}`, snippet).catch(() => {});
           }
         }
 
@@ -182,8 +189,9 @@ function setupSocket(io) {
 
         const updated = await db.editMessage(id, username, cleanText);
         if (updated) {
+          const activePartner = await resolvePartner();
           io.to('user:' + username).emit('message-edited', updated);
-          if (partner) io.to('user:' + partner).emit('message-edited', updated);
+          if (activePartner) io.to('user:' + activePartner).emit('message-edited', updated);
         }
       } catch (err) {
         console.error('Socket edit-message error:', err);
@@ -196,9 +204,10 @@ function setupSocket(io) {
         if (!id) return;
         const deleted = await db.deleteMessage(id, username);
         if (deleted) {
+          const activePartner = await resolvePartner();
           const payload = { id, deletedAt: Date.now() };
           io.to('user:' + username).emit('message-deleted', payload);
-          if (partner) io.to('user:' + partner).emit('message-deleted', payload);
+          if (activePartner) io.to('user:' + activePartner).emit('message-deleted', payload);
         }
       } catch (err) {
         console.error('Socket delete-message error:', err);
@@ -222,10 +231,11 @@ function setupSocket(io) {
     });
 
     // ── Typing Indicator ──────────────────────────────────────────────────────
-    socket.on('typing', ({ isTyping } = {}) => {
+    socket.on('typing', async ({ isTyping } = {}) => {
       if (isRateLimited(username, 'typing', 15, 5000)) return;
-      if (partner) {
-        io.to('user:' + partner).emit('typing', { user: username, isTyping: Boolean(isTyping) });
+      const targetPartner = await resolvePartner();
+      if (targetPartner) {
+        io.to('user:' + targetPartner).emit('typing', { user: username, isTyping: Boolean(isTyping) });
       }
     });
 
@@ -235,7 +245,8 @@ function setupSocket(io) {
         if (isRateLimited(username, 'call', 5, 10000)) {
           return socket.emit('call-error', { message: 'Call rate limit exceeded. Please wait before retrying.' });
         }
-        if (!partner) {
+        const activePartner = await resolvePartner();
+        if (!activePartner) {
           return socket.emit('call-error', { message: 'No partner configured' });
         }
 
@@ -243,7 +254,7 @@ function setupSocket(io) {
           return socket.emit('call-busy', { message: 'Line is busy' });
         }
 
-        if (!isUserOnline(partner)) {
+        if (!isUserOnline(activePartner)) {
           // Log missed call in message stream
           const missedMsg = await db.addMessage({
             sender: username,
@@ -252,7 +263,7 @@ function setupSocket(io) {
           });
           io.to('user:' + username).emit('message', missedMsg);
           if (pushModule && typeof pushModule.sendPushToUser === 'function') {
-            pushModule.sendPushToUser(partner, `Missed call from ${username}`, '[MISSED CALL]').catch(() => {});
+            pushModule.sendPushToUser(activePartner, `Missed call from ${username}`, '[MISSED CALL]').catch(() => {});
           }
           return socket.emit('call-unavailable', { message: 'Partner is offline' });
         }
@@ -267,19 +278,19 @@ function setupSocket(io) {
               body: '[MISSED CALL]'
             });
             io.to('user:' + username).emit('message', missedMsg);
-            io.to('user:' + partner).emit('message', missedMsg);
+            io.to('user:' + activePartner).emit('message', missedMsg);
           }
         }, RING_TIMEOUT_MS);
 
         currentCall = {
           caller: username,
-          callee: partner,
+          callee: activePartner,
           type: type || 'voice',
           timer,
           active: false
         };
 
-        io.to('user:' + partner).emit('call-offer', {
+        io.to('user:' + activePartner).emit('call-offer', {
           caller: username,
           type: currentCall.type,
           sdp
@@ -315,8 +326,8 @@ function setupSocket(io) {
       }
     });
 
-    // ── Disconnect ────────────────────────────────────────────────────────────
-    socket.on('disconnect', () => {
+    // ── Disconnect ────────────────────────────────────────────────────
+    socket.on('disconnect', async () => {
       const uConns = userConnections.get(username);
       if (uConns) {
         uConns.delete(socket.id);
@@ -330,8 +341,9 @@ function setupSocket(io) {
             clearCurrentCall(io, 'Partner disconnected');
           }
 
-          if (partner) {
-            io.to('user:' + partner).emit('presence', {
+          const activePartner = await resolvePartner();
+          if (activePartner) {
+            io.to('user:' + activePartner).emit('presence', {
               user: username,
               online: false,
               lastSeen: now

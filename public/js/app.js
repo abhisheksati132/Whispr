@@ -65,12 +65,23 @@ async function checkExistingAuth() {
       hideAuthOverlay();
       initAppSession();
     } else {
+      clearAllCachesAndState();
       localStorage.removeItem('whispr_jwt_token');
       authToken = null;
       showAuthOverlay();
     }
   } catch {
     showAuthOverlay();
+  }
+}
+
+export function clearAllCachesAndState() {
+  cleanupAllMediaUrls();
+  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_CACHES' });
+  }
+  if ('caches' in window) {
+    caches.keys().then((keys) => keys.forEach((k) => caches.delete(k)));
   }
 }
 
@@ -164,6 +175,7 @@ function initAppSession() {
   if (!socket) return;
 
   webrtc = new WebRTCManager(socket);
+  window.__webrtc = webrtc;
 
   socket.on('partner-status', ({ partner, online, lastSeen }) => {
     currentPartner = partner;
@@ -171,6 +183,9 @@ function initAppSession() {
   });
 
   socket.on('presence', ({ user, online, lastSeen }) => {
+    if (!currentPartner && user && user !== currentUser) {
+      currentPartner = user;
+    }
     if (user === currentPartner) {
       updateStatusBar({ partnerName: user, isOnline: online, lastSeen });
     }
@@ -194,8 +209,19 @@ function initAppSession() {
   });
 
   socket.on('message-edited', (msg) => {
-    const textEl = document.querySelector(`#msg-${msg.id} .msg-text-own, #msg-${msg.id} .msg-text-partner`);
-    if (textEl) textEl.textContent = msg.body;
+    const lineEl = document.getElementById(`msg-${msg.id}`);
+    if (lineEl) {
+      const textEl = lineEl.querySelector('.msg-text-own, .msg-text-partner');
+      if (textEl) textEl.textContent = msg.body;
+
+      if (!lineEl.querySelector('.msg-meta-edited')) {
+        const editedSpan = document.createElement('span');
+        editedSpan.className = 'msg-meta-edited';
+        editedSpan.textContent = '(edited)';
+        const row = lineEl.querySelector('.msg-content-row') || lineEl;
+        row.appendChild(editedSpan);
+      }
+    }
   });
 
   socket.on('message-deleted', ({ id }) => {
@@ -384,5 +410,8 @@ if (els.btnStartCall) {
 // ── Setup UI Controls & Start ─────────────────────────────────────────────────
 setupScanlinesToggle();
 setupLightbox();
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
 window.addEventListener('beforeunload', cleanupAllMediaUrls);
 checkExistingAuth();
