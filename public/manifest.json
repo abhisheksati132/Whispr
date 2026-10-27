@@ -1,32 +1,14 @@
 {
-  "id": "https://chat-jh59.onrender.com/",
-  "name": "Whispr",
-  "short_name": "Whispr",
-  "description": "Simple, fast, private messaging in black and white.",
+  "name": "WHISPR // TERMINAL",
+  "short_name": "WHISPR",
+  "description": "Private terminal HUD chat for two people.",
   "lang": "en",
-  "dir": "ltr",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "display_override": [
-    "tabbed",
-    "window-controls-overlay",
-    "standalone",
-    "minimal-ui"
-  ],
-  "tab_strip": {
-    "home_tab": "auto",
-    "new_tab_button": {
-      "url": "/"
-    }
-  },
-  "background_color": "#FAF9F5",
-  "theme_color": "#FAF9F5",
+  "background_color": "#0B0A08",
+  "theme_color": "#0B0A08",
   "orientation": "portrait-primary",
-  "categories": [
-    "social",
-    "communication"
-  ],
   "icons": [
     {
       "src": "/icon-192.png",
@@ -39,102 +21,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "/screenshot-mobile.png",
-      "sizes": "540x960",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Whispr Mobile View"
-    },
-    {
-      "src": "/screenshot-desktop.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "Whispr Desktop View"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Open Whispr",
-      "short_name": "Whispr",
-      "description": "Jump straight into your chat room",
-      "url": "/",
-      "icons": [
-        {
-          "src": "/icon-192.png",
-          "sizes": "192x192"
-        }
-      ]
-    }
-  ],
-  "share_target": {
-    "action": "/",
-    "method": "GET",
-    "enctype": "application/x-www-form-urlencoded",
-    "params": {
-      "title": "title",
-      "text": "text",
-      "url": "url"
-    }
-  },
-  "file_handlers": [
-    {
-      "action": "/",
-      "accept": {
-        "image/*": [
-          ".jpg",
-          ".jpeg",
-          ".png",
-          ".webp",
-          ".gif"
-        ]
-      }
-    }
-  ],
-  "launch_handler": {
-    "client_mode": "auto"
-  },
-  "protocol_handlers": [
-    {
-      "protocol": "web+chat",
-      "url": "/?url=%s"
-    }
-  ],
-  "prefer_related_applications": false,
-  "related_applications": [
-    {
-      "platform": "play",
-      "id": "com.chatjh59.app",
-      "url": "https://play.google.com/store/apps/details?id=com.chatjh59.app"
-    }
-  ],
-  "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
-  "edge_side_panel": {
-    "preferred_width": 400
-  },
-  "note_taking": {
-    "new_note_url": "/"
-  },
-  "scope_extensions": [
-    {
-      "type": "origin",
-      "origin": "https://auth.chat-jh59.onrender.com"
-    },
-    {
-      "type": "origin",
-      "origin": "https://m.chat-jh59.onrender.com"
-    },
-    {
-      "type": "origin",
-      "origin": "https://api.chat-jh59.onrender.com"
-    },
-    {
-      "type": "origin",
-      "origin": "https://chat-jh59.onrender.com"
     }
   ]
 }
