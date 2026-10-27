@@ -157,3 +157,43 @@ export class VoiceRecorder {
     this.audioChunks = [];
   }
 }
+
+// ── Authenticated Media Fetch & Object URL Lifecycle Management ────────────────
+const mediaBlobCache = new Map(); // mediaPath -> objectUrl
+
+export async function loadAuthenticatedMedia(mediaPath, authToken) {
+  if (!mediaPath) return '';
+  if (mediaBlobCache.has(mediaPath)) {
+    return mediaBlobCache.get(mediaPath);
+  }
+
+  const res = await fetch(mediaPath, {
+    headers: authToken ? { Authorization: `Bearer ${authToken}` } : {}
+  });
+
+  if (!res.ok) {
+    throw new Error(`Media fetch failed with HTTP ${res.status}`);
+  }
+
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  mediaBlobCache.set(mediaPath, objectUrl);
+  return objectUrl;
+}
+
+export function revokeMediaUrl(mediaPath) {
+  if (mediaBlobCache.has(mediaPath)) {
+    const url = mediaBlobCache.get(mediaPath);
+    URL.revokeObjectURL(url);
+    mediaBlobCache.delete(mediaPath);
+  }
+}
+
+export function cleanupAllMediaUrls() {
+  mediaBlobCache.forEach((url) => {
+    try {
+      URL.revokeObjectURL(url);
+    } catch { /* ignore */ }
+  });
+  mediaBlobCache.clear();
+}

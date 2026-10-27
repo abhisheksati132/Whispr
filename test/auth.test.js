@@ -1,5 +1,5 @@
 'use strict';
-const test = require('node:test');
+const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('node:http');
 const express = require('express');
@@ -74,88 +74,128 @@ function get(url, token) {
   });
 }
 
-test('auth suite: 2-user limit, password validation, login, session revocation', async () => {
+let server;
+let base;
+let aliceToken;
+let _bobToken;
+
+before(async () => {
   db.resetForTests();
   const app = createTestServer();
-  const server = http.createServer(app);
+  server = http.createServer(app);
   await new Promise(r => server.listen(0, '127.0.0.1', r));
-  const base = `http://127.0.0.1:${server.address().port}/api/auth`;
+  base = `http://127.0.0.1:${server.address().port}/api/auth`;
+});
 
-  try {
-    // 1. Initial status: registration open
-    const st1 = await get(`${base}/status`);
-    assert.equal(st1.status, 200);
-    assert.equal(st1.body.registrationOpen, true);
-
-    // 2. Validation: password < 8 chars rejected
-    const badPass = await post(`${base}/register`, { username: 'alice', password: '123' });
-    assert.equal(badPass.status, 400);
-
-    // 3. Validation: invalid username rejected
-    const badUser = await post(`${base}/register`, { username: 'al.ice!', password: 'password123' });
-    assert.equal(badUser.status, 400);
-
-    // 4. Register User 1: alice
-    const reg1 = await post(`${base}/register`, { username: 'alice', password: 'password123' });
-    assert.equal(reg1.status, 201);
-    assert.equal(reg1.body.username, 'alice');
-    assert.ok(reg1.body.token);
-
-    // 5. Register duplicate username rejected with 409
-    const dup = await post(`${base}/register`, { username: 'alice', password: 'password456' });
-    assert.equal(dup.status, 409);
-
-    // 6. Register User 2: bob
-    const reg2 = await post(`${base}/register`, { username: 'bob', password: 'password456' });
-    assert.equal(reg2.status, 201);
-    assert.equal(reg2.body.username, 'bob');
-    assert.ok(reg2.body.token);
-
-    // 7. Status now indicates registration is closed
-    const st2 = await get(`${base}/status`);
-    assert.equal(st2.status, 200);
-    assert.equal(st2.body.registrationOpen, false);
-
-    // 8. Register User 3: rejected with 403 "link closed"
-    const reg3 = await post(`${base}/register`, { username: 'charlie', password: 'password789' });
-    assert.equal(reg3.status, 403);
-    assert.equal(reg3.body.error, 'link closed');
-
-    // 9. Concurrent third attempts all rejected with 403
-    const concurrent = await Promise.all([
-      post(`${base}/register`, { username: 'dave', password: 'password789' }),
-      post(`${base}/register`, { username: 'eve', password: 'password789' })
-    ]);
-    assert.equal(concurrent[0].status, 403);
-    assert.equal(concurrent[1].status, 403);
-
-    // 10. Login with valid credentials
-    const loginOk = await post(`${base}/login`, { username: 'alice', password: 'password123' });
-    assert.equal(loginOk.status, 200);
-    assert.ok(loginOk.body.token);
-
-    // 11. Login with invalid password
-    const loginBad = await post(`${base}/login`, { username: 'alice', password: 'wrongpassword' });
-    assert.equal(loginBad.status, 401);
-
-    // 12. Login with nonexistent user
-    const loginNone = await post(`${base}/login`, { username: 'nobody', password: 'password123' });
-    assert.equal(loginNone.status, 401);
-
-    // 13. Profile /me returns user and partner
-    const meAlice = await get(`${base}/me`, reg1.body.token);
-    assert.equal(meAlice.status, 200);
-    assert.equal(meAlice.body.username, 'alice');
-    assert.equal(meAlice.body.partner, 'bob');
-
-    // 14. Session revocation on logout
-    const logout = await post(`${base}/logout`, {}, reg1.body.token);
-    assert.equal(logout.status, 200);
-
-    // Subsequent request with revoked token fails with 401
-    const meRevoked = await get(`${base}/me`, reg1.body.token);
-    assert.equal(meRevoked.status, 401);
-  } finally {
-    await new Promise((resolve, reject) => server.close(err => (err ? reject(err) : resolve())));
+after(async () => {
+  if (server) {
+    await new Promise(r => server.close(r));
   }
+});
+
+test('auth 01: registration is initially open', async () => {
+  const st = await get(`${base}/status`);
+  assert.equal(st.status, 200);
+  assert.equal(st.body.registrationOpen, true);
+});
+
+test('auth 02: password shorter than 8 chars is rejected with 400', async () => {
+  const res = await post(`${base}/register`, { username: 'alice', password: '123' });
+  assert.equal(res.status, 400);
+  assert.ok(res.body.error.includes('8 characters'));
+});
+
+test('auth 03: invalid username format is rejected with 400', async () => {
+  const res = await post(`${base}/register`, { username: 'al.ice!', password: 'password123' });
+  assert.equal(res.status, 400);
+  assert.ok(res.body.error.includes('Username must be'));
+});
+
+test('auth 04: missing credentials return 400', async () => {
+  const res = await post(`${base}/register`, {});
+  assert.equal(res.status, 400);
+});
+
+test('auth 05: first user (alice) registers successfully', async () => {
+  const res = await post(`${base}/register`, { username: 'alice', password: 'password123' });
+  assert.equal(res.status, 201);
+  assert.equal(res.body.username, 'alice');
+  assert.ok(res.body.token);
+  aliceToken = res.body.token;
+});
+
+test('auth 06: duplicate username registration is rejected with 409', async () => {
+  const res = await post(`${base}/register`, { username: 'alice', password: 'password999' });
+  assert.equal(res.status, 409);
+  assert.ok(res.body.error.includes('taken'));
+});
+
+test('auth 07: second user (bob) registers successfully', async () => {
+  const res = await post(`${base}/register`, { username: 'bob', password: 'password456' });
+  assert.equal(res.status, 201);
+  assert.equal(res.body.username, 'bob');
+  assert.ok(res.body.token);
+  _bobToken = res.body.token;
+});
+
+test('auth 08: registration status reports closed after 2 users', async () => {
+  const st = await get(`${base}/status`);
+  assert.equal(st.status, 200);
+  assert.equal(st.body.registrationOpen, false);
+});
+
+test('auth 09: 3rd user registration is rejected with 403 link closed', async () => {
+  const res = await post(`${base}/register`, { username: 'charlie', password: 'password789' });
+  assert.equal(res.status, 403);
+  assert.equal(res.body.error, 'link closed');
+});
+
+test('auth 10: concurrent registration attempts after limit return 403', async () => {
+  const results = await Promise.all([
+    post(`${base}/register`, { username: 'dave', password: 'password789' }),
+    post(`${base}/register`, { username: 'eve', password: 'password789' })
+  ]);
+  assert.equal(results[0].status, 403);
+  assert.equal(results[1].status, 403);
+});
+
+test('auth 11: login with valid credentials succeeds and returns JWT', async () => {
+  const res = await post(`${base}/login`, { username: 'alice', password: 'password123' });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.username, 'alice');
+  assert.ok(res.body.token);
+});
+
+test('auth 12: login with wrong password returns 401', async () => {
+  const res = await post(`${base}/login`, { username: 'alice', password: 'wrongpassword' });
+  assert.equal(res.status, 401);
+  assert.ok(res.body.error.includes('Invalid'));
+});
+
+test('auth 13: login with nonexistent user returns 401', async () => {
+  const res = await post(`${base}/login`, { username: 'nobody', password: 'password123' });
+  assert.equal(res.status, 401);
+  assert.ok(res.body.error.includes('Invalid'));
+});
+
+test('auth 14: /me endpoint returns user and assigned partner', async () => {
+  const res = await get(`${base}/me`, aliceToken);
+  assert.equal(res.status, 200);
+  assert.equal(res.body.username, 'alice');
+  assert.equal(res.body.partner, 'bob');
+});
+
+test('auth 15: /me without auth token returns 401', async () => {
+  const res = await get(`${base}/me`);
+  assert.equal(res.status, 401);
+});
+
+test('auth 16: logout revokes session and subsequent requests return 401', async () => {
+  const logoutRes = await post(`${base}/logout`, {}, aliceToken);
+  assert.equal(logoutRes.status, 200);
+  assert.equal(logoutRes.body.status, 'ok');
+
+  const meRevoked = await get(`${base}/me`, aliceToken);
+  assert.equal(meRevoked.status, 401);
+  assert.equal(meRevoked.body.error, 'Session revoked');
 });

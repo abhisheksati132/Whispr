@@ -13,8 +13,20 @@ try {
 const userConnections = new Map();
 // Map<username, timestamp>
 const lastSeenMap = new Map();
-// Rate limit per user: Map<username, { count: number, resetAt: number }>
-const rateLimits = new Map();
+// Per-user rate limiting by action: Map<`${username}:${action}`, { count: number, resetAt: number }>
+const actionRateLimits = new Map();
+
+function isRateLimited(username, action, maxAllowed, windowMs) {
+  const key = `${username}:${action}`;
+  const now = Date.now();
+  const rl = actionRateLimits.get(key);
+  if (!rl || now > rl.resetAt) {
+    actionRateLimits.set(key, { count: 1, resetAt: now + windowMs });
+    return false;
+  }
+  rl.count++;
+  return rl.count > maxAllowed;
+}
 
 // Active call state
 let currentCall = null; // { caller, callee, type, timer, active: boolean }
@@ -111,17 +123,10 @@ function setupSocket(io) {
     // ── Message Handler ───────────────────────────────────────────────────────
     socket.on('message', async (payload, ack) => {
       try {
-        // Rate limiting: max 60 messages per 5 seconds
-        const now = Date.now();
-        const rl = rateLimits.get(username);
-        if (!rl || now > rl.resetAt) {
-          rateLimits.set(username, { count: 1, resetAt: now + 5000 });
-        } else {
-          rl.count++;
-          if (rl.count > 60) {
-            socket.emit('error-notice', { error: 'Rate limit exceeded. Please wait a moment.' });
-            return;
-          }
+        // Per-user rate limiting: max 30 messages per 5 seconds
+        if (isRateLimited(username, 'message', 30, 5000)) {
+          socket.emit('error-notice', { error: 'Rate limit exceeded. Please wait a moment.' });
+          return;
         }
 
         const type = payload?.type || 'text';
@@ -218,6 +223,7 @@ function setupSocket(io) {
 
     // ── Typing Indicator ──────────────────────────────────────────────────────
     socket.on('typing', ({ isTyping } = {}) => {
+      if (isRateLimited(username, 'typing', 15, 5000)) return;
       if (partner) {
         io.to('user:' + partner).emit('typing', { user: username, isTyping: Boolean(isTyping) });
       }
@@ -226,6 +232,9 @@ function setupSocket(io) {
     // ── 1:1 WebRTC Call Signaling ─────────────────────────────────────────────
     socket.on('call-offer', async ({ type, sdp } = {}) => {
       try {
+        if (isRateLimited(username, 'call', 5, 10000)) {
+          return socket.emit('call-error', { message: 'Call rate limit exceeded. Please wait before retrying.' });
+        }
         if (!partner) {
           return socket.emit('call-error', { message: 'No partner configured' });
         }
@@ -337,7 +346,7 @@ function setupSocket(io) {
 function resetSocketStateForTests() {
   userConnections.clear();
   lastSeenMap.clear();
-  rateLimits.clear();
+  actionRateLimits.clear();
   if (currentCall?.timer) clearTimeout(currentCall.timer);
   currentCall = null;
 }

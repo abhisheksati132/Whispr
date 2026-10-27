@@ -7,9 +7,10 @@ import {
   updateReceipts,
   setupScanlinesToggle,
   setupLightbox,
-  openLightbox
+  openLightbox,
+  setAuthToken
 } from './terminal-ui.js';
-import { compressImage, uploadMedia, VoiceRecorder } from './media.js';
+import { compressImage, uploadMedia, VoiceRecorder, cleanupAllMediaUrls } from './media.js';
 import { createSocketConnection, registerPushNotifications } from './socket.js';
 import { WebRTCManager } from './webrtc.js';
 
@@ -147,6 +148,8 @@ if (els.authForm) {
 
 // ── App Session Initialization ────────────────────────────────────────────────
 function initAppSession() {
+  setAuthToken(authToken);
+
   updateStatusBar({
     state: 'CONNECTING',
     partnerName: currentPartner,
@@ -381,4 +384,5 @@ if (els.btnStartCall) {
 // ── Setup UI Controls & Start ─────────────────────────────────────────────────
 setupScanlinesToggle();
 setupLightbox();
+window.addEventListener('beforeunload', cleanupAllMediaUrls);
 checkExistingAuth();

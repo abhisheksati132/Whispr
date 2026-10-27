@@ -228,6 +228,37 @@ body.scanlines::before {
   user-select: none;
 }
 
+.msg-actions {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.msg-action-btn {
+  background: transparent;
+  border: none;
+  color: var(--dim);
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.msg-action-btn:hover,
+.msg-action-btn:focus-visible {
+  color: var(--accent);
+}
+
+.msg-action-del:hover,
+.msg-action-del:focus-visible {
+  color: var(--danger);
+}
+
+.hidden-input {
+  display: none !important;
+}
+
 /* Media in Log */
 .photo-frame {
   margin: 6px 0;

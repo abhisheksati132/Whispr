@@ -33,63 +33,84 @@ Minimal, private, high-contrast terminal chat designed for **exactly two people*
 
 ## Setup & Deployment
 
-### 1. Database Setup (Supabase)
+### 1. Database & Storage Setup (Fresh Supabase Project)
 
-1. Create a Supabase project at [supabase.com](https://supabase.com).
-2. Go to the **SQL Editor** in the Supabase Dashboard.
-3. Paste and run the contents of [`supabase_schema.sql`](./supabase_schema.sql).
-4. Create a private bucket named `whispr-media` in **Storage**.
+1. **Create Project:** Create a fresh project at [supabase.com](https://supabase.com).
+2. **Run Schema:**
+   - Go to **SQL Editor** in the Supabase Dashboard.
+   - Click **New Query**, copy the entire contents of [`supabase_schema.sql`](./supabase_schema.sql), paste into the editor, and click **Run**.
+   - This creates `users` (with atomic `enforce_two_users_limit` trigger and `pg_advisory_xact_lock`), `sessions`, `messages`, and `push_subscriptions`, enables Row Level Security (RLS) on all tables, and revokes anon access.
+3. **Create Private Storage Bucket:**
+   - In the Supabase Dashboard, click **Storage** in the sidebar.
+   - Click **New Bucket**.
+   - Set **Bucket Name** to exactly `whispr-media`.
+   - **Crucial:** Leave **Public bucket** toggled **OFF** (Private).
+   - Click **Save bucket**.
+4. **Copy API Keys:**
+   - Go to **Project Settings > API**.
+   - Copy the **Project URL** (use as `SUPABASE_URL`).
+   - Copy the **service_role secret key** (use as `SUPABASE_SERVICE_ROLE_KEY`). *Never expose the service role key to the client.*
 
-### 2. Environment Variables
+### 2. Generate Web Push VAPID Keys
 
-Copy `.env.example` to `.env`:
+Whispr uses standard Web Push for notifications when the app is in the background or offline:
 
-```bash
-PORT=3000
-NODE_ENV=production
-JWT_SECRET=generate_at_least_32_characters_random_string
-
-SUPABASE_URL=https://your-project-ref.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-
-VAPID_PUBLIC_KEY=your-vapid-public-key
-VAPID_PRIVATE_KEY=your-vapid-private-key
-VAPID_SUBJECT=https://your-domain.com
-
-TURN_URL=turn:turn.your-domain.com:3478
-TURN_USERNAME=your-turn-username
-TURN_CREDENTIAL=your-turn-password
-
-ALLOWED_ORIGINS=https://your-domain.com
-```
-
-To generate VAPID keys:
 ```bash
 npx web-push generate-vapid-keys
 ```
 
-### 3. Setting Up TURN for WebRTC
+This will output:
+- **Public Key:** Set as `VAPID_PUBLIC_KEY`.
+- **Private Key:** Set as `VAPID_PRIVATE_KEY`.
+- **Subject:** Set as `VAPID_SUBJECT` (must be a valid URL or mailto, e.g. `https://yourdomain.com` or `mailto:admin@yourdomain.com`).
 
-WebRTC direct P2P connections frequently fail across mobile cellular networks (4G/5G) and symmetric NATs. A TURN relay server is required for reliable voice and video calls.
+### 3. WebRTC TURN Server Configuration
 
-#### Option A: Self-hosted coturn
-1. On an Ubuntu/Debian VPS:
-   ```bash
-   sudo apt-get update && sudo apt-get install -y coturn
-   ```
-2. Configure `/etc/turnserver.conf`:
-   ```conf
-   listening-port=3478
-   fingerprint
-   lt-cred-mech
-   use-auth-secret
-   static-auth-secret=your_strong_secret
-   realm=turn.your-domain.com
-   ```
-3. Start coturn: `sudo systemctl restart coturn`.
+Direct peer-to-peer WebRTC connections often fail across mobile carriers (4G/5G/LTE), corporate firewalls, and symmetric NATs. A TURN server relays audio/video streams when P2P is blocked:
 
-#### Option B: Hosted TURN Service
-Use a managed provider such as [Metered.ca](https://www.metered.ca/tools/openrelay/), Twilio Network Traversal, or Xirsys, and supply the resulting credentials to `TURN_URL`, `TURN_USERNAME`, and `TURN_CREDENTIAL`.
+Set the following environment variables:
+- `TURN_URL`: e.g. `turn:turn.yourdomain.com:3478` (or `turns:turn.yourdomain.com:5349`)
+- `TURN_USERNAME`: username for the TURN credential mechanism
+- `TURN_CREDENTIAL`: password or auth token for the TURN server
+
+#### TURN Server Options:
+- **Option A (Free Managed):** Sign up for [Metered OpenRelay](https://www.metered.ca/tools/openrelay/) or [Twilio Network Traversal](https://www.twilio.com/docs/stun-turn).
+- **Option B (Self-Hosted coturn on Linux VPS):**
+  ```bash
+  sudo apt-get update && sudo apt-get install -y coturn
+  ```
+  In `/etc/turnserver.conf`:
+  ```conf
+  listening-port=3478
+  fingerprint
+  lt-cred-mech
+  user=myuser:mypassword
+  realm=turn.yourdomain.com
+  ```
+  Start service: `sudo systemctl restart coturn`.
+
+### 4. Environment Variables Summary
+
+Create a `.env` file from `.env.example`:
+
+```bash
+PORT=3000
+NODE_ENV=production
+JWT_SECRET=generate_a_random_32_character_string_here
+
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+VAPID_PUBLIC_KEY=your-generated-vapid-public-key
+VAPID_PRIVATE_KEY=your-generated-vapid-private-key
+VAPID_SUBJECT=https://yourdomain.com
+
+TURN_URL=turn:turn.yourdomain.com:3478
+TURN_USERNAME=myuser
+TURN_CREDENTIAL=mypassword
+
+ALLOWED_ORIGINS=https://yourdomain.com
+```
 
 ### 4. Deploying to Render
 

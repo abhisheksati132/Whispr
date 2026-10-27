@@ -1,5 +1,5 @@
 'use strict';
-const test = require('node:test');
+const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('node:http');
 const { Server } = require('socket.io');
@@ -10,18 +10,18 @@ const { JWT_SECRET } = require('../config');
 const db = require('../server/db');
 const { setupSocket, resetSocketStateForTests } = require('../server/socket');
 
-function setupTestEnvironment() {
-  db.resetForTests();
-  resetSocketStateForTests();
+let server;
+let io;
+let port;
+let aliceToken;
+let bobToken;
+let revokedToken;
+let clientAlice1;
+let clientAlice2;
+let clientBob;
+let lastMessageId;
 
-  const server = http.createServer();
-  const io = new Server(server, { cors: { origin: '*' } });
-  setupSocket(io);
-
-  return { server, io };
-}
-
-function connectClient(port, token) {
+function connectClient(token) {
   return Client(`http://127.0.0.1:${port}`, {
     auth: { token },
     transports: ['websocket'],
@@ -30,138 +30,201 @@ function connectClient(port, token) {
   });
 }
 
-test('socket chat suite: auth, messaging, receipts, edit/delete ownership, multi-device presence', async () => {
-  const { server, io } = setupTestEnvironment();
-  await new Promise(r => server.listen(0, '127.0.0.1', r));
-  const port = server.address().port;
+before(async () => {
+  db.resetForTests();
+  resetSocketStateForTests();
 
-  // Create users alice & bob
+  server = http.createServer();
+  io = new Server(server, { cors: { origin: '*' } });
+  setupSocket(io);
+
+  await new Promise(r => server.listen(0, '127.0.0.1', r));
+  port = server.address().port;
+
   const passHash = await bcrypt.hash('password123', 10);
   await db.createUser({ username: 'alice', passwordHash: passHash });
   await db.createUser({ username: 'bob', passwordHash: passHash });
 
   const aliceSession = await db.createSession('alice');
   const bobSession = await db.createSession('bob');
+  const tempSession = await db.createSession('alice');
 
-  const aliceToken = jwt.sign({ username: 'alice', sid: aliceSession.id }, JWT_SECRET);
-  const bobToken = jwt.sign({ username: 'bob', sid: bobSession.id }, JWT_SECRET);
+  aliceToken = jwt.sign({ username: 'alice', sid: aliceSession.id }, JWT_SECRET);
+  bobToken = jwt.sign({ username: 'bob', sid: bobSession.id }, JWT_SECRET);
+  revokedToken = jwt.sign({ username: 'alice', sid: tempSession.id }, JWT_SECRET);
 
-  let clientAlice1, clientAlice2, clientBob;
+  // Revoke temp session immediately
+  await db.revokeSession('alice', tempSession.id);
+});
 
-  try {
-    // 1. Connection without token rejected
-    const badClient = connectClient(port, null);
-    const connErr = await new Promise(resolve => badClient.on('connect_error', resolve));
-    assert.ok(connErr.message.includes('Authentication required'));
-    badClient.disconnect();
+after(async () => {
+  if (clientAlice1?.connected) clientAlice1.disconnect();
+  if (clientAlice2?.connected) clientAlice2.disconnect();
+  if (clientBob?.connected) clientBob.disconnect();
+  if (io) io.close();
+  if (server) await new Promise(r => server.close(r));
+});
 
-    // 2. Third user rejected
-    const fakeToken = jwt.sign({ username: 'charlie', sid: 'fake-sid' }, JWT_SECRET);
-    const charlieClient = connectClient(port, fakeToken);
-    const charlieErr = await new Promise(resolve => charlieClient.on('connect_error', resolve));
-    assert.ok(charlieErr.message.includes('User not found'));
-    charlieClient.disconnect();
+test('chat 01: connection without auth token is rejected', async () => {
+  const client = connectClient(null);
+  const err = await new Promise(resolve => client.on('connect_error', resolve));
+  assert.ok(err.message.includes('Authentication required'));
+  client.disconnect();
+});
 
-    // 3. Connect Bob first
-    clientBob = connectClient(port, bobToken);
-    await new Promise(resolve => clientBob.on('connect', resolve));
+test('chat 02: connection with unknown user is rejected', async () => {
+  const fakeToken = jwt.sign({ username: 'charlie', sid: 'fake-sid' }, JWT_SECRET);
+  const client = connectClient(fakeToken);
+  const err = await new Promise(resolve => client.on('connect_error', resolve));
+  assert.ok(err.message.includes('User not found'));
+  client.disconnect();
+});
 
-    // Listen for Alice's presence on Bob's socket
-    const aliceOnlinePromise = new Promise(resolve => {
-      clientBob.on('presence', p => {
-        if (p.user === 'alice' && p.online) resolve(p);
-      });
-    });
+test('chat 03: revoked session cannot connect to socket', async () => {
+  const client = connectClient(revokedToken);
+  const err = await new Promise(resolve => client.on('connect_error', resolve));
+  assert.ok(err.message.includes('Session revoked'));
+  client.disconnect();
+});
 
-    // 4. Connect Alice (tab 1)
-    clientAlice1 = connectClient(port, aliceToken);
-    await new Promise(resolve => clientAlice1.on('connect', resolve));
+test('chat 04: connecting user receives partner-status event', async () => {
+  clientBob = connectClient(bobToken);
+  const statusPromise = new Promise(resolve => clientBob.on('partner-status', resolve));
+  await new Promise(resolve => clientBob.on('connect', resolve));
+  const status = await statusPromise;
+  assert.equal(status.partner, 'alice');
+  assert.equal(status.online, false);
+});
 
-    const onlineEvt = await aliceOnlinePromise;
-    assert.equal(onlineEvt.user, 'alice');
-    assert.equal(onlineEvt.online, true);
-
-    // 5. Connect Alice (tab 2) - multi-device
-    clientAlice2 = connectClient(port, aliceToken);
-    await new Promise(resolve => clientAlice2.on('connect', resolve));
-
-    // 6. Send message from Alice
-    const bobMsgPromise = new Promise(resolve => clientBob.on('message', resolve));
-    const aliceReceiptPromise = new Promise(resolve => clientAlice1.on('receipt', resolve));
-
-    clientAlice1.emit('message', { type: 'text', body: 'Hello Bob from Terminal' });
-
-    const bobReceived = await bobMsgPromise;
-    assert.equal(bobReceived.sender, 'alice');
-    assert.equal(bobReceived.body, 'Hello Bob from Terminal');
-
-    // Bob is online, so auto-delivery receipt was generated
-    const receipt = await aliceReceiptPromise;
-    assert.equal(receipt.type, 'delivered');
-
-    // 7. Bob sends read receipt
-    const readReceiptPromise = new Promise(resolve => clientAlice1.on('receipt', resolve));
-    clientBob.emit('receipt', { type: 'read' });
-    const readReceipt = await readReceiptPromise;
-    assert.equal(readReceipt.type, 'read');
-
-    // 8. Edit own message (Alice edits her message)
-    const aliceEditPromise = new Promise(resolve => clientBob.on('message-edited', resolve));
-    clientAlice1.emit('edit-message', { id: bobReceived.id, text: 'Hello Bob (edited)' });
-    const edited = await aliceEditPromise;
-    assert.equal(edited.id, bobReceived.id);
-    assert.equal(edited.body, 'Hello Bob (edited)');
-
-    // 9. Unauthorized edit (Bob tries to edit Alice's message)
-    clientBob.emit('edit-message', { id: bobReceived.id, text: 'Hacked by Bob' });
-    await new Promise(r => setTimeout(r, 100)); // give time for potential erroneous emit
-    const msgCheck = await db.findMessage(bobReceived.id);
-    assert.equal(msgCheck.body, 'Hello Bob (edited)');
-
-    // 10. Unauthorized delete (Bob tries to delete Alice's message)
-    clientBob.emit('delete-message', { id: bobReceived.id });
-    await new Promise(r => setTimeout(r, 100));
-    const msgCheck2 = await db.findMessage(bobReceived.id);
-    assert.equal(msgCheck2.deletedAt, null);
-
-    // 11. Authorized delete (Alice deletes her own message)
-    const bobDeletePromise = new Promise(resolve => clientBob.on('message-deleted', resolve));
-    clientAlice1.emit('delete-message', { id: bobReceived.id });
-    const deleted = await bobDeletePromise;
-    assert.equal(deleted.id, bobReceived.id);
-
-    // 12. Typing indicator
-    const typingPromise = new Promise(resolve => clientBob.on('typing', resolve));
-    clientAlice1.emit('typing', { isTyping: true });
-    const typing = await typingPromise;
-    assert.equal(typing.user, 'alice');
-    assert.equal(typing.isTyping, true);
-
-    // 13. Multi-device presence test: Disconnect Alice tab 1 -> Alice still online
-    let aliceOfflineFired = false;
+test('chat 05: connecting user notifies partner of online presence', async () => {
+  const presencePromise = new Promise(resolve => {
     clientBob.on('presence', p => {
-      if (p.user === 'alice' && !p.online) aliceOfflineFired = true;
+      if (p.user === 'alice' && p.online) resolve(p);
     });
-    clientAlice1.disconnect();
-    await new Promise(r => setTimeout(r, 150));
-    assert.equal(aliceOfflineFired, false, 'Alice should remain online while tab 2 is open');
+  });
 
-    // Disconnect Alice tab 2 -> Now Alice goes offline
-    const aliceOfflinePromise = new Promise(resolve => {
-      clientBob.on('presence', p => {
-        if (p.user === 'alice' && !p.online) resolve(p);
-      });
-    });
-    clientAlice2.disconnect();
-    const offlineEvt = await aliceOfflinePromise;
-    assert.equal(offlineEvt.user, 'alice');
-    assert.equal(offlineEvt.online, false);
-    assert.ok(typeof offlineEvt.lastSeen === 'number');
-  } finally {
-    if (clientAlice1?.connected) clientAlice1.disconnect();
-    if (clientAlice2?.connected) clientAlice2.disconnect();
-    if (clientBob?.connected) clientBob.disconnect();
-    io.close();
-    await new Promise(r => server.close(r));
+  clientAlice1 = connectClient(aliceToken);
+  await new Promise(resolve => clientAlice1.on('connect', resolve));
+  const presence = await presencePromise;
+  assert.equal(presence.user, 'alice');
+  assert.equal(presence.online, true);
+});
+
+test('chat 06: message sent by alice is received by bob', async () => {
+  const msgPromise = new Promise(resolve => clientBob.on('message', resolve));
+  clientAlice1.emit('message', { type: 'text', body: 'Hello Bob from Terminal' });
+  const received = await msgPromise;
+  assert.equal(received.sender, 'alice');
+  assert.equal(received.body, 'Hello Bob from Terminal');
+  lastMessageId = received.id;
+});
+
+test('chat 07: online partner generates automatic delivery receipt', async () => {
+  const receiptPromise = new Promise(resolve => clientAlice1.on('receipt', resolve));
+  clientAlice1.emit('message', { type: 'text', body: 'Receipt check' });
+  const receipt = await receiptPromise;
+  assert.equal(receipt.type, 'delivered');
+});
+
+test('chat 08: partner manual read receipt is relayed back to sender', async () => {
+  const receiptPromise = new Promise(resolve => clientAlice1.on('receipt', resolve));
+  clientBob.emit('receipt', { type: 'read' });
+  const receipt = await receiptPromise;
+  assert.equal(receipt.type, 'read');
+});
+
+test('chat 09: owner can edit own text message', async () => {
+  const editPromise = new Promise(resolve => clientBob.on('message-edited', resolve));
+  clientAlice1.emit('edit-message', { id: lastMessageId, text: 'Hello Bob (edited)' });
+  const edited = await editPromise;
+  assert.equal(edited.id, lastMessageId);
+  assert.equal(edited.body, 'Hello Bob (edited)');
+});
+
+test('chat 10: non-owner cannot edit partner message', async () => {
+  clientBob.emit('edit-message', { id: lastMessageId, text: 'Hacked by Bob' });
+  await new Promise(r => setTimeout(r, 60));
+  const msgCheck = await db.findMessage(lastMessageId);
+  assert.equal(msgCheck.body, 'Hello Bob (edited)');
+});
+
+test('chat 11: non-owner cannot delete partner message', async () => {
+  clientBob.emit('delete-message', { id: lastMessageId });
+  await new Promise(r => setTimeout(r, 60));
+  const msgCheck = await db.findMessage(lastMessageId);
+  assert.equal(msgCheck.deletedAt, null);
+});
+
+test('chat 12: owner can delete own message', async () => {
+  const deletePromise = new Promise(resolve => clientBob.on('message-deleted', resolve));
+  clientAlice1.emit('delete-message', { id: lastMessageId });
+  const deleted = await deletePromise;
+  assert.equal(deleted.id, lastMessageId);
+});
+
+test('chat 13: typing indicator is relayed to partner', async () => {
+  const typingPromise = new Promise(resolve => clientBob.on('typing', resolve));
+  clientAlice1.emit('typing', { isTyping: true });
+  const typing = await typingPromise;
+  assert.equal(typing.user, 'alice');
+  assert.equal(typing.isTyping, true);
+});
+
+test('chat 14: typing indicator spam is rate limited silently', async () => {
+  let typingCount = 0;
+  const handler = () => { typingCount++; };
+  clientBob.on('typing', handler);
+
+  // Send 25 typing events rapidly (limit is 15 per 5s)
+  for (let i = 0; i < 25; i++) {
+    clientAlice1.emit('typing', { isTyping: true });
   }
+  await new Promise(r => setTimeout(r, 80));
+  clientBob.off('typing', handler);
+  assert.ok(typingCount <= 15, `Expected <= 15 typing events, got ${typingCount}`);
+});
+
+test('chat 15: message spam triggers rate limit error notice', async () => {
+  const errorPromise = new Promise(resolve => clientAlice1.on('error-notice', resolve));
+
+  // Send 35 messages rapidly (limit is 30 per 5s)
+  for (let i = 0; i < 35; i++) {
+    clientAlice1.emit('message', { type: 'text', body: `spam ${i}` });
+  }
+
+  const err = await errorPromise;
+  assert.ok(err.error.includes('Rate limit exceeded'));
+});
+
+test('chat 16: multi-device: closing 1 of 2 tabs keeps user online', async () => {
+  // Connect Alice tab 2
+  clientAlice2 = connectClient(aliceToken);
+  await new Promise(resolve => clientAlice2.on('connect', resolve));
+
+  let aliceWentOffline = false;
+  const presenceHandler = p => {
+    if (p.user === 'alice' && !p.online) aliceWentOffline = true;
+  };
+  clientBob.on('presence', presenceHandler);
+
+  // Disconnect tab 1
+  clientAlice1.disconnect();
+  await new Promise(r => setTimeout(r, 100));
+
+  clientBob.off('presence', presenceHandler);
+  assert.equal(aliceWentOffline, false, 'User must remain online while second tab is connected');
+});
+
+test('chat 17: multi-device: closing last tab emits offline presence with lastSeen', async () => {
+  const offlinePromise = new Promise(resolve => {
+    clientBob.on('presence', p => {
+      if (p.user === 'alice' && !p.online) resolve(p);
+    });
+  });
+
+  clientAlice2.disconnect();
+  const offlineEvt = await offlinePromise;
+  assert.equal(offlineEvt.user, 'alice');
+  assert.equal(offlineEvt.online, false);
+  assert.ok(typeof offlineEvt.lastSeen === 'number');
 });

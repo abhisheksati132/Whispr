@@ -1,7 +1,14 @@
 // Terminal HUD DOM Renderer & UI Utilities
 // Strict DOM manipulation: textContent for all user-controlled values (zero innerHTML injection)
 
+import { loadAuthenticatedMedia, revokeMediaUrl } from './media.js';
+
 let lastRenderedDate = '';
+let currentAuthToken = '';
+
+export function setAuthToken(token) {
+  currentAuthToken = token;
+}
 
 function formatTime(timestamp) {
   const d = new Date(timestamp);
@@ -96,7 +103,9 @@ export function renderMessage(msg, myUsername, onReply, onEdit, onDelete, onOpen
   if (msg.replyTo) {
     const replyBar = document.createElement('div');
     replyBar.className = 'msg-reply-bar';
-    replyBar.textContent = `  re: [parent message ${msg.replyTo.slice(0, 8)}]`;
+    const parentEl = document.getElementById(`msg-${msg.replyTo}`);
+    const parentText = parentEl ? parentEl.querySelector('.msg-text-own, .msg-text-partner')?.textContent : '';
+    replyBar.textContent = parentText ? `  re: ${parentText.slice(0, 40)}` : `  re: [msg ${msg.replyTo.slice(0, 8)}]`;
     lineEl.appendChild(replyBar);
   }
 
@@ -119,6 +128,9 @@ export function renderMessage(msg, myUsername, onReply, onEdit, onDelete, onOpen
     deletedSpan.className = 'msg-meta-deleted';
     deletedSpan.textContent = '[deleted]';
     row.appendChild(deletedSpan);
+    if (msg.mediaPath) {
+      revokeMediaUrl(msg.mediaPath);
+    }
   } else {
     if (msg.type === 'text') {
       const textSpan = document.createElement('span');
@@ -129,18 +141,26 @@ export function renderMessage(msg, myUsername, onReply, onEdit, onDelete, onOpen
       const frame = document.createElement('div');
       frame.className = 'photo-frame';
       const img = document.createElement('img');
-      img.src = msg.mediaPath || '';
       img.alt = 'Shared photo';
       img.loading = 'lazy';
       frame.appendChild(img);
 
       const cap = document.createElement('div');
       cap.className = 'photo-caption';
-      cap.textContent = 'IMG [TAP TO VIEW]';
+      cap.textContent = 'IMG [LOADING...]';
       frame.appendChild(cap);
 
+      loadAuthenticatedMedia(msg.mediaPath, currentAuthToken)
+        .then((blobUrl) => {
+          img.src = blobUrl;
+          cap.textContent = 'IMG [TAP TO VIEW]';
+        })
+        .catch(() => {
+          cap.textContent = 'IMG [LOAD FAILED]';
+        });
+
       frame.addEventListener('click', () => {
-        if (onOpenPhoto && msg.mediaPath) onOpenPhoto(msg.mediaPath);
+        if (onOpenPhoto && img.src) onOpenPhoto(img.src);
       });
       row.appendChild(frame);
     } else if (msg.type === 'voice') {
@@ -163,20 +183,26 @@ export function renderMessage(msg, myUsername, onReply, onEdit, onDelete, onOpen
       durSpan.textContent = `00:${String(sec).padStart(2, '0')}`;
 
       let audio = null;
-      playBtn.addEventListener('click', () => {
-        if (!audio) {
-          audio = new Audio(msg.mediaPath);
-          audio.addEventListener('ended', () => {
+      playBtn.addEventListener('click', async () => {
+        try {
+          if (!audio) {
+            playBtn.textContent = '[...]';
+            const blobUrl = await loadAuthenticatedMedia(msg.mediaPath, currentAuthToken);
+            audio = new Audio(blobUrl);
+            audio.addEventListener('ended', () => {
+              playBtn.textContent = '[PLAY]';
+            });
+          }
+          if (audio.paused) {
+            await audio.play();
+            playBtn.textContent = '[STOP]';
+          } else {
+            audio.pause();
+            audio.currentTime = 0;
             playBtn.textContent = '[PLAY]';
-          });
-        }
-        if (audio.paused) {
-          audio.play().catch(() => {});
-          playBtn.textContent = '[STOP]';
-        } else {
-          audio.pause();
-          audio.currentTime = 0;
-          playBtn.textContent = '[PLAY]';
+          }
+        } catch {
+          playBtn.textContent = '[ERR]';
         }
       });
 
@@ -193,24 +219,51 @@ export function renderMessage(msg, myUsername, onReply, onEdit, onDelete, onOpen
       row.appendChild(editedSpan);
     }
 
+    // Inline action controls: [RE] for all, [EDIT] [DEL] for own messages
+    const actionsSpan = document.createElement('span');
+    actionsSpan.className = 'msg-actions';
+
+    const replyBtn = document.createElement('button');
+    replyBtn.className = 'msg-action-btn';
+    replyBtn.textContent = '[RE]';
+    replyBtn.title = 'Reply';
+    replyBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (onReply) onReply(msg);
+    });
+    actionsSpan.appendChild(replyBtn);
+
+    if (isOwn) {
+      if (msg.type === 'text') {
+        const editBtn = document.createElement('button');
+        editBtn.className = 'msg-action-btn';
+        editBtn.textContent = '[EDIT]';
+        editBtn.title = 'Edit';
+        editBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (onEdit) onEdit(msg);
+        });
+        actionsSpan.appendChild(editBtn);
+      }
+
+      const delBtn = document.createElement('button');
+      delBtn.className = 'msg-action-btn msg-action-del';
+      delBtn.textContent = '[DEL]';
+      delBtn.title = 'Delete';
+      delBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (onDelete) onDelete(msg);
+      });
+      actionsSpan.appendChild(delBtn);
+    }
+
+    row.appendChild(actionsSpan);
+
     // Context actions on tap/click
     lineEl.addEventListener('click', (e) => {
-      // Don't trigger if clicked play button or image directly
       if (e.target.tagName === 'BUTTON' || e.target.tagName === 'IMG') return;
       if (onReply) onReply(msg);
     });
-
-    if (isOwn) {
-      lineEl.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        const action = prompt('Message Action:\n1 = Edit\n2 = Delete\nCancel = Esc', '1');
-        if (action === '1' && msg.type === 'text' && onEdit) {
-          onEdit(msg);
-        } else if (action === '2' && onDelete) {
-          onDelete(msg);
-        }
-      });
-    }
   }
 
   // Delivery / Read Receipts for own messages

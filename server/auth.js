@@ -12,7 +12,10 @@ const USERNAME_REGEX = /^[a-z0-9_]{3,20}$/;
 
 function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
+  let token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
+  if (!token && typeof req.query?.token === 'string') {
+    token = req.query.token.trim();
+  }
   if (!token) {
     return res.status(401).json({ error: 'Authentication required' });
   }

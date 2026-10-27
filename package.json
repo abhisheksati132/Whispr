@@ -29,7 +29,6 @@
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.11.0",
     "multer": "^2.0.0-rc.4",
-    "sharp": "^0.35.3",
     "socket.io": "^4.8.3",
     "web-push": "^3.6.7"
   },

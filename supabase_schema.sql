@@ -23,6 +23,8 @@ CREATE TABLE users (
 CREATE OR REPLACE FUNCTION enforce_two_users_limit()
 RETURNS TRIGGER AS $$
 BEGIN
+  -- Acquire transaction-scoped advisory lock to serialize registration across concurrent transactions
+  PERFORM pg_advisory_xact_lock(hashtext('whispr_user_registration_lock'));
   IF (SELECT COUNT(*) FROM users) >= 2 THEN
     RAISE EXCEPTION 'link closed' USING ERRCODE = 'P0001';
   END IF;
