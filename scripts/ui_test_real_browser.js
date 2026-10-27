@@ -1,14 +1,47 @@
 'use strict';
 const path = require('path');
 const fs = require('fs');
-const http = require('http');
-const puppeteer = require('puppeteer-core');
+let puppeteer;
+try {
+  puppeteer = require('puppeteer');
+} catch {
+  puppeteer = require('puppeteer-core');
+}
 const assert = require('assert/strict');
-const { app, server } = require('../server/index');
+const { server } = require('../server/index');
 const db = require('../server/db');
 const { resetSocketStateForTests } = require('../server/socket');
 
-const CHROME_PATH = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+function resolveChromePath() {
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+    return process.env.PUPPETEER_EXECUTABLE_PATH;
+  }
+  if (process.env.E2E_CHROME === 'auto') {
+    return undefined;
+  }
+  const candidatePaths = [
+    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+    process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'Google', 'Chrome', 'Application', 'chrome.exe') : null,
+    '/usr/bin/google-chrome',
+    '/usr/bin/chromium-browser',
+    '/usr/bin/chromium'
+  ].filter(Boolean);
+
+  for (const p of candidatePaths) {
+    if (fs.existsSync(p)) return p;
+  }
+  if (typeof puppeteer.executablePath === 'function') {
+    try {
+      const p = puppeteer.executablePath();
+      if (fs.existsSync(p)) return p;
+    } catch {
+      // ignore
+    }
+  }
+  return undefined;
+}
+
 const SCREENSHOT_DIR = path.join(__dirname, '..', 'screenshots');
 if (!fs.existsSync(SCREENSHOT_DIR)) {
   fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
@@ -41,8 +74,8 @@ async function main() {
   const tempPngPath = path.join(__dirname, 'temp_test_photo.png');
   fs.writeFileSync(tempPngPath, SAMPLE_PNG);
 
-  const browser = await puppeteer.launch({
-    executablePath: CHROME_PATH,
+  const chromePath = resolveChromePath();
+  const launchOptions = {
     headless: 'new',
     args: [
       '--no-sandbox',
@@ -51,7 +84,11 @@ async function main() {
       '--use-fake-ui-for-media-stream',
       '--disable-web-security=false'
     ]
-  });
+  };
+  if (chromePath) {
+    launchOptions.executablePath = chromePath;
+  }
+  const browser = await puppeteer.launch(launchOptions);
 
   const consoleErrors = { A: [], B: [] };
   const cspViolations = { A: [], B: [] };

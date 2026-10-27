@@ -7,7 +7,8 @@
     "test": "node --test test/*.test.js",
     "start": "node server/index.js",
     "lint": "eslint server/**/*.js public/js/*.js test/*.test.js",
-    "db:setup": "node -e \"const fs=require('fs'); const sql=fs.readFileSync('supabase_schema.sql','utf8'); console.log('Run this SQL in Supabase Dashboard -> SQL Editor:\\n\\n' + sql)\""
+    "db:setup": "node -e \"const fs=require('fs'); const sql=fs.readFileSync('supabase_schema.sql','utf8'); console.log('Run this SQL in Supabase Dashboard -> SQL Editor:\\n\\n' + sql)\"",
+    "test:e2e": "node scripts/ui_test_real_browser.js"
   },
   "keywords": [
     "chat",

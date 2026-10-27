@@ -118,10 +118,18 @@ export class WebRTCManager {
     this.showOverlay(`CALL // ${partnerName}`, 'DIALING...');
 
     try {
-      this.localStream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: isVideo ? { width: { ideal: 640 }, height: { ideal: 480 } } : false
-      });
+      try {
+        this.localStream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: isVideo ? { width: { ideal: 640 }, height: { ideal: 480 } } : false
+        });
+      } catch (mediaErr) {
+        if (isVideo) {
+          this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        } else {
+          throw mediaErr;
+        }
+      }
       if (this.localVideo) this.localVideo.srcObject = this.localStream;
 
       this.peerConnection = this.createPeerConnection();
@@ -153,10 +161,18 @@ export class WebRTCManager {
     this.setStatus('CONNECTING...');
 
     try {
-      this.localStream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: type === 'video' ? { width: { ideal: 640 }, height: { ideal: 480 } } : false
-      });
+      try {
+        this.localStream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: type === 'video' ? { width: { ideal: 640 }, height: { ideal: 480 } } : false
+        });
+      } catch (mediaErr) {
+        if (type === 'video') {
+          this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        } else {
+          throw mediaErr;
+        }
+      }
       if (this.localVideo) this.localVideo.srcObject = this.localStream;
 
       this.peerConnection = this.createPeerConnection();
