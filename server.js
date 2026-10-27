@@ -806,15 +806,18 @@ io.on('connection', (socket) => {
   // ── Message ───────────────────────────────────────────────────────────────
   socket.on('message', async (payload) => {
     // Identity comes exclusively from the verified JWT — never the client.
-    const targetRoom = normalizeRoom(payload && payload.room) || currentRoom || `dm_${username.toLowerCase()}_${username.toLowerCase()}`;
+    if (!currentRoom) {
+      return socket.emit('room-error', { error: 'You must join a room before sending messages.' });
+    }
+    const targetRoom = normalizeRoom(payload && payload.room) || currentRoom;
+    if (targetRoom !== currentRoom) {
+      return socket.emit('room-error', { error: 'Cannot send message to a room other than the joined one.' });
+    }
 
     const access = await cachedAuthorize(targetRoom, username);
     if (!canRead(access)) {
       return socket.emit('room-error', { error: 'You cannot send messages to this room.' });
     }
-    currentRoom = targetRoom;
-    socket.join(targetRoom);
-    socket.join('user:' + username.toLowerCase());
 
     const _now = Date.now();
     const rl = rateLimitMap.get(username);

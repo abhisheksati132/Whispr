@@ -120,3 +120,39 @@ test('failed join does not mutate username or break subsequent operations', asyn
     await new Promise((resolve, reject) => listeningServer.close((err) => (err ? reject(err) : resolve())));
   }
 });
+
+test('message handler rejects messages sent to a room other than the joined one', async () => {
+  listeningServer = server.listen(0, '127.0.0.1');
+  await new Promise((resolve) => listeningServer.once('listening', resolve));
+
+  const address = listeningServer.address();
+  const token = jwt.sign({ username: 'alice', sid: 'local-session' }, JWT_SECRET);
+  const client = Client(`http://127.0.0.1:${address.port}`, {
+    auth: { token },
+    transports: ['websocket']
+  });
+
+  try {
+    await new Promise((resolve, reject) => {
+      client.on('connect', resolve);
+      client.on('connect_error', reject);
+    });
+
+    const joinedPromise = new Promise((resolve) => client.once('joined', resolve));
+    client.emit('join', { room: 'dm_alice_alice' });
+    await joinedPromise;
+
+    const errorPromise = new Promise((resolve) => client.once('room-error', resolve));
+    client.emit('message', { text: 'Hello foreign room', room: 'dm_bob_charlie' });
+    const errPayload = await errorPromise;
+    assert.equal(errPayload.error, 'Cannot send message to a room other than the joined one.');
+
+    const msgPromise = new Promise((resolve) => client.once('message', resolve));
+    client.emit('message', { text: 'Hello my room', room: 'dm_alice_alice' });
+    const msg = await msgPromise;
+    assert.equal(msg.text, 'Hello my room');
+  } finally {
+    client.disconnect();
+    await new Promise((resolve, reject) => listeningServer.close((err) => (err ? reject(err) : resolve())));
+  }
+});
