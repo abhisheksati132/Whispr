@@ -78,6 +78,14 @@ CREATE INDEX idx_push_subs_username ON push_subscriptions(username);
 -- Security: Enable Row Level Security (RLS) on all tables.
 -- Deny all direct access to 'anon' and 'authenticated' roles.
 -- The Node.js server connects exclusively using the Supabase Service Role Key.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'anon') THEN
+    CREATE ROLE anon NOLOGIN;
+  END IF;
+END
+$$;
+
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
